@@ -1,0 +1,116 @@
+// Prisma schema for RoadWatch AI
+// Supabase (PostgreSQL) with PostGIS enabled.
+// `directUrl` is used by `prisma migrate` (no pgBouncer);
+// `url` should be the pooled connection string for the app runtime.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [postgis]
+  schemas    = ["public"]
+}
+
+/// Placeholder model so the generated client has something to type-check.
+/// Replace / extend with the real RoadWatch AI domain models.
+model HealthPing {
+  id        String   @id @default(uuid()) @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("health_pings")
+  @@schema("public")
+}
+
+// ---------------------------------------------------------------------------
+// Authentication & onboarding
+// ---------------------------------------------------------------------------
+
+/// A fully-onboarded RoadWatch AI account. Created only after a successful
+/// OTP verification. `passwordHash` is a bcrypt digest — never the plaintext.
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  fullName      String
+  passwordHash  String
+  country       Country
+  isVerified    Boolean        @default(false)
+  role          Role           @default(CITIZEN)
+  loginAttempts Int            @default(0)
+  lockedUntil   DateTime?
+  lastLoginAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+  @@schema("public")
+}
+
+/// Transient registration state held between `register` and `verify-otp`.
+/// Stores the bcrypt-hashed OTP and the pending account's hashed password.
+/// Consumed (set `used = true`) when verification succeeds.
+model PendingVerification {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  otpHash           String
+  fullName          String
+  passwordHash      String
+  country           Country
+  expiresAt         DateTime
+  attempts          Int      @default(0)
+  resendCount       Int      @default(0)
+  /// Start of the current rolling resend window; used to cap resends/hour.
+  resendWindowStart DateTime @default(now())
+  used              Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@map("pending_verifications")
+  @@schema("public")
+}
+
+/// A persisted refresh-token handle. Only the SHA-256 `tokenHash` is stored,
+/// never the raw JWT. Revoke by setting `revoked = true`.
+model RefreshToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  revoked    Boolean   @default(false)
+  revokedAt  DateTime?
+  ipAddress  String?
+  userAgent  String?
+  deviceInfo Json?
+
+  @@index([userId])
+  @@map("refresh_tokens")
+  @@schema("public")
+}
+
+/// BIMSTEC member states supported by RoadWatch AI.
+enum Country {
+  INDIA
+  BANGLADESH
+  NEPAL
+  SRI_LANKA
+  MYANMAR
+  THAILAND
+  BHUTAN
+
+  @@schema("public")
+}
+
+/// Account roles. New citizens default to CITIZEN.
+enum Role {
+  CITIZEN
+  AUTHORITY
+  ADMIN
+
+  @@schema("public")
+}
