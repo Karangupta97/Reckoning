@@ -1,0 +1,107 @@
+/**
+ * Complaint controllers — thin HTTP adapters.
+ *
+ * Each handler reads already-validated request data, derives the requester (if
+ * any) from `req.user`, delegates to the service, and shapes the standard
+ * `{ success, data }` envelope. No business logic lives here.
+ */
+import * as complaintService from "./complaint.service.js";
+import { AppError } from "../../utils/AppError.js";
+/**
+ * Build a {@link Requester} from `req.user`, or `undefined` when anonymous.
+ *
+ * @param req Express request.
+ * @returns The caller identity for authorization, if authenticated.
+ */
+function requesterOf(req) {
+    return req.user ? { id: req.user.id, role: req.user.role } : undefined;
+}
+/**
+ * `POST /api/complaints` — submit a new complaint (auth required).
+ *
+ * @returns 201 with `{ success: true, data: CreateComplaintResult }`.
+ */
+export async function create(req, res, next) {
+    try {
+        if (!req.user) {
+            throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
+        }
+        const body = req.body;
+        const result = await complaintService.createComplaint(req.user.id, body, req.ip);
+        res.status(201).json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+/**
+ * `GET /api/complaints` — public, filtered, paginated list.
+ *
+ * @returns 200 with `{ success: true, data: ComplaintListResult }`.
+ */
+export async function list(req, res, next) {
+    try {
+        const query = req.query;
+        const result = await complaintService.listComplaints(query);
+        res.status(200).json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+/**
+ * `GET /api/complaints/:id` — public single complaint (owner gets more).
+ *
+ * @returns 200 with `{ success: true, data: ComplaintDetail }`.
+ */
+export async function getById(req, res, next) {
+    try {
+        const id = req.params.id;
+        const result = await complaintService.getComplaintById(id, requesterOf(req));
+        res.status(200).json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+/**
+ * `PATCH /api/complaints/:id` — update own complaint (owner or ADMIN).
+ *
+ * @returns 200 with `{ success: true, data: ComplaintDetail }`.
+ */
+export async function update(req, res, next) {
+    try {
+        if (!req.user) {
+            throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
+        }
+        const id = req.params.id;
+        const body = req.body;
+        const result = await complaintService.updateComplaint(id, { id: req.user.id, role: req.user.role }, body);
+        res.status(200).json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+/**
+ * `DELETE /api/complaints/:id` — soft delete (owner or ADMIN).
+ *
+ * @returns 200 with `{ success: true, data: { message } }`.
+ */
+export async function remove(req, res, next) {
+    try {
+        if (!req.user) {
+            throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
+        }
+        const id = req.params.id;
+        const result = await complaintService.deleteComplaint(id, {
+            id: req.user.id,
+            role: req.user.role,
+        });
+        res.status(200).json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+}
+//# sourceMappingURL=complaint.controller.js.map

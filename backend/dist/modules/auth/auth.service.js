@@ -173,7 +173,19 @@ export async function register(input) {
  */
 export async function verifyOtp(input) {
     const { email, otp } = input;
-    const pending = await dbGuard(() => prisma.pendingVerification.findUnique({ where: { email } }), "verifyOtp:findPending");
+    const pending = (await dbGuard(() => prisma.pendingVerification.findUnique({
+        where: { email },
+        select: {
+            email: true,
+            otpHash: true,
+            passwordHash: true,
+            fullName: true,
+            country: true,
+            expiresAt: true,
+            attempts: true,
+            used: true,
+        },
+    }), "verifyOtp:findPending"));
     if (!pending) {
         throw new AppError("No pending verification found for this email.", 404);
     }
@@ -188,18 +200,18 @@ export async function verifyOtp(input) {
     }
     const matches = await compareOtp(otp, pending.otpHash);
     if (!matches) {
-        const attempts = await dbGuard(() => prisma.pendingVerification.update({
+        const attempts = (await dbGuard(() => prisma.pendingVerification.update({
             where: { email },
             data: { attempts: { increment: 1 } },
             select: { attempts: true },
-        }), "verifyOtp:incrementAttempts");
+        }), "verifyOtp:incrementAttempts"));
         const remaining = Math.max(0, MAX_OTP_ATTEMPTS - attempts.attempts);
         throw new AppError(remaining > 0
             ? `Incorrect code. ${remaining} attempt(s) remaining.`
             : "Incorrect code. You've been locked out — request a new code.", 400);
     }
     // Atomic activation: create user, consume pending record, persist session.
-    const result = await dbGuard(() => prisma.$transaction(async (tx) => {
+    const result = (await dbGuard(() => prisma.$transaction(async (tx) => {
         const user = await tx.user.create({
             data: {
                 email: pending.email,
@@ -240,16 +252,18 @@ export async function verifyOtp(input) {
         return { user, tokens };
     }), "verifyOtp:activate").catch((error) => {
         // Unique violation = the email was activated by a concurrent request.
-        if (error instanceof Prisma.PrismaClientKnownRequestError &&
+        if (error &&
+            typeof error === "object" &&
+            "code" in error &&
             error.code === "P2002") {
             throw new AppError("This email is already registered. Please sign in.", 409);
         }
         throw error;
-    });
+    }));
     return {
         accessToken: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken,
-        user: toPublicUser(result.user),
+        user: toPublicUser({ ...result.user, country: result.user.country }),
     };
 }
 /**
@@ -266,7 +280,17 @@ export async function verifyOtp(input) {
  */
 export async function resendOtp(input) {
     const { email } = input;
-    const pending = await dbGuard(() => prisma.pendingVerification.findUnique({ where: { email } }), "resendOtp:findPending");
+    const pending = (await dbGuard(() => prisma.pendingVerification.findUnique({
+        where: { email },
+        select: {
+            email: true,
+            fullName: true,
+            country: true,
+            used: true,
+            resendWindowStart: true,
+            resendCount: true,
+        },
+    }), "resendOtp:findPending"));
     if (!pending) {
         throw new AppError("No pending registration found for this email.", 404);
     }
@@ -461,7 +485,15 @@ export async function refresh(refreshToken, ctx) {
     }
     // 2. Look up the stored hash.
     const tokenHash = sha256(refreshToken);
-    const stored = await dbGuard(() => prisma.refreshToken.findUnique({ where: { tokenHash } }), "refresh:findToken");
+    const stored = (await dbGuard(() => prisma.refreshToken.findUnique({
+        where: { tokenHash },
+        select: {
+            tokenHash: true,
+            revoked: true,
+            expiresAt: true,
+            userId: true,
+        },
+    }), "refresh:findToken"));
     // 3. Validate: exists, not revoked, unexpired, owner matches the JWT subject.
     if (!stored ||
         stored.revoked ||

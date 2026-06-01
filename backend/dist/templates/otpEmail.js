@@ -96,90 +96,85 @@ export function otpEmailTemplate(otp, fullName, country) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>RoadWatch AI Verification Code</title>
+  <title>Your RoadWatch AI Verification Code</title>
 </head>
-<body style="margin:0;padding:0;background:${COLORS.bg};">
-  <!-- Preheader (hidden preview text) -->
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${COLORS.bg};">
+<body style="margin:0;padding:0;background:#f6f8fa;">
+  <!-- Preheader -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f6f8fa;">
     Your RoadWatch AI verification code is ${otp}. It expires in 10 minutes.
   </div>
 
-  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background:${COLORS.bg};">
+  <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f6f8fa;">
     <tr>
-      <td align="center" style="padding:24px 12px;">
-
-        <table role="presentation" width="600" border="0" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:${COLORS.white};border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(20,47,73,0.08);">
-
+      <td align="center" style="padding:40px 12px;">
+        <table role="presentation" width="600" border="0" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border:1px solid #d0d7de;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+          
           <!-- Header -->
           <tr>
-            <td style="background:${COLORS.navy};padding:28px 32px;">
+            <td style="background:#24292f;padding:28px 32px;text-align:center;">
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:700;color:${COLORS.white};letter-spacing:0.4px;">
-                    \u{1F6E3}\uFE0F RoadWatch&nbsp;AI
+                  <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
+                    🛣️ RoadWatch AI
                   </td>
-                  <td align="right" style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;color:#A9C0D6;">
-                    Account Verification
+                </tr>
+                <tr>
+                  <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;color:#8b949e;padding-top:4px;">
+                    Road Safety Hackathon 2026 • BIMSTEC
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- Body -->
+          <!-- Content -->
           <tr>
-            <td style="padding:36px 32px 8px 32px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${COLORS.text};">
-              <p style="margin:0 0 14px 0;font-size:18px;font-weight:600;">
-                Hi ${safeName}, ${flag}
+            <td style="padding:40px 32px 20px 32px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#24292f;">
+              <p style="margin:0 0 16px 0;font-size:20px;font-weight:600;">
+                Hi ${safeName},
               </p>
-              <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;color:${COLORS.muted};">
-                Your RoadWatch AI verification code is:
+              
+              <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#57606a;">
+                Here's your verification code to sign in to your RoadWatch AI account:
               </p>
-            </td>
-          </tr>
 
-          <!-- OTP cells -->
-          <tr>
-            <td style="padding:0 32px 8px 32px;">
-              ${renderDigitCells(otp)}
-            </td>
-          </tr>
+              <!-- OTP Box - GitHub Style -->
+              <div style="background:#f6f8fa;border:1px solid #d0d7de;border-radius:10px;padding:20px;text-align:center;margin:24px 0;">
+                <p style="margin:0 0 12px 0;font-size:15px;color:#57606a;font-weight:500;">Verification Code</p>
+                <div style="font-family:'SF Mono', Monaco, Consolas, monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#24292f;background:#ffffff;border:2px solid #d0d7de;border-radius:8px;padding:16px 24px;display:inline-block;">
+                  ${otp}
+                </div>
+              </div>
 
-          <!-- Expiry warning -->
-          <tr>
-            <td align="center" style="padding:20px 32px 4px 32px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <p style="margin:0;font-size:14px;font-weight:600;color:${COLORS.warn};">
-                \u23F1\uFE0F This code expires in 10 minutes
+              <p style="margin:0 0 24px 0;font-size:14px;color:#57606a;">
+                This code will expire in <strong>10 minutes</strong>.
               </p>
-            </td>
-          </tr>
 
-          <!-- Security note -->
-          <tr>
-            <td style="padding:18px 32px 30px 32px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <div style="border-top:1px solid ${COLORS.border};margin-bottom:18px;"></div>
-              <p style="margin:0;font-size:13px;line-height:1.6;color:${COLORS.muted};">
-                \u{1F512} If you didn't request this, you can safely ignore this email.
-                Someone may have typed your address by mistake \u2014 no account will be created.
-              </p>
+              <!-- Security Note -->
+              <div style="background:#fff8c5;border-left:4px solid #d4a017;padding:16px 20px;border-radius:6px;margin:24px 0;">
+                <p style="margin:0;font-size:14px;color:#664e00;">
+                  🔒 If you didn't request this code, you can safely ignore this email. 
+                  No account will be created.
+                </p>
+              </div>
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background:${COLORS.navyDark};padding:20px 32px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-              <p style="margin:0;font-size:12px;color:#9FB6CC;text-align:center;line-height:1.6;">
-                <strong style="color:${COLORS.white};">RoadWatch AI</strong>
-                &nbsp;|&nbsp; Road Safety Hackathon 2026 \u2013 BIMSTEC
+            <td style="background:#f6f8fa;border-top:1px solid #d0d7de;padding:24px 32px;">
+              <p style="margin:0;font-size:13px;color:#57606a;text-align:center;line-height:1.5;">
+                <strong>RoadWatch AI</strong> • Road Safety Hackathon 2026 – BIMSTEC
               </p>
-              <p style="margin:6px 0 0 0;font-size:11px;color:#6E879E;text-align:center;">
-                &copy; ${year} RoadWatch AI. This is an automated message, please do not reply.
+              <p style="margin:8px 0 0 0;font-size:12px;color:#8b949e;text-align:center;">
+                © ${year} RoadWatch AI. This is an automated message.
+              </p>
+              <p style="margin:12px 0 0 0;font-size:12px;color:#8b949e;text-align:center;">
+                <a href="unsubscribeLink" style="color:#8b949e;text-decoration:underline;">Unsubscribe</a>
               </p>
             </td>
           </tr>
-
         </table>
-
       </td>
     </tr>
   </table>

@@ -46,6 +46,8 @@ model User {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   refreshTokens RefreshToken[]
+  complaints    Complaint[]
+  mediaUploads  MediaUpload[]
 
   @@map("users")
   @@schema("public")
@@ -112,5 +114,192 @@ enum Role {
   AUTHORITY
   ADMIN
 
+  @@schema("public")
+}
+
+// ---------------------------------------------------------------------------
+// SmartReport — complaints, media uploads, and assignable authorities
+// ---------------------------------------------------------------------------
+
+/// Road-issue categories a citizen can report. `OTHERS` is the catch-all.
+enum IssueCategory {
+  POTHOLE
+  CRACKS_DAMAGE
+  FADED_LANE_MARKINGS
+  MISSING_BROKEN_SIGNBOARD
+  POOR_STREET_LIGHTING
+  ENCROACHMENT
+  OTHERS
+
+  @@schema("public")
+}
+
+/// Lifecycle of a complaint as it moves through triage and resolution.
+/// Every transition is expected to emit an audit log, a timeline event, and
+/// a notification (handled by the workflow layer — SOON).
+enum ComplaintStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  VERIFIED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  ESCALATED
+
+  @@schema("public")
+}
+
+/// Relative urgency of a complaint. Set heuristically at creation (AI hints +
+/// keyword scan) and overridable by an admin later.
+enum SeverityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@schema("public")
+}
+
+/// A citizen-submitted road issue.
+///
+/// Identity is hybrid-anonymous: `userId` is ALWAYS stored (for moderation and
+/// abuse prevention) but is never exposed publicly. When `isAnonymous` is true
+/// the public/authority surfaces show "Anonymous Citizen" instead of the name.
+///
+/// `location` is a PostGIS `geography(Point,4326)` column. Prisma cannot create
+/// or back-fill it directly, so it is added/maintained via the raw SQL
+/// migration in `prisma/migrations` and written with a raw `UPDATE` inside the
+/// create transaction.
+model Complaint {
+  id           String           @id @default(cuid())
+  // Identity (hybrid anonymous model)
+  userId       String
+  user         User             @relation(fields: [userId], references: [id])
+  isAnonymous  Boolean          @default(false)
+  // Issue details
+  category     IssueCategory
+  description  String?          @db.Text
+  suggestedFix String?          @db.Text
+  // Location (PostGIS geography column added via raw SQL migration)
+  latitude     Float
+  longitude    Float
+  location     Unsupported("geography(Point,4326)")?
+  address      String?
+  roadName     String?
+  roadNumber   String?
+  landmark     String?
+  direction    String?
+  country      Country
+  // Media
+  media        ComplaintMedia[]
+  // AI fields (populated by AI service — SOON)
+  aiDetected   Boolean          @default(false)
+  aiCategory   IssueCategory?
+  aiConfidence Float?
+  aiRawResult  Json?
+  // Severity (set by AI heuristics or an admin)
+  severity     SeverityLevel    @default(MEDIUM)
+  // Status & workflow
+  status       ComplaintStatus  @default(SUBMITTED)
+  assignedTo   String?
+  authority    Authority?       @relation(fields: [assignedTo], references: [id])
+  ticketNumber String           @unique
+  // Engagement
+  upvotes      Int              @default(0)
+  viewCount    Int              @default(0)
+  // Soft delete
+  deletedAt    DateTime?
+  deletedBy    String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([country])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("complaints")
+  @@schema("public")
+}
+
+/// Join row binding an uploaded media asset to a complaint, preserving display
+/// order and which asset is the primary (thumbnail) one.
+model ComplaintMedia {
+  id          String      @id @default(cuid())
+  complaintId String
+  complaint   Complaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  mediaId     String
+  media       MediaUpload @relation(fields: [mediaId], references: [id])
+  isPrimary   Boolean     @default(false)
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+
+  @@unique([complaintId, mediaId])
+  @@index([complaintId])
+  @@index([mediaId])
+  @@map("complaint_media")
+  @@schema("public")
+}
+
+/// A single uploaded file (image or video) stored in S3.
+///
+/// Created by `POST /api/upload` BEFORE it is ever linked to a complaint.
+/// `linkedAt` is stamped when the asset is attached to a complaint so it can
+/// never be reused for a second complaint. `isDeleted` supports soft cleanup
+/// when its owning complaint is removed.
+model MediaUpload {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  s3Key     String           @unique
+  url       String
+  mimeType  String
+  size      Int
+  width     Int?
+  height    Int?
+  duration  Float?
+  linkedAt  DateTime?
+  isDeleted Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  complaints ComplaintMedia[]
+
+  @@index([userId])
+  @@map("media_uploads")
+  @@schema("public")
+}
+
+/// A government body a complaint can be auto-assigned to, scoped by a PostGIS
+/// `geography(Polygon,4326)` boundary. The polygon is managed via raw SQL.
+model Authority {
+  id         String      @id @default(cuid())
+  name       String
+  type       String // NHAI | PWD | MUNICIPAL | STATE
+  country    Country
+  boundary   Unsupported("geography(Polygon,4326)")?
+  email      String
+  phone      String?
+  isActive   Boolean     @default(true)
+  complaints Complaint[]
+  createdAt  DateTime    @default(now())
+
+  @@index([country])
+  @@map("authorities")
+  @@schema("public")
+}
+
+/// Atomic, per-country monotonic counter used to mint sequential ticket
+/// numbers (e.g. `RW-IN-2026-000042`). One row per (country, year); the
+/// `lastSeq` is bumped inside the complaint-create transaction.
+model TicketCounter {
+  country   Country
+  year      Int
+  lastSeq   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([country, year])
+  @@map("ticket_counters")
   @@schema("public")
 }

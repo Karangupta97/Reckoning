@@ -169,3 +169,44 @@ export const refreshLimiter: RateLimitRequestHandler = makeLimiter(15 * MINUTES,
 
 /** `POST /api/auth/logout` → 10 requests / 5 minutes / IP. */
 export const logoutLimiter: RateLimitRequestHandler = makeLimiter(5 * MINUTES, 10);
+
+// ---------------------------------------------------------------------------
+// SmartReport limiters (upload + complaints)
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a per-user rate-limit key, falling back to the IPv6-safe client IP
+ * for unauthenticated requests. Mount AFTER `requireAuth` so `req.user` is
+ * populated for the authenticated routes.
+ *
+ * @param req Express request (expects `req.user` on guarded routes).
+ * @returns A stable key: the user id when present, else the client IP.
+ */
+function userOrIpKey(req: Request): string {
+  const user = req.user;
+  if (user?.id) return `user:${user.id}`;
+  return ipKeyGenerator(req.ip ?? "");
+}
+
+/** Hour constant in milliseconds. */
+const HOURS = 60 * MINUTES;
+
+/** `POST /api/upload` → 20 uploads / hour / user. */
+export const uploadRateLimiter: RateLimitRequestHandler = makeLimiter(
+  1 * HOURS,
+  20,
+  userOrIpKey,
+);
+
+/** `POST /api/complaints` → 10 submissions / hour / user. */
+export const createComplaintLimiter: RateLimitRequestHandler = makeLimiter(
+  1 * HOURS,
+  10,
+  userOrIpKey,
+);
+
+/** `GET /api/complaints` → 60 requests / minute / IP. */
+export const listComplaintsLimiter: RateLimitRequestHandler = makeLimiter(
+  1 * MINUTES,
+  60,
+);

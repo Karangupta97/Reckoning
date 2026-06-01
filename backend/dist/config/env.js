@@ -60,12 +60,30 @@ const envSchema = z.object({
         .string()
         .min(20, "DUMMY_HASH must be a valid bcrypt hash"),
     // Optional Redis connection. When present, rate-limit counters are shared
-    // across instances via rate-limit-redis; otherwise an in-memory store is
-    // used (fine for a single instance / local dev).
+    // across instances via rate-limit-redis AND BullMQ background queues are
+    // enabled; otherwise an in-memory store is used and queue producers no-op
+    // (fine for a single instance / local dev).
     REDIS_URL: z
         .string()
         .url("REDIS_URL must be a valid redis:// connection URL")
         .optional(),
+    // AWS S3 — media storage. Optional so the app still boots in environments
+    // without object storage configured; the upload layer throws a clear,
+    // operator-facing error if it is invoked while these are unset.
+    AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+    AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    AWS_REGION: z.string().min(1).default("ap-south-1"),
+    AWS_S3_BUCKET_NAME: z.string().min(1).optional(),
+    // Nominatim (OpenStreetMap) reverse-geocoding. A descriptive User-Agent is
+    // required by their usage policy. https://operations.osmfoundation.org/policies/nominatim/
+    NOMINATIM_USER_AGENT: z
+        .string()
+        .min(1)
+        .default("RoadWatchAI/1.0 (roadwatch@example.com)"),
+    NOMINATIM_BASE_URL: z
+        .string()
+        .url("NOMINATIM_BASE_URL must be a valid URL")
+        .default("https://nominatim.openstreetmap.org"),
 })
     .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",

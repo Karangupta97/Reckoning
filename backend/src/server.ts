@@ -13,6 +13,8 @@ import { checkDbConnection, closeDbPool } from "./config/db.js";
 import { disconnectPrisma } from "./config/prisma.js";
 import { healthRouter } from "./middleware/dbHealth.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { uploadRouter } from "./modules/upload/upload.routes.js";
+import { complaintRouter } from "./modules/complaints/complaint.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
 
@@ -37,6 +39,8 @@ app.get("/", (_req: Request, res: Response) => {
 
 app.use(healthRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/upload", uploadRouter);
+app.use("/api/complaints", complaintRouter);
 
 // 404 + global error handler must come AFTER all routes.
 app.use(notFoundHandler);

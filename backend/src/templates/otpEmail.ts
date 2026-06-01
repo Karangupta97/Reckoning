@@ -122,12 +122,12 @@ export function otpEmailTemplate(
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>Your Reckoning AI Verification Code</title>
+  <title>Your RoadWatch AI Verification Code</title>
 </head>
 <body style="margin:0;padding:0;background:#f6f8fa;">
   <!-- Preheader -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:#f6f8fa;">
-    Your Reckoning AI verification code is ${otp}. It expires in 10 minutes.
+    Your RoadWatch AI verification code is ${otp}. It expires in 10 minutes.
   </div>
 
   <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" style="background:#f6f8fa;">
@@ -141,7 +141,7 @@ export function otpEmailTemplate(
               <table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">
-                    Reckoning
+                    🛣️ RoadWatch AI
                   </td>
                 </tr>
                 <tr>
@@ -161,7 +161,7 @@ export function otpEmailTemplate(
               </p>
               
               <p style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#57606a;">
-                Here's your verification code to sign in to your Reckoning AI account:
+                Here's your verification code to sign in to your RoadWatch AI account:
               </p>
 
               <!-- OTP Box - GitHub Style -->
@@ -190,13 +190,13 @@ export function otpEmailTemplate(
           <tr>
             <td style="background:#f6f8fa;border-top:1px solid #d0d7de;padding:24px 32px;">
               <p style="margin:0;font-size:13px;color:#57606a;text-align:center;line-height:1.5;">
-                <strong>Reckoning AI</strong> • Road Safety Hackathon 2026 – BIMSTEC
+                <strong>RoadWatch AI</strong> • Road Safety Hackathon 2026 – BIMSTEC
               </p>
               <p style="margin:8px 0 0 0;font-size:12px;color:#8b949e;text-align:center;">
-                © ${year} Reckoning AI. This is an automated message.
+                © ${year} RoadWatch AI. This is an automated message.
               </p>
               <p style="margin:12px 0 0 0;font-size:12px;color:#8b949e;text-align:center;">
-                <a href="${unsubscribeLink}" style="color:#8b949e;text-decoration:underline;">Unsubscribe</a>
+                <a href="unsubscribeLink" style="color:#8b949e;text-decoration:underline;">Unsubscribe</a>
               </p>
             </td>
           </tr>

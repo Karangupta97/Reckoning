@@ -338,7 +338,7 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<AuthResult> {
         return { user, tokens };
       }),
     "verifyOtp:activate",
-  ).catch((error: unknown) => {
+  ).catch((error: unknown): never => {
     // Unique violation = the email was activated by a concurrent request.
     if (
       error &&
@@ -354,7 +354,7 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<AuthResult> {
   return {
     accessToken: result.tokens.accessToken,
     refreshToken: result.tokens.refreshToken,
-    user: toPublicUser(result.user),
+    user: toPublicUser({ ...result.user, country: result.user.country as CountryEnum }),
   };
 }
 
@@ -495,7 +495,7 @@ async function storeRefreshToken(
       expiresAt: refreshExpiryOf(refreshToken),
       ipAddress: ctx.ipAddress ?? null,
       userAgent: ctx.userAgent ?? null,
-      deviceInfo: deviceInfo ?? null,
+      deviceInfo: deviceInfo ? (deviceInfo as Prisma.InputJsonValue) : Prisma.JsonNull,
     },
   });
 }
