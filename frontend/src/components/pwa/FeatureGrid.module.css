@@ -1,0 +1,30 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap");
+
+.grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 0 24px 32px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.card {
+  background: #1A1E2E;
+  border: 1px solid #2D3748;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.card h3 {
+  font-family: "Sora", sans-serif;
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.card p {
+  color: #94A3B8;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}

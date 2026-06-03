@@ -1,0 +1,28 @@
+.strip {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.item {
+  background: #1A1E2E;
+  border: 1px solid #2D3748;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.label {
+  font-size: 11px;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.value {
+  font-size: 18px;
+  font-weight: 700;
+}

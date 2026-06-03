@@ -1,0 +1,28 @@
+.footer {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  border-top: 1px solid #2D3748;
+}
+
+.title {
+  font-family: "Sora", sans-serif;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.text {
+  color: #94A3B8;
+  font-size: 13px;
+}
+
+.meta {
+  display: flex;
+  gap: 12px;
+  color: #94A3B8;
+  font-size: 12px;
+}
