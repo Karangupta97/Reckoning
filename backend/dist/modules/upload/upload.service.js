@@ -105,17 +105,71 @@ const ALLOWED_TYPES = {
 };
 /**
  * Validate a buffer's true type against the declared MIME type using magic
- * bytes (not the extension/header alone).
+ * bytes (content is authoritative — the declared header is never trusted on
+ * its own).
+ *
+ * Behaviour:
+ *   - If `mimetype` is a recognised media type, the bytes MUST match it
+ *     (rejects a `.png` payload sent as `image/jpeg`, etc.).
+ *   - If `mimetype` is missing/generic (e.g. `application/octet-stream`), the
+ *     buffer is accepted when its magic bytes match ANY allowed type.
  *
  * @param buffer   Raw file bytes (at least the first 12 are inspected).
  * @param mimetype Declared MIME type from the multipart part.
- * @returns `true` when the declared type is allowed AND the bytes match it.
+ * @returns `true` when the content is a recognised allowed type.
  */
 export function validateFileType(buffer, mimetype) {
-    const allowed = ALLOWED_TYPES[mimetype];
-    if (!allowed)
-        return false;
-    return allowed.matches(buffer);
+    const declared = ALLOWED_TYPES[mimetype];
+    if (declared)
+        return declared.matches(buffer);
+    // Declared type unknown/generic → fall back to pure content inspection.
+    return magicMatch(buffer) !== null;
+}
+/**
+ * Find the first allowed type whose magic-byte matcher accepts the buffer.
+ *
+ * Insertion order means `image/jpeg` is preferred over the `image/jpg` alias.
+ *
+ * @param buffer Raw file bytes.
+ * @returns The matched type + its canonical MIME key, or `null`.
+ */
+function magicMatch(buffer) {
+    for (const [mimeKey, spec] of Object.entries(ALLOWED_TYPES)) {
+        if (spec.matches(buffer))
+            return { mimeKey, spec };
+    }
+    return null;
+}
+/**
+ * Resolve the authoritative media type for a buffer.
+ *
+ * Order of trust: content sniffing (`file-type`) → our own magic-byte matchers
+ * → a recognised declared MIME type that matches the bytes. The declared header
+ * alone is never sufficient. Returns `null` when the content is not a
+ * recognised, allowed media type.
+ *
+ * @param buffer       Raw file bytes.
+ * @param declaredMime Declared MIME type from the multipart part.
+ * @returns The canonical MIME key + type spec, or `null` when unsupported.
+ */
+async function resolveAllowedType(buffer, declaredMime) {
+    // 1. Content sniffing is the strongest signal.
+    const sniffed = await fileTypeFromBuffer(buffer);
+    if (sniffed) {
+        const spec = ALLOWED_TYPES[sniffed.mime];
+        // Sniffed to a concrete type: allowed → use it; not allowed → reject.
+        return spec ? { mimeKey: sniffed.mime, spec } : null;
+    }
+    // 2. file-type couldn't identify it — try our own magic-byte matchers.
+    const matched = magicMatch(buffer);
+    if (matched)
+        return matched;
+    // 3. Last resort: a recognised declared type whose bytes actually match.
+    const declared = ALLOWED_TYPES[declaredMime];
+    if (declared && declared.matches(buffer)) {
+        return { mimeKey: declaredMime, spec: declared };
+    }
+    return null;
 }
 /**
  * Probe a video buffer's duration (seconds) via ffprobe.
@@ -179,24 +233,17 @@ function buildS3Key(userId, ext) {
  *         failure / misconfiguration.
  */
 export async function uploadFileToS3(file, userId, fileType = file.mimetype) {
-    // 1. Magic-byte + allow-list validation (declared type must match bytes).
-    if (!validateFileType(file.buffer, fileType)) {
+    // 1. Resolve the TRUE media type from content (magic bytes + sniffing).
+    //    The declared `fileType` header is only a hint, never trusted alone, so
+    //    a valid file sent as `application/octet-stream` is still accepted, while
+    //    a spoofed extension/header is rejected.
+    const resolved = await resolveAllowedType(file.buffer, fileType);
+    if (!resolved) {
         throw new AppError("Unsupported or corrupted file. Allowed: jpg, png, webp, mp4, mov, webm.", 400, { code: "INVALID_FILE_TYPE" });
     }
-    // Defence in depth: cross-check the detected type from content sniffing.
-    const sniffed = await fileTypeFromBuffer(file.buffer);
-    if (sniffed && !ALLOWED_TYPES[sniffed.mime]) {
-        throw new AppError("Unsupported file content.", 400, {
-            code: "INVALID_FILE_TYPE",
-        });
-    }
-    const spec = ALLOWED_TYPES[fileType];
-    // `spec` is guaranteed by validateFileType, but narrow for the type checker.
-    if (!spec) {
-        throw new AppError("Unsupported file type.", 400, { code: "INVALID_FILE_TYPE" });
-    }
+    const { mimeKey: detectedMime, spec } = resolved;
     let body = file.buffer;
-    let outputMime = fileType;
+    let outputMime = detectedMime;
     let outputExt = spec.ext;
     let width;
     let height;
@@ -208,19 +255,20 @@ export async function uploadFileToS3(file, userId, fileType = file.mimetype) {
                 code: "FILE_TOO_LARGE",
             });
         }
-        // 3a. Strip EXIF + resize + compress. PNGs stay PNG; everything else → JPEG.
+        // 3a. Strip EXIF + resize + compress. PNGs stay PNG, WebP stays WebP;
+        //     everything else is normalised to JPEG.
         const pipeline = sharp(file.buffer, { failOn: "error" })
             .rotate() // bake in EXIF orientation before metadata is dropped
             .resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true });
         let processed;
-        if (fileType === "image/png") {
+        if (detectedMime === "image/png") {
             processed = await pipeline
                 .png({ quality: IMAGE_QUALITY, compressionLevel: 9 })
                 .toBuffer({ resolveWithObject: true });
             outputMime = "image/png";
             outputExt = "png";
         }
-        else if (fileType === "image/webp") {
+        else if (detectedMime === "image/webp") {
             processed = await pipeline
                 .webp({ quality: IMAGE_QUALITY })
                 .toBuffer({ resolveWithObject: true });

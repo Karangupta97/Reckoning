@@ -14,7 +14,7 @@ import {
   QUEUE_NAMES,
   type ComplaintConfirmationJob,
 } from "../queues.js";
-import { prisma } from "../../config/prisma.js";
+import { processComplaintConfirmation } from "../handlers.js";
 
 /**
  * Start the confirmation-email worker.
@@ -32,31 +32,7 @@ export function startConfirmationWorker(): Worker | null {
     QUEUE_NAMES.complaintConfirmation,
     async (job) => {
       const { complaintId, userId } = job.data;
-
-      const [complaint, user] = await Promise.all([
-        prisma.complaint.findUnique({
-          where: { id: complaintId },
-          select: { ticketNumber: true, category: true, status: true, address: true },
-        }),
-        prisma.user.findUnique({
-          where: { id: userId },
-          select: { email: true, fullName: true },
-        }),
-      ]);
-
-      if (!complaint || !user) {
-        // eslint-disable-next-line no-console
-        console.warn(
-          `[confirmation.worker] Skipping job — missing complaint/user (complaint=${complaintId}, user=${userId}).`,
-        );
-        return;
-      }
-
-      // eslint-disable-next-line no-console
-      console.log(
-        `[confirmation.worker] Emailing ${user.email}: complaint ${complaint.ticketNumber} received.`,
-      );
-      // TODO: send the real confirmation email via the transactional email service.
+      await processComplaintConfirmation(complaintId, userId);
     },
     { connection },
   );

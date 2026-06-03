@@ -15,7 +15,9 @@ import { env } from "../config/env.js";
 export const QUEUE_NAMES = {
     aiAnalysis: "ai-analysis",
     authorityNotify: "authority-notify",
+    adminNotify: "admin-notify",
     complaintConfirmation: "complaint-confirmation",
+    slaEscalation: "sla-escalation",
 };
 /**
  * Shared Redis connection options for BullMQ, or `null` when Redis is not
@@ -46,8 +48,12 @@ function makeQueue(name) {
 export const aiAnalysisQueue = makeQueue(QUEUE_NAMES.aiAnalysis);
 /** `authority-notify` queue (or `null` without Redis). */
 export const authorityNotifyQueue = makeQueue(QUEUE_NAMES.authorityNotify);
+/** `admin-notify` queue (or `null` without Redis). */
+export const adminNotifyQueue = makeQueue(QUEUE_NAMES.adminNotify);
 /** `complaint-confirmation` queue (or `null` without Redis). */
 export const complaintConfirmationQueue = makeQueue(QUEUE_NAMES.complaintConfirmation);
+/** `sla-escalation` queue (or `null` without Redis). */
+export const slaEscalationQueue = makeQueue(QUEUE_NAMES.slaEscalation);
 /** True when background queues are active (Redis configured). */
 export const queuesEnabled = connection !== null;
 //# sourceMappingURL=queues.js.map

@@ -17,7 +17,9 @@ import { env } from "../config/env.js";
 export const QUEUE_NAMES = {
   aiAnalysis: "ai-analysis",
   authorityNotify: "authority-notify",
+  adminNotify: "admin-notify",
   complaintConfirmation: "complaint-confirmation",
+  slaEscalation: "sla-escalation",
 } as const;
 
 /** Payload for the `ai-analysis` queue (future AI processing). */
@@ -31,10 +33,23 @@ export interface AuthorityNotifyJob {
   authorityId: string;
 }
 
+/** Payload for the `admin-notify` queue (platform-operator alert). */
+export interface AdminNotifyJob {
+  complaintId: string;
+}
+
 /** Payload for the `complaint-confirmation` queue (user email). */
 export interface ComplaintConfirmationJob {
   complaintId: string;
   userId: string;
+}
+
+/**
+ * Payload for the `sla-escalation` queue. Carries only the complaint id; the
+ * handler re-fetches fresh state and decides the appropriate escalation step.
+ */
+export interface SlaEscalationJob {
+  complaintId: string;
 }
 
 /**
@@ -72,9 +87,17 @@ export const authorityNotifyQueue: Queue | null = makeQueue(
   QUEUE_NAMES.authorityNotify,
 );
 
+/** `admin-notify` queue (or `null` without Redis). */
+export const adminNotifyQueue: Queue | null = makeQueue(QUEUE_NAMES.adminNotify);
+
 /** `complaint-confirmation` queue (or `null` without Redis). */
 export const complaintConfirmationQueue: Queue | null = makeQueue(
   QUEUE_NAMES.complaintConfirmation,
+);
+
+/** `sla-escalation` queue (or `null` without Redis). */
+export const slaEscalationQueue: Queue | null = makeQueue(
+  QUEUE_NAMES.slaEscalation,
 );
 
 /** True when background queues are active (Redis configured). */

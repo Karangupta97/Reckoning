@@ -210,3 +210,68 @@ export const listComplaintsLimiter: RateLimitRequestHandler = makeLimiter(
   1 * MINUTES,
   60,
 );
+
+// ---------------------------------------------------------------------------
+// Admin realm limiters (onboarding + auth)
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a per-admin rate-limit key, falling back to the IPv6-safe client IP
+ * for unauthenticated requests. Mount AFTER `requireAdminAuth` so `req.admin`
+ * is populated for guarded routes.
+ *
+ * @param req Express request (expects `req.admin` on guarded routes).
+ * @returns A stable key: the admin id when present, else the client IP.
+ */
+function adminOrIpKey(req: Request): string {
+  const admin = req.admin;
+  if (admin?.id) return `admin:${admin.id}`;
+  return ipKeyGenerator(req.ip ?? "");
+}
+
+/**
+ * Invite limiter → 10 invites / hour / admin.
+ *
+ * Applies to both district and sub-district invite endpoints. Mount AFTER
+ * `requireAdminAuth` so the key is the inviting admin's id.
+ */
+export const adminInviteLimiter: RateLimitRequestHandler = makeLimiter(
+  1 * HOURS,
+  10,
+  adminOrIpKey,
+);
+
+/** Admin general per-IP login limiter → 10 requests / 15 minutes / IP. */
+export const adminLoginIpLimiter: RateLimitRequestHandler = makeLimiter(
+  15 * MINUTES,
+  10,
+);
+
+/**
+ * Targeted per-IP+email admin login limiter → 5 requests / 15 minutes.
+ *
+ * Mount AFTER body validation so `req.body.email` is available to the key.
+ */
+export const adminLoginEmailLimiter: RateLimitRequestHandler = makeLimiter(
+  15 * MINUTES,
+  5,
+  ipEmailKey,
+);
+
+/** `POST /api/admin/auth/refresh` → 20 requests / 15 minutes / IP. */
+export const adminRefreshLimiter: RateLimitRequestHandler = makeLimiter(
+  15 * MINUTES,
+  20,
+);
+
+/** `POST /api/admin/auth/logout` → 10 requests / 5 minutes / IP. */
+export const adminLogoutLimiter: RateLimitRequestHandler = makeLimiter(
+  5 * MINUTES,
+  10,
+);
+
+/** Admin account activation (public, token-based) → 10 / 15 minutes / IP. */
+export const adminActivateLimiter: RateLimitRequestHandler = makeLimiter(
+  15 * MINUTES,
+  10,
+);

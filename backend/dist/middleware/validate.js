@@ -40,7 +40,12 @@ export function validate(schemas) {
             const schema = schemas[segment];
             if (!schema)
                 continue;
-            const result = schema.safeParse(req[segment]);
+            // Express 5 leaves `req.body` undefined when no JSON body is sent (or the
+            // Content-Type header is missing). Default it to `{}` so object schemas
+            // surface clear per-field errors ("email is required") instead of a
+            // confusing top-level "expected object, received undefined".
+            const target = segment === "body" && req.body === undefined ? {} : req[segment];
+            const result = schema.safeParse(target);
             if (result.success) {
                 // Express 5 `req.query`/`req.params` are getter-only; assign safely.
                 Object.defineProperty(req, segment, {

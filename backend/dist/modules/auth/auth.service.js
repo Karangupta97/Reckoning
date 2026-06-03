@@ -2,7 +2,7 @@
  * Auth service — all onboarding business logic.
  *
  * Pure(ish) functions operating on the database, OTP utilities, JWT helpers,
- * and the ElasticEmail service. Controllers stay thin and delegate everything here.
+ * and the SES email service. Controllers stay thin and delegate everything here.
  * Every DB interaction is wrapped so failures surface as {@link AppError}
  * rather than leaking Prisma internals.
  *
@@ -22,7 +22,7 @@ import { AppError } from "../../utils/AppError.js";
 import { sha256 } from "../../utils/hash.js";
 import { compareOtp, generateOtp, hashOtp, otpExpiry, OTP_TTL_MINUTES, } from "../../utils/otp.js";
 import { signAccessToken, signRefreshToken, signTokenPair, verifyRefreshToken, } from "../../utils/jwt.js";
-import { sendOtpEmail } from "../../services/elasticemail.service.js";
+import { sendVerificationEmail, sendWelcomeEmail } from "../../services/email.service.js";
 /** bcrypt cost factor for password hashing. */
 const PASSWORD_SALT_ROUNDS = 12;
 /** Maximum failed OTP attempts before a pending verification is locked. */
@@ -88,9 +88,9 @@ async function issueOtp(email, fullName, country) {
     const otp = generateOtp();
     const otpHash = await hashOtp(otp);
     const expiresAt = otpExpiry();
-    // Send only after hashing so an ElasticEmail failure doesn't persist a code we
+    // Send only after hashing so an email failure doesn't persist a code we
     // never delivered (the caller persists after this resolves).
-    await sendOtpEmail(email, fullName, otp, country);
+    await sendVerificationEmail(email, fullName, otp, country);
     return { otpHash, expiresAt };
 }
 /**
@@ -260,6 +260,12 @@ export async function verifyOtp(input) {
         }
         throw error;
     }));
+    // Welcome email is a non-critical side effect: a failure here must never
+    // block account activation, so it is fired best-effort and only logged.
+    void sendWelcomeEmail(result.user.email, result.user.fullName).catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(`[auth.service] Failed to send welcome email to ${result.user.email}:`, error instanceof Error ? error.message : error);
+    });
     return {
         accessToken: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken,

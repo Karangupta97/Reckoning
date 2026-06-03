@@ -14,8 +14,13 @@ import { healthRouter } from "./middleware/dbHealth.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { uploadRouter } from "./modules/upload/upload.routes.js";
 import { complaintRouter } from "./modules/complaints/complaint.routes.js";
+import { adminAuthRouter } from "./modules/admin/auth/adminAuth.routes.js";
+import { districtRouter } from "./modules/admin/district/district.routes.js";
+import { subDistrictRouter } from "./modules/admin/subDistrict/subDistrict.routes.js";
+import { managementRouter } from "./modules/admin/management/management.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
+import { verifyEmailTransport } from "./services/email.service.js";
 const app = express();
 // Trust the first proxy hop (load balancer / reverse proxy) so `req.ip`
 // reflects the real client address — required for correct IP rate limiting.
@@ -34,6 +39,13 @@ app.use(healthRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/complaints", complaintRouter);
+// Admin realm. Mount the specific onboarding prefixes BEFORE the catch-all
+// management router so `/api/admin/district/*` and `/api/admin/sub-district/*`
+// are not shadowed by the management router's `:id` routes.
+app.use("/api/admin/auth", adminAuthRouter);
+app.use("/api/admin/district", districtRouter);
+app.use("/api/admin/sub-district", subDistrictRouter);
+app.use("/api/admin", managementRouter);
 // 404 + global error handler must come AFTER all routes.
 app.use(notFoundHandler);
 app.use(errorHandler);
@@ -53,6 +65,10 @@ async function bootstrap() {
         console.error("\u274C Aborting startup: database is unreachable.", error);
         process.exit(1);
     }
+    // Verify SMTP/SES connectivity. This is non-fatal: the app still boots so
+    // non-email routes stay available, but the failure is logged loudly so the
+    // operator knows transactional email is currently degraded.
+    await verifyEmailTransport();
     const server = app.listen(env.PORT, () => {
         // eslint-disable-next-line no-console
         console.log(`\uD83D\uDE80 RoadWatch AI API listening on http://localhost:${env.PORT} ` +

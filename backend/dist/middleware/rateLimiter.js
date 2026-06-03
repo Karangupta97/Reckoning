@@ -159,4 +159,42 @@ export const uploadRateLimiter = makeLimiter(1 * HOURS, 20, userOrIpKey);
 export const createComplaintLimiter = makeLimiter(1 * HOURS, 10, userOrIpKey);
 /** `GET /api/complaints` → 60 requests / minute / IP. */
 export const listComplaintsLimiter = makeLimiter(1 * MINUTES, 60);
+// ---------------------------------------------------------------------------
+// Admin realm limiters (onboarding + auth)
+// ---------------------------------------------------------------------------
+/**
+ * Derive a per-admin rate-limit key, falling back to the IPv6-safe client IP
+ * for unauthenticated requests. Mount AFTER `requireAdminAuth` so `req.admin`
+ * is populated for guarded routes.
+ *
+ * @param req Express request (expects `req.admin` on guarded routes).
+ * @returns A stable key: the admin id when present, else the client IP.
+ */
+function adminOrIpKey(req) {
+    const admin = req.admin;
+    if (admin?.id)
+        return `admin:${admin.id}`;
+    return ipKeyGenerator(req.ip ?? "");
+}
+/**
+ * Invite limiter → 10 invites / hour / admin.
+ *
+ * Applies to both district and sub-district invite endpoints. Mount AFTER
+ * `requireAdminAuth` so the key is the inviting admin's id.
+ */
+export const adminInviteLimiter = makeLimiter(1 * HOURS, 10, adminOrIpKey);
+/** Admin general per-IP login limiter → 10 requests / 15 minutes / IP. */
+export const adminLoginIpLimiter = makeLimiter(15 * MINUTES, 10);
+/**
+ * Targeted per-IP+email admin login limiter → 5 requests / 15 minutes.
+ *
+ * Mount AFTER body validation so `req.body.email` is available to the key.
+ */
+export const adminLoginEmailLimiter = makeLimiter(15 * MINUTES, 5, ipEmailKey);
+/** `POST /api/admin/auth/refresh` → 20 requests / 15 minutes / IP. */
+export const adminRefreshLimiter = makeLimiter(15 * MINUTES, 20);
+/** `POST /api/admin/auth/logout` → 10 requests / 5 minutes / IP. */
+export const adminLogoutLimiter = makeLimiter(5 * MINUTES, 10);
+/** Admin account activation (public, token-based) → 10 / 15 minutes / IP. */
+export const adminActivateLimiter = makeLimiter(15 * MINUTES, 10);
 //# sourceMappingURL=rateLimiter.js.map

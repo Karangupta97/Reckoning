@@ -17,7 +17,7 @@ import { prisma } from "../../config/prisma.js";
 import { query } from "../../config/db.js";
 import { AppError } from "../../utils/AppError.js";
 import { reverseGeocode, isoCodeForCountry } from "../../services/geocode.service.js";
-import { enqueueAiAnalysis, enqueueAuthorityNotification, enqueueComplaintConfirmation, } from "../../services/queue.service.js";
+import { enqueueAiAnalysis, enqueueAuthorityNotification, enqueueAdminNotification, enqueueComplaintConfirmation, } from "../../services/queue.service.js";
 import { composeAddress, computeSeverity, formatTicketNumber, isWithinCountryBounds, validateCoordinates, } from "./complaint.helpers.js";
 import { ANONYMOUS_LABEL, } from "./complaint.types.js";
 /** Radius (metres) within which a same-category report is a soft duplicate. */
@@ -312,6 +312,8 @@ export async function createComplaint(userId, input, _ipAddress) {
     if (assignedTo) {
         await enqueueAuthorityNotification(complaint.id, assignedTo);
     }
+    // Always alert the platform admin and confirm receipt to the reporter.
+    await enqueueAdminNotification(complaint.id);
     await enqueueComplaintConfirmation(complaint.id, userId);
     // 8. Response.
     return {

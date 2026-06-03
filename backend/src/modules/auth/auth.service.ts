@@ -2,7 +2,7 @@
  * Auth service — all onboarding business logic.
  *
  * Pure(ish) functions operating on the database, OTP utilities, JWT helpers,
- * and the ElasticEmail service. Controllers stay thin and delegate everything here.
+ * and the SES email service. Controllers stay thin and delegate everything here.
  * Every DB interaction is wrapped so failures surface as {@link AppError}
  * rather than leaking Prisma internals.
  *
@@ -36,7 +36,7 @@ import {
   type UserCountry,
   type UserRole,
 } from "../../utils/jwt.js";
-import { sendOtpEmail } from "../../services/elasticemail.service.js";
+import { sendVerificationEmail, sendWelcomeEmail } from "../../services/email.service.js";
 import type {
   AuthResult,
   AuthUser,
@@ -130,9 +130,9 @@ async function issueOtp(
   const otp = generateOtp();
   const otpHash = await hashOtp(otp);
   const expiresAt = otpExpiry();
-  // Send only after hashing so an ElasticEmail failure doesn't persist a code we
+  // Send only after hashing so an email failure doesn't persist a code we
   // never delivered (the caller persists after this resolves).
-  await sendOtpEmail(email, fullName, otp, country);
+  await sendVerificationEmail(email, fullName, otp, country);
   return { otpHash, expiresAt };
 }
 
@@ -350,6 +350,18 @@ export async function verifyOtp(input: VerifyOtpInput): Promise<AuthResult> {
     }
     throw error;
   })) as { user: { id: string; email: string; fullName: string; country: string; role: string; createdAt: Date }; tokens: { accessToken: string; refreshToken: string } };
+
+  // Welcome email is a non-critical side effect: a failure here must never
+  // block account activation, so it is fired best-effort and only logged.
+  void sendWelcomeEmail(result.user.email, result.user.fullName).catch(
+    (error: unknown) => {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[auth.service] Failed to send welcome email to ${result.user.email}:`,
+        error instanceof Error ? error.message : error,
+      );
+    },
+  );
 
   return {
     accessToken: result.tokens.accessToken,

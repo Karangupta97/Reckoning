@@ -34,15 +34,35 @@ const envSchema = z.object({
     SUPABASE_SERVICE_ROLE_KEY: z
         .string()
         .min(20, "SUPABASE_SERVICE_ROLE_KEY looks too short to be valid"),
-    // ElasticEmail (transactional email — OTP delivery)
-    ELASTICEMAIL_API_KEY: z
+    // Amazon SES (Nodemailer SMTP transport) — transactional email.
+    // All five SMTP_*/EMAIL_FROM values are REQUIRED: the process refuses to
+    // boot without them so a misconfigured mailer is caught immediately, never
+    // at the moment a user is waiting on a verification code.
+    SMTP_HOST: z.string().min(1, "SMTP_HOST is required (e.g. email-smtp.ap-south-1.amazonaws.com)"),
+    SMTP_PORT: z
         .string()
-        .min(1, "ELASTICEMAIL_API_KEY is required"),
-    ELASTICEMAIL_FROM_EMAIL: z
+        .regex(/^\d+$/, "SMTP_PORT must be a positive integer (e.g. 587 or 465)")
+        .transform((value) => Number.parseInt(value, 10))
+        .pipe(z.number().int().positive().max(65535)),
+    SMTP_USER: z.string().min(1, "SMTP_USER is required (your SES SMTP username)"),
+    SMTP_PASS: z.string().min(1, "SMTP_PASS is required (your SES SMTP password)"),
+    EMAIL_FROM: z
         .string()
-        .email("ELASTICEMAIL_FROM_EMAIL must be a valid email address")
-        .default("noreply@roadwatch.ai"),
-    ELASTICEMAIL_FROM_NAME: z.string().min(1).default("RoadWatch AI"),
+        .email("EMAIL_FROM must be a valid, SES-verified email address"),
+    // Display name shown alongside EMAIL_FROM, e.g. "RoadWatch AI" <noreply@…>.
+    EMAIL_FROM_NAME: z.string().min(1).default("RoadWatch AI"),
+    // Recipient for operational/admin alerts (new-complaint notifications).
+    // Falls back to EMAIL_FROM when unset.
+    ADMIN_EMAIL: z
+        .string()
+        .email("ADMIN_EMAIL must be a valid email address")
+        .optional(),
+    // Public base URL of the app, used to build links inside emails
+    // (password reset, complaint tracking). No trailing slash.
+    APP_BASE_URL: z
+        .string()
+        .url("APP_BASE_URL must be a valid URL")
+        .default("https://roadwatch.ai"),
     // JWT signing secrets + lifetimes. Secrets must be long (>=64 chars) so the
     // HS256 HMAC key has adequate entropy. Access and refresh secrets MUST differ.
     JWT_ACCESS_SECRET: z
@@ -53,6 +73,35 @@ const envSchema = z.object({
         .min(64, "JWT_REFRESH_SECRET must be at least 64 characters"),
     JWT_ACCESS_EXPIRES: z.string().min(1).default("15m"),
     JWT_REFRESH_EXPIRES: z.string().min(1).default("7d"),
+    // Admin auth realm — SEPARATE signing secrets from the citizen realm so a
+    // leaked citizen token can never be replayed against admin endpoints (and
+    // vice versa). Both must be >=64 chars and differ from each other AND from
+    // the citizen secrets (enforced by the refinements below).
+    ADMIN_JWT_ACCESS_SECRET: z
+        .string()
+        .min(64, "ADMIN_JWT_ACCESS_SECRET must be at least 64 characters"),
+    ADMIN_JWT_REFRESH_SECRET: z
+        .string()
+        .min(64, "ADMIN_JWT_REFRESH_SECRET must be at least 64 characters"),
+    ADMIN_JWT_ACCESS_EXPIRES: z.string().min(1).default("15m"),
+    ADMIN_JWT_REFRESH_EXPIRES: z.string().min(1).default("7d"),
+    // Public base URL the activation email links point at. The raw invite token
+    // is appended as `?token=...`. No trailing slash.
+    ADMIN_ACTIVATION_BASE_URL: z
+        .string()
+        .url("ADMIN_ACTIVATION_BASE_URL must be a valid URL")
+        .default("https://roadwatch.ai/authority/activate"),
+    // Super Admin bootstrap credentials, consumed ONLY by `prisma/seed.ts`.
+    // The Super Admin can never be created through the API.
+    SUPER_ADMIN_EMAIL: z
+        .string()
+        .email("SUPER_ADMIN_EMAIL must be a valid email address")
+        .optional(),
+    SUPER_ADMIN_PASSWORD: z
+        .string()
+        .min(10, "SUPER_ADMIN_PASSWORD must be at least 10 characters")
+        .optional(),
+    SUPER_ADMIN_FULL_NAME: z.string().min(2).max(80).optional(),
     // Pre-computed bcrypt hash of a throwaway string. Compared against during
     // login when no user is found, so response timing is identical whether or
     // not the email exists (timing-attack / user-enumeration prevention).
@@ -88,6 +137,18 @@ const envSchema = z.object({
     .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",
     path: ["JWT_REFRESH_SECRET"],
+})
+    .refine((data) => data.ADMIN_JWT_ACCESS_SECRET !== data.ADMIN_JWT_REFRESH_SECRET, {
+    message: "ADMIN_JWT_ACCESS_SECRET and ADMIN_JWT_REFRESH_SECRET must be different",
+    path: ["ADMIN_JWT_REFRESH_SECRET"],
+})
+    .refine((data) => data.ADMIN_JWT_ACCESS_SECRET !== data.JWT_ACCESS_SECRET, {
+    message: "ADMIN_JWT_ACCESS_SECRET must differ from the citizen JWT_ACCESS_SECRET",
+    path: ["ADMIN_JWT_ACCESS_SECRET"],
+})
+    .refine((data) => data.ADMIN_JWT_REFRESH_SECRET !== data.JWT_REFRESH_SECRET, {
+    message: "ADMIN_JWT_REFRESH_SECRET must differ from the citizen JWT_REFRESH_SECRET",
+    path: ["ADMIN_JWT_REFRESH_SECRET"],
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {

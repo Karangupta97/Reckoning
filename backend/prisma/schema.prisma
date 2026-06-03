@@ -118,6 +118,163 @@ enum Role {
 }
 
 // ---------------------------------------------------------------------------
+// Admin & Authority onboarding (3-tier hierarchy)
+// ---------------------------------------------------------------------------
+
+/// The three administrative tiers. SUPER_ADMIN is seeded only; DISTRICT_ADMIN
+/// is invited by a SUPER_ADMIN; SUB_DISTRICT_ADMIN is invited by a
+/// DISTRICT_ADMIN. Role is the single source of truth for RBAC decisions.
+enum AdminRole {
+  SUPER_ADMIN
+  DISTRICT_ADMIN
+  SUB_DISTRICT_ADMIN
+
+  @@schema("public")
+}
+
+/// Lifecycle of an admin account.
+///   PENDING     — invited, not yet activated (no password set).
+///   ACTIVE      — activated and able to log in.
+///   SUSPENDED   — temporarily blocked by a higher tier; reversible.
+///   DEACTIVATED — soft-deleted; cannot log in (terminal via API).
+enum AdminStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+
+  @@schema("public")
+}
+
+/// A government administrator in the RoadWatch AI hierarchy.
+///
+/// `passwordHash` is null until the invitee activates their account. Invite
+/// tokens are stored ONLY as a SHA-256 hash (`inviteTokenHash`); the raw token
+/// lives solely in the activation email link. Jurisdiction columns are null
+/// for SUPER_ADMIN, district-scoped for DISTRICT_ADMIN, and district +
+/// sub-district scoped for SUB_DISTRICT_ADMIN.
+model AdminUser {
+  id                String    @id @default(cuid())
+  fullName          String
+  email             String    @unique
+  passwordHash      String?
+  phone             String?
+  designation       String?
+  department        String?
+  role              AdminRole
+  status            AdminStatus @default(PENDING)
+  isVerified        Boolean   @default(false)
+
+  // Jurisdiction (null for SUPER_ADMIN)
+  districtId        String?
+  district          District?    @relation(fields: [districtId], references: [id])
+  subDistrictId     String?
+  subDistrict       SubDistrict? @relation(fields: [subDistrictId], references: [id])
+
+  // Invite flow
+  inviteTokenHash   String?   @unique
+  inviteTokenExpiry DateTime?
+  inviteAcceptedAt  DateTime?
+  invitedById       String?
+  resendCount       Int       @default(0)
+
+  // Security
+  loginAttempts     Int       @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  refreshTokens     AdminRefreshToken[]
+
+  @@index([role])
+  @@index([status])
+  @@index([districtId])
+  @@index([subDistrictId])
+  @@map("admin_users")
+  @@schema("public")
+}
+
+/// A district jurisdiction with a PostGIS polygon boundary. The `geofence`
+/// column is `geometry(Polygon, 4326)`; Prisma cannot write it directly, so it
+/// is set via raw `ST_GeomFromGeoJSON` inside the create transaction. The GIST
+/// index is created by the raw SQL migration.
+model District {
+  id           String        @id @default(cuid())
+  name         String
+  country      Country
+  geofence     Unsupported("geometry(Polygon, 4326)")?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+
+  admins       AdminUser[]
+  subDistricts SubDistrict[]
+
+  @@index([country])
+  @@map("districts")
+  @@schema("public")
+}
+
+/// A sub-district jurisdiction nested inside exactly one {@link District}. Its
+/// `geofence` MUST be fully contained within the parent district boundary
+/// (enforced with `ST_Within` at invite time).
+model SubDistrict {
+  id         String   @id @default(cuid())
+  name       String
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+  geofence   Unsupported("geometry(Polygon, 4326)")?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  admins     AdminUser[]
+
+  @@index([districtId])
+  @@map("sub_districts")
+  @@schema("public")
+}
+
+/// A persisted admin refresh-token handle. Only the SHA-256 `tokenHash` is
+/// stored, never the raw JWT. Mirrors the citizen {@link RefreshToken} model
+/// but is bound to the separate admin auth realm.
+model AdminRefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  adminId   String
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean   @default(false)
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  @@index([adminId])
+  @@map("admin_refresh_tokens")
+  @@schema("public")
+}
+
+/// An audit record raised when a complaint reaches a terminal escalation
+/// state (e.g. max escalation reached, or both tiers breached their SLA). Used
+/// to drive the public "Unresolved" surface and accountability reporting.
+model AuditFlag {
+  id              String    @id @default(cuid())
+  complaintId     String
+  districtId      String?
+  subDistrictId   String?
+  reason          String // "MAX_ESCALATION_REACHED" | "DOUBLE_SLA_BREACH"
+  resolvedByAdmin String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([complaintId])
+  @@index([reason])
+  @@map("audit_flags")
+  @@schema("public")
+}
+
+// ---------------------------------------------------------------------------
 // SmartReport — complaints, media uploads, and assignable authorities
 // ---------------------------------------------------------------------------
 
@@ -206,6 +363,16 @@ model Complaint {
   assignedTo   String?
   authority    Authority?       @relation(fields: [assignedTo], references: [id])
   ticketNumber String           @unique
+  // Resolution
+  resolutionNote String?        @db.Text
+  resolvedAt     DateTime?
+  resolvedByAdmin String?
+  // SLA & escalation (managed by the SLA worker + admin actions)
+  slaDeadline           DateTime?
+  escalationLevel       Int       @default(0)
+  escalatedAt           DateTime?
+  escalatedToDistrictId String?
+  escalationReason      String?
   // Engagement
   upvotes      Int              @default(0)
   viewCount    Int              @default(0)
@@ -221,6 +388,7 @@ model Complaint {
   @@index([country])
   @@index([severity])
   @@index([createdAt])
+  @@index([escalatedToDistrictId])
   @@map("complaints")
   @@schema("public")
 }

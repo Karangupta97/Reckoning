@@ -21,6 +21,7 @@ import { reverseGeocode, isoCodeForCountry } from "../../services/geocode.servic
 import {
   enqueueAiAnalysis,
   enqueueAuthorityNotification,
+  enqueueAdminNotification,
   enqueueComplaintConfirmation,
 } from "../../services/queue.service.js";
 import {
@@ -417,6 +418,8 @@ export async function createComplaint(
   if (assignedTo) {
     await enqueueAuthorityNotification(complaint.id, assignedTo);
   }
+  // Always alert the platform admin and confirm receipt to the reporter.
+  await enqueueAdminNotification(complaint.id);
   await enqueueComplaintConfirmation(complaint.id, userId);
 
   // 8. Response.
