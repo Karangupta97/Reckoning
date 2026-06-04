@@ -229,6 +229,7 @@ model SubDistrict {
   createdAt  DateTime @default(now())
 
   admins     AdminUser[]
+  tickets    Ticket[]
 
   @@index([districtId])
   @@map("sub_districts")
@@ -363,6 +364,9 @@ model Complaint {
   assignedTo   String?
   authority    Authority?       @relation(fields: [assignedTo], references: [id])
   ticketNumber String           @unique
+  // Ticket (assigned after complaint creation by authority-assignment worker)
+  ticketId       String?        @unique
+  ticket         Ticket?
   // Resolution
   resolutionNote String?        @db.Text
   resolvedAt     DateTime?
@@ -469,5 +473,86 @@ model TicketCounter {
 
   @@id([country, year])
   @@map("ticket_counters")
+  @@schema("public")
+}
+
+// ---------------------------------------------------------------------------
+// Ticket System — authority assignment & SLA tracking
+// ---------------------------------------------------------------------------
+
+/// Lifecycle of a ticket through resolution / rejection.
+enum TicketStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+  UNASSIGNED
+  ESCALATED
+
+  @@schema("public")
+}
+
+/// A ticket assigned to a sub-district admin for resolution tracking.
+///
+/// Created automatically by the authority-assignment worker after a complaint
+/// is submitted. Carries SLA deadline, escalation state, and an independent
+/// status lifecycle that mirrors the complaint's progression.
+model Ticket {
+  id              String       @id @default(cuid())
+  ticketNumber    String       @unique
+  complaintId     String       @unique
+  complaint       Complaint    @relation(fields: [complaintId], references: [id])
+  subDistrictId   String?
+  subDistrict     SubDistrict? @relation(fields: [subDistrictId], references: [id])
+  districtId      String?
+  assignedAdminId String?
+  status          TicketStatus @default(OPEN)
+  priority        SeverityLevel
+  slaDeadline     DateTime
+  escalationLevel Int          @default(0)
+  escalatedAt     DateTime?
+  resolvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  notes           TicketNote[]
+  statusHistory   TicketStatusHistory[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([status])
+  @@index([subDistrictId])
+  @@index([assignedAdminId])
+  @@index([slaDeadline])
+  @@map("tickets")
+  @@schema("public")
+}
+
+/// An internal note attached to a ticket by an admin.
+model TicketNote {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  authorId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_notes")
+  @@schema("public")
+}
+
+/// Audit trail of every status change on a ticket.
+model TicketStatusHistory {
+  id          String       @id @default(cuid())
+  ticketId    String
+  ticket      Ticket       @relation(fields: [ticketId], references: [id])
+  status      TicketStatus
+  changedById String
+  note        String?
+  changedAt   DateTime     @default(now())
+
+  @@index([ticketId])
+  @@map("ticket_status_history")
   @@schema("public")
 }

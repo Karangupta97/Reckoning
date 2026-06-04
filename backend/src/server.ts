@@ -19,6 +19,7 @@ import { adminAuthRouter } from "./modules/admin/auth/adminAuth.routes.js";
 import { districtRouter } from "./modules/admin/district/district.routes.js";
 import { subDistrictRouter } from "./modules/admin/subDistrict/subDistrict.routes.js";
 import { managementRouter } from "./modules/admin/management/management.routes.js";
+import { ticketRouter, citizenTicketRouter, superAdminTicketRouter } from "./modules/tickets/tickets.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
 import { verifyEmailTransport } from "./services/email.service.js";
@@ -46,6 +47,8 @@ app.use(healthRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/complaints", complaintRouter);
+app.use("/api/complaints", citizenTicketRouter);
+app.use("/api/tickets", ticketRouter);
 
 // Admin realm. Mount the specific onboarding prefixes BEFORE the catch-all
 // management router so `/api/admin/district/*` and `/api/admin/sub-district/*`
@@ -54,6 +57,7 @@ app.use("/api/admin/auth", adminAuthRouter);
 app.use("/api/admin/district", districtRouter);
 app.use("/api/admin/sub-district", subDistrictRouter);
 app.use("/api/admin", managementRouter);
+app.use("/api/admin/tickets", superAdminTicketRouter);
 
 // 404 + global error handler must come AFTER all routes.
 app.use(notFoundHandler);

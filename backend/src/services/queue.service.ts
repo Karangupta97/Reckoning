@@ -22,6 +22,7 @@ import {
   authorityNotifyQueue,
   adminNotifyQueue,
   complaintConfirmationQueue,
+  authorityAssignmentQueue,
   queuesEnabled,
   QUEUE_NAMES,
 } from "../jobs/queues.js";
@@ -139,5 +140,22 @@ export async function enqueueComplaintConfirmation(
     QUEUE_NAMES.complaintConfirmation,
     { complaintId, userId },
     () => processComplaintConfirmation(complaintId, userId),
+  );
+}
+
+/**
+ * Enqueue the authority-assignment job (ticket creation + geofence lookup).
+ *
+ * No inline fallback — this job is heavyweight (PostGIS + ticket creation).
+ *
+ * @param complaintId Complaint to assign.
+ */
+export async function enqueueAuthorityAssignment(
+  complaintId: string,
+): Promise<void> {
+  await safeEnqueue(
+    authorityAssignmentQueue,
+    QUEUE_NAMES.authorityAssignment,
+    { complaintId },
   );
 }

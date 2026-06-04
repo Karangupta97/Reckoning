@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Route, AlertTriangle, Clock, ShieldAlert } from "lucide-react";
 
 import StatCard from "@/components/super-admin-dashboard/stat-card";
-import IndiaMap from "@/components/maps/india-map";
+import IndiaMap from "@/components/map/IndiaMap";
 import RiskAlerts from "@/components/super-admin-dashboard/risk-alerts";
 
 import ActivityFeed from "@/components/super-admin-dashboard/activity-feed";
@@ -81,7 +81,7 @@ export default function SuperAdminDashboard() {
       </section>
 
       <section className="min-w-0">
-        <IndiaMap />
+        <IndiaMap adminRole="super_admin" height="560px" />
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-stretch">

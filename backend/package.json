@@ -18,6 +18,7 @@
     "worker:admin": "tsx src/jobs/workers/adminNotify.worker.ts",
     "worker:confirmation": "tsx src/jobs/workers/confirmation.worker.ts",
     "worker:sla": "tsx src/jobs/workers/slaEscalation.worker.ts",
+    "worker:assignment": "tsx src/workers/authorityAssignment.worker.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
