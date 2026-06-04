@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
+import { DashboardCard } from "./dashboard-card";
 
 type Priority = "High" | "Medium" | "Low";
 type Status = "Open" | "Escalated" | "Under Review" | "Resolved";
@@ -73,10 +74,10 @@ const statusBadgeClass: Record<Status, string> = {
 
 export default function ComplaintsTable() {
   return (
-    <motion.div
+    <DashboardCard
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="dashboard-table-section"
+      className="flex min-h-[440px] flex-col p-5 pb-5 xl:min-h-[480px]"
     >
       <div className="dashboard-table-header">
         <div>
@@ -92,7 +93,7 @@ export default function ComplaintsTable() {
         </button>
       </div>
 
-      <div className="dashboard-table-scroll">
+      <div className="dashboard-table-scroll min-h-[320px] flex-1 max-h-[380px] xl:min-h-[340px] xl:max-h-[400px]">
         <table className="dashboard-table">
           <thead>
             <tr>
@@ -125,7 +126,7 @@ export default function ComplaintsTable() {
                     </span>
                   </div>
                 </td>
-                <td className="dashboard-table-td dashboard-table-td-primary max-w-[14rem] truncate">
+                <td className="dashboard-table-td dashboard-table-td-primary max-w-[14rem] truncate sm:max-w-[16rem] xl:max-w-[18rem]">
                   {complaint.project}
                 </td>
                 <td className="dashboard-table-td whitespace-nowrap">
@@ -153,6 +154,6 @@ export default function ComplaintsTable() {
           </tbody>
         </table>
       </div>
-    </motion.div>
+    </DashboardCard>
   );
 }

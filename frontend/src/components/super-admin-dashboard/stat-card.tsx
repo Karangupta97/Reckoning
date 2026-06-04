@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { DashboardCard } from "./dashboard-card";
 
 interface StatCardProps {
   title: string;
@@ -23,18 +23,18 @@ export default function StatCard({
   const isUp = trend === "up";
 
   return (
-    <motion.div
+    <DashboardCard
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{
         y: -4,
         transition: { duration: 0.2 },
       }}
-      className="neu-card h-[120px] overflow-hidden p-4 lg:p-5"
+      className="min-h-[100px] overflow-hidden p-3 sm:min-h-[112px] sm:p-4 lg:min-h-[116px] lg:p-4"
     >
       <div className="flex h-full items-center gap-3 lg:gap-4">
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 lg:h-14 lg:w-14 ${iconColor}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 sm:h-12 sm:w-12 lg:h-11 lg:w-11 ${iconColor}`}
           style={{
             borderColor: "currentColor",
             boxShadow:
@@ -52,7 +52,7 @@ export default function StatCard({
             {title}
           </p>
 
-          <h3 className="overflow-hidden text-ellipsis whitespace-nowrap text-xl font-bold leading-none text-[var(--color-text-primary)] lg:text-2xl">
+          <h3 className="overflow-hidden text-ellipsis whitespace-nowrap text-lg font-bold leading-none text-[var(--color-text-primary)] sm:text-xl">
             {value}
           </h3>
 
@@ -71,12 +71,12 @@ export default function StatCard({
               {change}
             </span>
 
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--color-text-muted)]">
+            <span className="hidden overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-[var(--color-text-muted)] sm:inline">
               from last month
             </span>
           </div>
         </div>
       </div>
-    </motion.div>
+    </DashboardCard>
   );
 }

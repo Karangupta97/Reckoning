@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
+import { DashboardCard } from "./dashboard-card";
 
 type RiskLevel = "critical" | "high" | "moderate" | "low";
 
@@ -87,10 +88,10 @@ const riskBarFillClass: Record<RiskLevel, string> = {
 
 export default function ContractorRiskTable() {
   return (
-    <motion.div
+    <DashboardCard
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="dashboard-table-section"
+      className="p-5"
     >
       <div className="dashboard-table-header">
         <div>
@@ -193,6 +194,6 @@ export default function ContractorRiskTable() {
           </tbody>
         </table>
       </div>
-    </motion.div>
+    </DashboardCard>
   );
 }

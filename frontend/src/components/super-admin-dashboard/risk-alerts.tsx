@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
+import { DashboardCard } from "./dashboard-card";
 
 interface RiskAlert {
   rank: number;
@@ -87,16 +88,17 @@ export default function RiskAlerts() {
   };
 
   return (
-    <motion.div
+    <DashboardCard
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl bg-[#111827] border border-[#1e2a3a] p-5"
+      className="flex min-h-[400px] flex-col p-5 lg:min-h-[430px]"
     >
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-white">AI Risk Alerts</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+            AI Risk Alerts
+          </h3>
+          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
             Top 5 High Risk Projects
           </p>
         </div>
@@ -106,27 +108,26 @@ export default function RiskAlerts() {
       </div>
 
       {/* Alerts List */}
-      <div className="space-y-3">
+      <div className="flex flex-1 flex-col justify-center space-y-3">
         {alerts.map((alert, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            whileHover={{ backgroundColor: "rgba(30, 41, 59, 0.5)" }}
-            className="flex items-center gap-3 rounded-lg p-2.5 transition-colors cursor-pointer group"
+            className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 transition-colors cursor-pointer group hover:bg-[var(--color-card)]"
           >
             {/* Rank */}
-            <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-[#1e2a3a] text-xs font-semibold text-slate-400">
+            <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-card)] text-xs font-semibold text-[var(--color-text-muted)]">
               {alert.rank}
             </div>
 
             {/* Project Info */}
             <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-xs font-medium text-slate-200 truncate group-hover:text-white">
+              <span className="text-xs font-medium text-[var(--color-text-primary)] truncate">
                 {alert.projectName}
               </span>
-              <span className="text-[10px] text-slate-500 truncate">
+              <span className="text-[10px] text-[var(--color-text-muted)] truncate">
                 {alert.state}
               </span>
             </div>
@@ -138,7 +139,7 @@ export default function RiskAlerts() {
               >
                 {alert.riskScore}%
               </span>
-              <span className="text-xs font-medium text-slate-400">
+              <span className="text-xs font-medium text-[var(--color-text-secondary)]">
                 {alert.potentialLeakage}
               </span>
             </div>
@@ -163,6 +164,6 @@ export default function RiskAlerts() {
           </motion.div>
         ))}
       </div>
-    </motion.div>
+    </DashboardCard>
   );
 }

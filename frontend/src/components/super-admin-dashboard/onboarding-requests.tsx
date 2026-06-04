@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import { DashboardCard } from "./dashboard-card";
 import {
   UserPlus,
   ShieldCheck,
@@ -79,10 +80,10 @@ export default function OnboardingRequests() {
   }, []);
 
   return (
-    <motion.div
+    <DashboardCard
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="onboarding-section"
+      className="p-5"
     >
       <div className="onboarding-header">
         <div>
@@ -167,6 +168,6 @@ export default function OnboardingRequests() {
           );
         })}
       </ul>
-    </motion.div>
+    </DashboardCard>
   );
 }
