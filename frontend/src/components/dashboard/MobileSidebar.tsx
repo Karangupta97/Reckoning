@@ -1,0 +1,138 @@
+"use client";
+
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+  LayoutDashboard,
+  FileText,
+  AlertTriangle,
+  Map,
+  Bell,
+  Users,
+  Trophy,
+  User,
+  Settings,
+  HelpCircle,
+  LogOut,
+  X,
+} from "lucide-react";
+
+import { LogoMark } from "@/components/ui/Logo";
+import { useSidebarStore } from "@/store/sidebarStore";
+import { useDashboardStore, type NavItem } from "@/store/dashboardStore";
+
+const NAV_ITEMS: Array<{
+  id: NavItem;
+  label: string;
+  icon: React.ElementType;
+  href: string;
+}> = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard" },
+  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
+  { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/notifications" },
+  { id: "community", label: "Community", icon: Users, href: "/dashboard" },
+  { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard" },
+  { id: "profile", label: "Profile", icon: User, href: "/dashboard" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard" },
+  { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard" },
+];
+
+export function MobileSidebar() {
+  const { mobileOpen, setMobileOpen } = useSidebarStore();
+  const { activeNav, setActiveNav, notificationCount } = useDashboardStore();
+  const router = useRouter();
+
+  return (
+    <AnimatePresence>
+      {mobileOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          />
+
+          {/* Drawer */}
+          <motion.aside
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            className="fixed inset-y-0 left-0 z-50 w-[280px] bg-[var(--color-card)] border-r border-[var(--color-border)] flex flex-col lg:hidden"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-6 pb-4">
+              <div className="flex items-center gap-3">
+                <LogoMark size={32} />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm tracking-tight text-[var(--color-text-primary)]">
+                    RECKONING
+                  </span>
+                  <span className="text-[10px] text-[var(--color-text-muted)]">
+                    Citizen Dashboard
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] transition-colors"
+                aria-label="Close menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Nav */}
+            <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+              {NAV_ITEMS.map((item) => {
+                const isActive = activeNav === item.id;
+                const Icon = item.icon;
+                const showBadge = item.id === "notifications" && notificationCount > 0;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveNav(item.id);
+                      router.push(item.href);
+                      setMobileOpen(false);
+                    }}
+                    className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
+                      isActive
+                        ? "bg-[var(--color-text-primary)] text-[var(--color-card)] shadow-[var(--shadow-neu)]"
+                        : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
+                    }`}
+                  >
+                    <span className="relative shrink-0">
+                      <Icon size={20} strokeWidth={1.8} />
+                      {showBadge && (
+                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-danger)] text-white text-[10px] font-bold flex items-center justify-center">
+                          {notificationCount}
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Logout */}
+            <div className="px-3 pb-6">
+              <div className="border-t border-[var(--color-border)] mb-3" />
+              <button className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-danger)] transition-all duration-200">
+                <LogOut size={20} strokeWidth={1.8} />
+                <span className="text-sm font-medium">Logout</span>
+              </button>
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}

@@ -1,0 +1,232 @@
+{
+  "meta": {
+    "title": "Reckoning — सड़कें जो खुद रिपोर्ट करती हैं",
+    "description": "BIMSTEC देशों के लिए AI-संचालित नागरिक सड़क क्षति रिपोर्टिंग। तस्वीर लें, जमा करें और ट्रैक करें।"
+  },
+  "nav": {
+    "howItWorks": "यह कैसे काम करता है",
+    "features": "विशेषताएँ",
+    "countries": "देश",
+    "reportNow": "अभी रिपोर्ट करें",
+    "openMenu": "मेनू खोलें",
+    "closeMenu": "मेनू बंद करें",
+    "selectLanguage": "भाषा चुनें"
+  },
+  "hero": {
+    "badge": "रोड सेफ्टी हैकाथॉन 2026",
+    "headline": "सड़कें जो खुद रिपोर्ट करती हैं।",
+    "subheadline": "BIMSTEC देशों के लिए AI-संचालित नागरिक सड़क क्षति रिपोर्टिंग। तस्वीर लें। जमा करें। ट्रैक करें।",
+    "ctaPrimary": "सड़क समस्या की रिपोर्ट करें",
+    "ctaSecondary": "जानें यह कैसे काम करता है",
+    "stats": {
+      "reports": "रिपोर्ट",
+      "countries": "देश",
+      "resolution": "समाधान दर"
+    }
+  },
+  "howItWorks": {
+    "title": "यह कैसे काम करता है",
+    "subtitle": "गड्ढे से मरम्मत तक तीन कदम।",
+    "step1": {
+      "label": "चरण 1",
+      "title": "तस्वीर लें",
+      "description": "अपने फ़ोन से सड़क क्षति कैद करें। स्थान स्वतः टैग हो जाता है।"
+    },
+    "step2": {
+      "label": "चरण 2",
+      "title": "AI समस्या पहचानता है",
+      "description": "हमारा मॉडल कुछ ही सेकंड में क्षति का प्रकार और गंभीरता पहचान लेता है।"
+    },
+    "step3": {
+      "label": "चरण 3",
+      "title": "अधिकारियों तक पहुँचाया गया",
+      "description": "रिपोर्ट सही स्थानीय अधिकारी तक पहुँचती है और आपको ईमेल अपडेट मिलते हैं।"
+    }
+  },
+  "features": {
+    "title": "सड़कें ठीक कराने के लिए बना",
+    "subtitle": "सड़क क्षति की रिपोर्ट, ट्रैक और समाधान के लिए सब कुछ।",
+    "items": {
+      "detection": {
+        "title": "AI क्षति पहचान",
+        "description": "गड्ढे, दरारें, जलभराव और मलबे को स्वतः पहचानता है।"
+      },
+      "tracking": {
+        "title": "रियल-टाइम स्थिति ट्रैकिंग",
+        "description": "हर रिपोर्ट को जमा से समाधान तक देखें।"
+      },
+      "notifications": {
+        "title": "ईमेल सूचनाएँ",
+        "description": "समय पर ईमेल अपडेट के साथ हर कदम पर सूचित रहें।"
+      },
+      "offline": {
+        "title": "ऑफ़लाइन रिपोर्ट ड्राफ़्ट",
+        "description": "बिना कनेक्शन के रिपोर्ट तैयार करें और ऑनलाइन होने पर सिंक करें।"
+      },
+      "multilingual": {
+        "title": "बहु-भाषा समर्थन",
+        "description": "सभी BIMSTEC देशों में अपनी भाषा में रिपोर्ट करें।"
+      },
+      "location": {
+        "title": "सटीक स्थान",
+        "description": "PostGIS-संचालित जियोलोकेशन क्षति को सटीक रूप से इंगित करता है।"
+      }
+    }
+  },
+  "countries": {
+    "title": "सभी BIMSTEC देशों के लिए बना",
+    "subtitle": "सात सदस्य देशों की सेवा, और भी आने वाले हैं।",
+    "status": {
+      "active": "सक्रिय",
+      "comingSoon": "जल्द आ रहा है"
+    },
+    "names": {
+      "india": "भारत",
+      "bangladesh": "बांग्लादेश",
+      "nepal": "नेपाल",
+      "bhutan": "भूटान",
+      "myanmar": "म्यांमार",
+      "srilanka": "श्रीलंका",
+      "thailand": "थाईलैंड"
+    }
+  },
+  "stats": {
+    "title": "असली सड़कों पर असली प्रभाव",
+    "items": {
+      "reports": "जमा रिपोर्ट",
+      "countries": "समर्थित देश",
+      "resolution": "औसत समाधान समय",
+      "accuracy": "AI सटीकता"
+    },
+    "values": {
+      "resolution": "4.2 दिन"
+    }
+  },
+  "cta": {
+    "title": "क्षतिग्रस्त सड़क दिखी? अभी रिपोर्ट करें।",
+    "subtitle": "60 सेकंड से भी कम समय लगता है। बुनियादी रिपोर्ट के लिए लॉगिन आवश्यक नहीं।",
+    "button": "सड़क समस्या की रिपोर्ट करें"
+  },
+  "footer": {
+    "tagline": "BIMSTEC देशों के लिए AI-संचालित नागरिक सड़क क्षति रिपोर्टिंग।",
+    "links": {
+      "privacy": "गोपनीयता",
+      "terms": "शर्तें",
+      "github": "GitHub",
+      "contact": "संपर्क"
+    },
+    "attribution": "BIMSTEC · IIT मद्रास / CoERS",
+    "builtFor": "रोड सेफ्टी हैकाथॉन 2026 के लिए बनाया गया",
+    "rights": "सर्वाधिकार सुरक्षित।"
+  },
+  "dashboard": {
+    "greeting": "शुभ प्रभात, {name} 👋",
+    "subtitle": "अपने क्षेत्र में सड़क सुरक्षा के बारे में जानकारी रखें।",
+    "quickActions": {
+      "reportHazard": "खतरे की रिपोर्ट करें",
+      "reportHazardSub": "नई रिपोर्ट जमा करें",
+      "openSafetyMap": "सुरक्षा मानचित्र खोलें",
+      "openSafetyMapSub": "लाइव खतरे देखें",
+      "emergencyContacts": "आपातकालीन संपर्क",
+      "emergencyContactsSub": "त्वरित सहायता कॉल",
+      "viewMyReports": "मेरी रिपोर्ट देखें",
+      "viewMyReportsSub": "अपनी रिपोर्ट ट्रैक करें"
+    },
+    "overview": {
+      "reportsSubmitted": "जमा रिपोर्ट",
+      "thisMonth": "इस महीने {count}",
+      "verifiedReports": "सत्यापित रिपोर्ट",
+      "percentVerified": "{percent}% सत्यापित",
+      "resolvedIssues": "हल की गई समस्याएँ",
+      "percentResolved": "{percent}% हल",
+      "safetyScore": "सुरक्षा स्कोर",
+      "communityContributor": "सामुदायिक योगदानकर्ता"
+    },
+    "recentActivity": {
+      "title": "हालिया गतिविधि",
+      "viewAll": "सभी देखें",
+      "potholeNH48": "NH48 पर गड्ढे की रिपोर्ट",
+      "verifiedByCitizens": "{count} नागरिकों द्वारा सत्यापित",
+      "floodingPanvel": "पनवेल के पास बाढ़ का पता चला",
+      "authorityNotified": "अधिकारी को सूचित किया गया",
+      "debrisCleared": "सड़क का मलबा साफ किया गया",
+      "resolved": "हल किया गया",
+      "brokenStreetLight": "टूटी स्ट्रीट लाइट की रिपोर्ट",
+      "underReview": "अधिकारियों द्वारा समीक्षाधीन",
+      "hoursAgo": "{count} घंटे पहले",
+      "yesterday": "कल",
+      "daysAgo": "{count} दिन पहले"
+    },
+    "myReports": {
+      "title": "मेरी रिपोर्ट",
+      "viewAll": "सभी देखें",
+      "columns": {
+        "reportId": "रिपोर्ट ID",
+        "type": "प्रकार",
+        "location": "स्थान",
+        "status": "स्थिति",
+        "date": "दिनांक"
+      },
+      "status": {
+        "verified": "सत्यापित",
+        "inReview": "समीक्षाधीन",
+        "resolved": "हल किया गया",
+        "pending": "लंबित"
+      },
+      "types": {
+        "pothole": "गड्ढा",
+        "flooding": "बाढ़",
+        "brokenSignal": "टूटा सिग्नल",
+        "roadDebris": "सड़क मलबा"
+      },
+      "dates": {
+        "today": "आज",
+        "yesterday": "कल",
+        "daysAgo": "{count} दिन पहले"
+      }
+    },
+    "safetyMap": {
+      "title": "सुरक्षा मानचित्र पूर्वावलोकन",
+      "openFullMap": "पूरा मानचित्र खोलें"
+    },
+    "achievements": {
+      "title": "उपलब्धियाँ",
+      "viewAll": "सभी देखें",
+      "level": "स्तर {level}",
+      "roadGuardian": "रोड गार्डियन",
+      "progress": "प्रगति",
+      "toNextLevel": "अगले स्तर तक {percent}%",
+      "badges": {
+        "firstReport": "पहली रिपोर्ट",
+        "verifiedContributor": "सत्यापित योगदानकर्ता",
+        "communityHelper": "सामुदायिक सहायक",
+        "safetyChampion": "सुरक्षा चैम्पियन"
+      }
+    },
+    "emergencyContacts": {
+      "title": "आपातकालीन संपर्क",
+      "trafficPolice": "ट्रैफिक पुलिस",
+      "highwayHelpline": "हाईवे हेल्पलाइन",
+      "emergencyServices": "आपातकालीन सेवाएँ",
+      "municipalCorporation": "नगर निगम",
+      "emergencyCta": "आपातकाल में, 112 पर कॉल करें"
+    },
+    "nearbyHazards": {
+      "title": "पास के खतरे",
+      "viewMap": "मानचित्र देखें",
+      "types": {
+        "pothole": "गड्ढा",
+        "flooding": "बाढ़",
+        "roadDebris": "सड़क मलबा",
+        "brokenSignal": "टूटा सिग्नल"
+      },
+      "distance": "{km} किमी दूर",
+      "risk": {
+        "high": "उच्च जोखिम",
+        "medium": "मध्यम जोखिम",
+        "low": "कम जोखिम"
+      }
+    },
+    "footer": "मिलकर हम सुरक्षित सड़कें और मजबूत समुदाय बना सकते हैं।"
+  }
+}
