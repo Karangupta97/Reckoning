@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Sidebar from "@/components/super-admin-dashboard/sidebar";
 import Header from "@/components/super-admin-dashboard/header";
+import "@/components/super-admin-dashboard/super-admin-theme.css";
 
 export default function SuperAdminLayout({
   children,
@@ -26,7 +27,7 @@ export default function SuperAdminLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0f1a] text-slate-200">
+    <div className="min-h-screen bg-[var(--color-page)] text-[var(--color-text-primary)]">
       {/* Desktop Layout */}
       <div className="flex min-h-screen">
         {/* Sidebar - Desktop Only */}

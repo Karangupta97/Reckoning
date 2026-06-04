@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Plus, Minus, Layers } from "lucide-react";
+import { dashboardCardClassName } from "@/components/super-admin-dashboard/dashboard-card";
 
 export default function IndiaMap() {
   const [zoom, setZoom] = useState(1);
@@ -23,16 +24,16 @@ export default function IndiaMap() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="rounded-2xl border border-white/10 bg-[var(--color-card)] p-5"
+      className={`${dashboardCardClassName} p-5`}
     >
       {/* Header */}
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-white">
+          <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
             India Infrastructure Heatmap
           </h3>
 
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             Complaint & Risk Density Analysis
           </p>
         </div>
@@ -41,12 +42,12 @@ export default function IndiaMap() {
           className="
             rounded-xl
             border
-            border-white/10
-            bg-[#303a58]
+            border-[var(--color-border)]
+            bg-[var(--color-surface)]
             px-4
             py-2
             text-sm
-            text-slate-200
+            text-[var(--color-text-primary)]
             outline-none
           "
         >
@@ -60,7 +61,7 @@ export default function IndiaMap() {
       <div
         className="
           relative
-          h-[600px] xl:h-[720px]
+          h-[360px] sm:h-[400px] lg:h-[440px]
           overflow-hidden
           rounded-2xl
           border
@@ -96,7 +97,7 @@ export default function IndiaMap() {
             transform: `scale(${zoom})`,
           }}
         >
-          <div className="relative h-[90%] w-[90%] translate-x-4">
+          <div className="relative h-[90%] w-[90%] -translate-x-2">
             <Image
               src="/maps/india-map.svg"
               alt="India Map"
@@ -108,90 +109,68 @@ export default function IndiaMap() {
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="absolute left-6 top-1/2 flex -translate-y-1/2 flex-col gap-3">
+        {/* Zoom controls — top right */}
+        <div className="absolute right-4 top-4 z-10 flex flex-col gap-2 sm:right-6 sm:top-6 sm:gap-3">
           <button
             onClick={() => setZoom((z) => Math.min(z + 0.1, 2))}
-            className="
-              flex h-12 w-12 items-center justify-center
-              rounded-xl
-              border border-white/10
-              bg-[#1d2437]
-              text-white
-              transition-all
-              hover:bg-[#28324d]
-            "
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#1d2437] text-white transition-all hover:bg-[#28324d] sm:h-12 sm:w-12"
+            aria-label="Zoom in"
           >
             <Plus size={18} />
           </button>
 
           <button
             onClick={() => setZoom((z) => Math.max(z - 0.1, 0.8))}
-            className="
-              flex h-12 w-12 items-center justify-center
-              rounded-xl
-              border border-white/10
-              bg-[#1d2437]
-              text-white
-              transition-all
-              hover:bg-[#28324d]
-            "
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#1d2437] text-white transition-all hover:bg-[#28324d] sm:h-12 sm:w-12"
+            aria-label="Zoom out"
           >
             <Minus size={18} />
           </button>
 
           <button
-            className="
-              flex h-12 w-12 items-center justify-center
-              rounded-xl
-              border border-white/10
-              bg-[#1d2437]
-              text-white
-              transition-all
-              hover:bg-[#28324d]
-            "
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-[#1d2437] text-white transition-all hover:bg-[#28324d] sm:h-12 sm:w-12"
+            aria-label="Map layers"
           >
             <Layers size={18} />
           </button>
         </div>
 
-        {/* Legend */}
-        <div
-          className="
-            absolute
-            bottom-6
-            left-6
-            rounded-2xl
-            border
-            border-white/10
-            bg-[#1d2437]
-            p-5
-          "
-        >
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded bg-red-500" />
-              <span className="text-sm text-white">Very High Risk</span>
+        {/* Risk legend — bottom right (clear of zoom controls) */}
+        <div className="absolute bottom-4 right-4 z-10 rounded-2xl border border-white/10 bg-[#1d2437] p-3 sm:bottom-6 sm:right-6 sm:p-4">
+          <div className="space-y-2 sm:space-y-2.5">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-3.5 w-3.5 shrink-0 rounded bg-red-500 sm:h-4 sm:w-4" />
+              <span className="whitespace-nowrap text-xs text-white sm:text-sm">
+                Very High Risk
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded bg-orange-500" />
-              <span className="text-sm text-white">High Risk</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-3.5 w-3.5 shrink-0 rounded bg-orange-500 sm:h-4 sm:w-4" />
+              <span className="whitespace-nowrap text-xs text-white sm:text-sm">
+                High Risk
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded bg-yellow-500" />
-              <span className="text-sm text-white">Medium Risk</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-3.5 w-3.5 shrink-0 rounded bg-yellow-500 sm:h-4 sm:w-4" />
+              <span className="whitespace-nowrap text-xs text-white sm:text-sm">
+                Medium Risk
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded bg-green-500" />
-              <span className="text-sm text-white">Low Risk</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-3.5 w-3.5 shrink-0 rounded bg-green-500 sm:h-4 sm:w-4" />
+              <span className="whitespace-nowrap text-xs text-white sm:text-sm">
+                Low Risk
+              </span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="h-4 w-4 rounded bg-cyan-500" />
-              <span className="text-sm text-white">Very Low Risk</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-3.5 w-3.5 shrink-0 rounded bg-cyan-500 sm:h-4 sm:w-4" />
+              <span className="whitespace-nowrap text-xs text-white sm:text-sm">
+                Very Low Risk
+              </span>
             </div>
           </div>
         </div>

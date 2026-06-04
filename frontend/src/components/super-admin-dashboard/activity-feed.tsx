@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DashboardCard } from "./dashboard-card";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -92,10 +93,10 @@ function formatRelativeTime(minutesAgo: number): string {
 
 export default function ActivityFeed() {
   return (
-    <motion.div
+    <DashboardCard
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      className="activity-feed-section"
+      className="flex min-h-[440px] flex-col p-5 pb-5 xl:min-h-[480px]"
     >
       <div className="activity-feed-header">
         <div>
@@ -109,7 +110,7 @@ export default function ActivityFeed() {
         </button>
       </div>
 
-      <div className="activity-timeline">
+      <div className="activity-timeline min-h-0 flex-1">
         <div className="activity-timeline-line" aria-hidden />
 
         <ul className="activity-timeline-list">
@@ -147,6 +148,6 @@ export default function ActivityFeed() {
           })}
         </ul>
       </div>
-    </motion.div>
+    </DashboardCard>
   );
 }

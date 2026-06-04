@@ -10,13 +10,12 @@ import {
   ChevronDown,
   User,
   Menu,
-  Moon,
-  Sun,
   LogOut,
   HelpCircle,
   Shield,
   Sliders,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -98,7 +97,6 @@ export default function Header({
 }: HeaderProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [selectedDate, setSelectedDate] =
     useState<(typeof DATE_OPTIONS)[number]>("This Month");
   const [showNotifications, setShowNotifications] = useState(false);
@@ -275,17 +273,7 @@ export default function Header({
           </AnimatePresence>
         </div>
 
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setIsDarkTheme((prev) => !prev)}
-          className="btn-icon"
-          aria-label={isDarkTheme ? "Switch to light theme" : "Switch to dark theme"}
-          title={isDarkTheme ? "Light mode (coming soon)" : "Dark mode"}
-        >
-          {isDarkTheme ? <Moon size={18} /> : <Sun size={18} />}
-        </motion.button>
+        <ThemeToggle />
 
         <div className="relative">
           <motion.button

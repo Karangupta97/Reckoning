@@ -40,14 +40,14 @@ const navItems: NavItem[] = [
     label: "Overview",
     icon: <LayoutDashboard size={18} />,
     href: "/dashboard",
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
   },
   {
     label: "Road Intelligence",
     icon: <Route size={18} />,
     href: "/dashboard/road-intelligence",
     hasDropdown: true,
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
     children: [
       {
         label: "Road Conditions",
@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
     icon: <AlertTriangle size={18} />,
     href: "/dashboard/complaints",
     hasDropdown: true,
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
     children: [
       {
         label: "Citizen Complaints",
@@ -89,7 +89,7 @@ const navItems: NavItem[] = [
     icon: <BarChart3 size={18} />,
     href: "/dashboard/expenditure",
     hasDropdown: true,
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
     children: [
       {
         label: "Budget Allocation",
@@ -110,7 +110,7 @@ const navItems: NavItem[] = [
     icon: <Users size={18} />,
     href: "/dashboard/contractors",
     hasDropdown: true,
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
     children: [
       {
         label: "Verified Contractors",
@@ -130,14 +130,14 @@ const navItems: NavItem[] = [
     label: "AI Alerts",
     icon: <Bell size={18} />,
     href: "/dashboard/ai-alerts",
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
   },
   {
     label: "GIS Monitoring",
     icon: <Map size={18} />,
     href: "/dashboard/gis",
     hasDropdown: true,
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
     children: [
       {
         label: "Infrastructure Map",
@@ -158,7 +158,7 @@ const navItems: NavItem[] = [
     icon: <Shield size={18} />,
     href: "/dashboard/admin",
     hasDropdown: true,
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
     children: [
       {
         label: "User Roles",
@@ -178,19 +178,19 @@ const navItems: NavItem[] = [
     label: "Reports",
     icon: <FileText size={18} />,
     href: "/dashboard/reports",
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
   },
   {
     label: "Audit Logs",
     icon: <ClipboardList size={18} />,
     href: "/dashboard/audit",
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
   },
   {
     label: "Settings",
     icon: <Settings size={18} />,
     href: "/dashboard/settings",
-    color: "text-slate-400",
+    color: "text-[var(--color-text-muted)]",
   },
 ];
 
@@ -200,8 +200,8 @@ interface SidebarProps {
 
 const SIDEBAR_WIDTH = 250;
 
-const sidebarGradient =
-  "bg-gradient-to-b from-[#0c1220] via-[#0a0f1a] to-[#060a12]";
+const sidebarShell =
+  "bg-[var(--color-card)] border-[var(--color-border)]";
 
 const navScrollClass = [
   "flex-1 overflow-y-auto px-3 py-3 space-y-0.5",
@@ -283,7 +283,7 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
   const sidebarContent = useMemo(
     () => (
       <div className="flex h-full flex-col">
-        <div className="flex items-center gap-3.5 px-4 py-5 border-b border-white/[0.06]">
+        <div className="flex items-center gap-3.5 px-4 py-5 border-b border-[var(--color-border)]">
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 shadow-[0_0_24px_rgba(34,211,238,0.22)]">
             <div
               className="pointer-events-none absolute inset-0 rounded-xl bg-cyan-400/15 blur-md"
@@ -295,10 +295,10 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
             />
           </div>
           <div className="min-w-0 flex flex-col gap-0.5">
-            <span className="text-base font-bold tracking-wide text-white truncate">
+            <span className="text-base font-bold tracking-wide text-[var(--color-text-primary)] truncate">
               RECKONING
             </span>
-            <span className="text-[10px] leading-snug text-slate-500 line-clamp-2">
+            <span className="text-[10px] leading-snug text-[var(--color-text-muted)] line-clamp-2">
               Infrastructure Transparency Platform
             </span>
           </div>
@@ -329,8 +329,8 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
                             shadow-[0_0_16px_rgba(34,211,238,0.1)]
                           `
                         : `
-                            text-slate-400 border-transparent
-                            hover:bg-white/[0.03] hover:text-white
+                            text-[var(--color-text-secondary)] border-transparent
+                            hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]
                           `
                     }
                   `}
@@ -348,7 +348,7 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
                       animate={{ rotate: expanded ? 180 : 0 }}
                       transition={{ duration: 0.2 }}
                       className={`shrink-0 ${
-                        active ? "text-cyan-400/60" : "text-slate-600"
+                        active ? "text-cyan-400/60" : "text-[var(--color-text-muted)]"
                       }`}
                     >
                       <ChevronDown size={14} />
@@ -384,8 +384,9 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
                                         shadow-[0_0_10px_rgba(34,211,238,0.1)]
                                       `
                                     : `
-                                        text-slate-500
-                                        hover:text-cyan-300 hover:bg-cyan-500/[0.06]
+                                        text-[var(--color-text-muted)]
+                                        hover:text-cyan-600 hover:bg-cyan-500/[0.08]
+                                        dark:hover:text-cyan-300 dark:hover:bg-cyan-500/[0.06]
                                         hover:shadow-[0_0_8px_rgba(34,211,238,0.08)]
                                       `
                                 }
@@ -394,7 +395,7 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
                               <ChevronRight
                                 size={11}
                                 className={
-                                  subActive ? "text-cyan-400" : "text-slate-600"
+                                  subActive ? "text-cyan-400" : "text-[var(--color-text-muted)]"
                                 }
                               />
                               <span className="truncate">{sub.label}</span>
@@ -410,10 +411,10 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
           })}
         </nav>
 
-        <div className="px-3 pb-4 pt-2 border-t border-white/[0.06]">
-          <div className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+        <div className="px-3 pb-4 pt-2 border-t border-[var(--color-border)]">
+          <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-[var(--color-text-secondary)]">
               All Systems Operational
             </span>
           </div>
@@ -429,7 +430,7 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-[#0d1320]/90 border border-[#1e2a3a] text-slate-400 hover:text-white hover:bg-white/[0.03] transition-colors lg:hidden"
+          className="fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)] transition-colors lg:hidden"
         >
           <Menu size={20} />
         </motion.button>
@@ -451,11 +452,11 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
               exit={{ x: -SIDEBAR_WIDTH }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               style={{ width: SIDEBAR_WIDTH }}
-              className={`fixed inset-y-0 left-0 z-50 border-r border-white/[0.06] lg:hidden ${sidebarGradient}`}
+              className={`fixed inset-y-0 left-0 z-50 border-r lg:hidden ${sidebarShell}`}
             >
               <button
                 onClick={() => setIsOpen(false)}
-                className="absolute top-4 right-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.03] transition-colors"
+                className="absolute top-4 right-3 flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-colors"
               >
                 <X size={18} />
               </button>
@@ -467,7 +468,7 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
 
       <aside
         style={{ width: SIDEBAR_WIDTH }}
-        className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r border-white/[0.06] h-screen sticky top-0 ${sidebarGradient}`}
+        className={`hidden lg:flex lg:flex-col lg:shrink-0 border-r h-screen sticky top-0 ${sidebarShell}`}
       >
         {sidebarContent}
       </aside>
