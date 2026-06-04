@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Map, Phone, FileText } from "lucide-react";
+import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 
 const QUICK_ACTIONS_KEYS = [
   { labelKey: "reportHazard", subKey: "reportHazardSub", icon: AlertTriangle, color: "var(--color-amber)" },
@@ -35,12 +36,17 @@ export function HeroSection() {
     >
       {/* Greeting */}
       <motion.div variants={itemVariants}>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--color-text-primary)]">
-          {t("greeting", { name: "Karan" })}
-        </h1>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          {t("subtitle")}
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--color-text-primary)]">
+              {t("greeting", { name: "Karan" })}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+              {t("subtitle")}
+            </p>
+          </div>
+          <InstallPWAButton variant="hero" className="hidden sm:inline-flex shrink-0" />
+        </div>
       </motion.div>
 
       {/* Quick Actions - hidden on small/medium screens */}

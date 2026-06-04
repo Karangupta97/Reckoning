@@ -16,6 +16,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from "lucide-react";
 
 import { LogoMark } from "@/components/ui/Logo";
@@ -23,12 +24,14 @@ import { useSidebarStore } from "@/store/sidebarStore";
 import { useDashboardStore, type NavItem } from "@/store/dashboardStore";
 
 const NAV_ITEMS: Array<{
-  id: NavItem;
+  id: NavItem | "reportHazard";
   label: string;
   icon: React.ElementType;
   href: string;
+  highlight?: boolean;
 }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/report", highlight: true },
   { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard" },
   { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
   { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
@@ -77,26 +80,31 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href && activeNav === item.id;
+          const isActive = pathname === item.href && (item.id === "reportHazard" ? pathname === "/report" : activeNav === item.id);
           const Icon = item.icon;
           const showBadge = item.id === "notifications" && notificationCount > 0;
+          const isHighlight = item.highlight;
 
           return (
             <button
               key={item.id}
               onClick={() => {
-                setActiveNav(item.id);
+                if (item.id !== "reportHazard") {
+                  setActiveNav(item.id as NavItem);
+                }
                 router.push(item.href);
               }}
               className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
-                isActive
+                isHighlight && !isActive
+                  ? "bg-[var(--color-amber)] text-[#1c2b3a] font-semibold hover:brightness-105"
+                  : isActive
                   ? "bg-[var(--color-text-primary)] text-[var(--color-card)] shadow-[var(--shadow-neu)]"
                   : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
               }`}
               title={!expanded ? item.label : undefined}
             >
               <span className="relative shrink-0">
-                <Icon size={20} strokeWidth={1.8} />
+                <Icon size={20} strokeWidth={isHighlight ? 2.2 : 1.8} />
                 {showBadge && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[var(--color-danger)] text-white text-[10px] font-bold flex items-center justify-center">
                     {notificationCount}

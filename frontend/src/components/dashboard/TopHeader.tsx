@@ -3,15 +3,18 @@
 import { Search, Plus, Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { DashboardLanguageSwitcher } from "@/components/dashboard/DashboardLanguageSwitcher";
 import { NotificationDropdown } from "@/components/dashboard/NotificationDropdown";
+import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 import { useSidebarStore } from "@/store/sidebarStore";
 
 export function TopHeader() {
   const { toggleMobile } = useSidebarStore();
   const t = useTranslations("dashboard");
+  const router = useRouter();
 
   return (
     <header className="sticky top-0 z-20 bg-[var(--color-card)] border-b border-[var(--color-border)] px-4 sm:px-6 lg:px-8">
@@ -44,6 +47,11 @@ export function TopHeader() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Install App */}
+          <div className="hidden md:block">
+            <InstallPWAButton variant="compact" />
+          </div>
+
           {/* Language */}
           <div className="hidden sm:block">
             <DashboardLanguageSwitcher />
@@ -76,6 +84,7 @@ export function TopHeader() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            onClick={() => router.push("/report")}
             className="btn-amber flex items-center gap-2 px-4 py-2.5 text-sm"
           >
             <Plus size={16} strokeWidth={2.5} />

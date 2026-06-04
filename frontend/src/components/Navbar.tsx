@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/ui/Logo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 
 const NAV_LINKS = [
   { href: "#how-it-works", key: "howItWorks" },
@@ -78,11 +79,15 @@ export function Navbar() {
             <LanguageSwitcher />
           </div>
 
+          <div className="hidden md:block">
+            <InstallPWAButton variant="compact" />
+          </div>
+
           <Link
-            href="/report"
+            href="/login"
             className="btn-amber hidden px-4 py-2 text-sm md:inline-flex"
           >
-            {t("reportNow")}
+            {t("login")}
           </Link>
 
           {/* Mobile hamburger */}
@@ -137,12 +142,16 @@ export function Navbar() {
           ))}
 
           <Link
-            href="/report"
+            href="/login"
             onClick={() => setMenuOpen(false)}
             className="btn-amber mt-2 px-4 py-3 text-center text-base"
           >
-            {t("reportNow")}
+            {t("login")}
           </Link>
+
+          <div className="mt-2">
+            <InstallPWAButton variant="default" className="w-full justify-center" />
+          </div>
 
           <div className="mt-3 border-t border-[var(--color-border)] pt-3">
             <LanguageSwitcher />

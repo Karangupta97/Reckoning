@@ -1,6 +1,7 @@
 export { Sidebar } from "./Sidebar";
 export { TopHeader } from "./TopHeader";
 export { MobileNav } from "./MobileNav";
+export { MobileBottomNav } from "./MobileBottomNav";
 export { HeroSection } from "./HeroSection";
 export { OverviewCards } from "./OverviewCards";
 export { RecentActivity } from "./RecentActivity";

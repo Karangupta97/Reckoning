@@ -1,31 +1,29 @@
-import { memo } from "react";
-import Link from "next/link";
+"use client";
 
-import { Logo } from "@/components/ui/Logo";
+import { motion } from "framer-motion";
+import { ReportHazardForm } from "@/components/report";
 
-/**
- * Placeholder report page. The landing CTAs route here; the full reporting flow
- * (photo capture → AI detection → submission) is implemented separately.
- *
- * This route lives outside the `[locale]` segment, so it uses the plain Next.js
- * `Link` rather than the locale-aware navigation helper.
- */
-const ReportPage = () => {
+export default function ReportPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 px-6 py-24 text-center">
-      <Logo />
-      <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">
-        Report a Road Issue
-      </h1>
-      <p className="max-w-md text-[var(--color-text-secondary)]">
-        The reporting flow is coming soon. Snap a photo, let AI detect the issue,
-        and we&apos;ll route it to the right authority.
-      </p>
-      <Link href="/" className="btn-outline px-6 py-3 text-base">
-        Back to home
-      </Link>
-    </main>
-  );
-};
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto pb-32 sm:pb-8">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-semibold text-[var(--color-text-primary)]">
+            Report Road Hazard
+          </h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+            Help keep roads safe — report hazards and let authorities take action.
+          </p>
+        </div>
 
-export default memo(ReportPage);
+        {/* Main Form */}
+        <ReportHazardForm />
+      </motion.div>
+    </div>
+  );
+}

@@ -1,68 +1,61 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
-// next-pwa ships CommonJS without bundled types.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const withPWA = require("next-pwa");
+import withPWAInit from "@ducanh2912/next-pwa";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const isDev = process.env.NODE_ENV === "development";
 
-const baseConfig: NextConfig = {
-  reactStrictMode: true,
-  images: {
-    formats: ["image/avif", "image/webp"],
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  reloadOnOnline: true,
+  disable: isDev,
+  cacheOnFrontEndNav: true,
+  cacheStartUrl: true,
+  dynamicStartUrl: true,
+  customWorkerSrc: "worker",
+  fallbacks: {
+    document: "/offline.html",
   },
-};
-
-/**
- * PWA / Workbox configuration.
- *
- * `dest: "public"` emits `public/sw.js`. The Workbox runtime caching rules below
- * make sure the offline shell works:
- *  - `/messages/*.json`  → StaleWhileRevalidate so translations work offline
- *  - `/_next/static/**`  → precached automatically by next-pwa
- *  - `/` and `/report`   → NetworkFirst app-shell routes
- *
- * IMPORTANT: next-pwa injects a `webpack()` hook into the Next config. In dev,
- * Next.js 16 runs Turbopack, which is incompatible with a webpack-only plugin and
- * panics in a loop (`parse_segment_config_from_loader_tree`). PWA/offline support
- * is irrelevant in dev anyway, so we only apply the PWA wrapper for production
- * builds (which run with `next build --webpack`). Dev keeps a clean config.
- */
-const applyPWA = (config: NextConfig): NextConfig => {
-  if (isDev) {
-    return config;
-  }
-
-  return withPWA({
-    dest: "public",
-    register: true,
+  scope: "/",
+  workboxOptions: {
     skipWaiting: true,
-    cacheOnFrontEndNav: true,
-    buildExcludes: [/middleware-manifest\.json$/, /app-build-manifest\.json$/],
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
     runtimeCaching: [
+      // ─── Citizen Dashboard routes (offline shell) ─────────────────────────
       {
-        // Offline-first translations.
+        urlPattern: /^\/(dashboard|reports|map|notifications|profile|settings)(\/.*)?$/,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "reckoning-citizen-pages",
+          networkTimeoutSeconds: 5,
+          expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 7 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      // ─── Translation / language packs ─────────────────────────────────────
+      {
         urlPattern: /\/messages\/.*\.json$/i,
         handler: "StaleWhileRevalidate",
         options: {
           cacheName: "reckoning-translations",
-          expiration: { maxEntries: 16, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          expiration: { maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 30 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
+      // ─── Next.js static assets (JS/CSS) ───────────────────────────────────
       {
-        // App-shell routes for offline access.
-        urlPattern: /^\/(report)?$/,
-        handler: "NetworkFirst",
+        urlPattern: /\/_next\/static\/.*/i,
+        handler: "CacheFirst",
         options: {
-          cacheName: "reckoning-shell",
-          networkTimeoutSeconds: 5,
-          expiration: { maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 7 },
+          cacheName: "reckoning-next-static",
+          expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 * 365 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
+      // ─── Google Fonts ─────────────────────────────────────────────────────
       {
         urlPattern: /^https:\/\/fonts\.(gstatic|googleapis)\.com\/.*/i,
         handler: "CacheFirst",
@@ -72,27 +65,55 @@ const applyPWA = (config: NextConfig): NextConfig => {
           cacheableResponse: { statuses: [0, 200] },
         },
       },
+      // ─── Mapbox tiles and styles ──────────────────────────────────────────
       {
-        // Mapbox styles, tiles, glyphs and the GL JS stylesheet.
         urlPattern: /^https:\/\/(api|[abcd]\.tiles)\.mapbox\.com\/.*/i,
         handler: "StaleWhileRevalidate",
         options: {
           cacheName: "reckoning-mapbox",
-          expiration: { maxEntries: 96, maxAgeSeconds: 60 * 60 * 24 * 7 },
+          expiration: { maxEntries: 128, maxAgeSeconds: 60 * 60 * 24 * 7 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
+      // ─── Images / Icons ───────────────────────────────────────────────────
       {
         urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif|ico)$/i,
         handler: "StaleWhileRevalidate",
         options: {
           cacheName: "reckoning-images",
-          expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          expiration: { maxEntries: 96, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          cacheableResponse: { statuses: [0, 200] },
+        },
+      },
+      // ─── Citizen API data ─────────────────────────────────────────────────
+      {
+        urlPattern: /\/api\/(reports|notifications|profile|dashboard|map)\/.*/i,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "reckoning-api-citizen",
+          networkTimeoutSeconds: 10,
+          expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },
     ],
-  })(config);
+    // Do NOT cache admin, staff, founder, or auth routes
+    navigateFallbackDenylist: [
+      /^\/admin/,
+      /^\/staff/,
+      /^\/founder/,
+      /^\/auth/,
+      /^\/api\/admin/,
+      /^\/api\/auth/,
+    ],
+  },
+});
+
+const baseConfig: NextConfig = {
+  reactStrictMode: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+  },
 };
 
-export default withNextIntl(applyPWA(baseConfig));
+export default withPWA(withNextIntl(baseConfig));

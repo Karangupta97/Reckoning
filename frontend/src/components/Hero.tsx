@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 import { CountUp } from "@/components/ui/CountUp";
+import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 
 /**
  * Landing hero with the dashed road-line background, headline, dual CTAs and an
@@ -45,6 +46,7 @@ export function Hero() {
           >
             {t("ctaSecondary")}
           </a>
+          <InstallPWAButton variant="hero" />
         </div>
 
         {/* Animated stat ticker */}

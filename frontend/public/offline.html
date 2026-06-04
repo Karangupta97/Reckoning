@@ -1,43 +1,123 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>RoadWatch Offline</title>
-    <style>
-      body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #0F1117;
-        color: #F1F5F9;
-        display: grid;
-        place-items: center;
-        min-height: 100vh;
-        text-align: center;
-        padding: 24px;
-      }
-      .card {
-        background: #1A1E2E;
-        border: 1px solid #2D3748;
-        border-radius: 16px;
-        padding: 24px;
-        max-width: 360px;
-      }
-      h1 {
-        font-size: 20px;
-        margin: 0 0 10px;
-      }
-      p {
-        font-size: 14px;
-        color: #94A3B8;
-        margin: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <h1>You are offline</h1>
-      <p>Reconnect to continue using RoadWatch. Cached pages are still available.</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#3B82F6" />
+  <title>Offline — Reckoning</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #EFF2F9;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1A1F2E; color: #e2e8f0; }
+      .card { background: #252b3b; border-color: #374151; }
+      .subtitle { color: #94a3b8; }
+    }
+    .card {
+      text-align: center;
+      max-width: 400px;
+      width: 100%;
+      padding: 3rem 2rem;
+      border-radius: 1.5rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 1.5rem;
+      border-radius: 1rem;
+      background: rgba(59,130,246,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon svg { width: 32px; height: 32px; color: #3B82F6; }
+    h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .subtitle { color: #64748b; font-size: 0.875rem; line-height: 1.5; margin-bottom: 2rem; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      background: #3B82F6;
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #2563eb; }
+    .pending {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.2);
+      font-size: 0.75rem;
+      color: #92400e;
+    }
+    @media (prefers-color-scheme: dark) {
+      .pending { color: #fbbf24; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728M5.636 5.636a9 9 0 000 12.728M8.464 15.536a5 5 0 010-7.072M15.536 8.464a5 5 0 010 7.072M12 12h.01"/>
+      </svg>
     </div>
-  </body>
+    <h1>You&rsquo;re offline</h1>
+    <p class="subtitle">
+      It looks like you&rsquo;ve lost your internet connection. 
+      Don&rsquo;t worry &mdash; any reports you submit will be saved and synced automatically when you&rsquo;re back online.
+    </p>
+    <button class="btn" onclick="window.location.reload()">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Try again
+    </button>
+    <div class="pending" id="pending-info" style="display:none"></div>
+  </div>
+
+  <script>
+    // Show pending reports count from IndexedDB
+    (async function() {
+      try {
+        const request = indexedDB.open('reckoning-offline', 1);
+        request.onsuccess = function() {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('offline-reports')) return;
+          const tx = db.transaction('offline-reports', 'readonly');
+          const store = tx.objectStore('offline-reports');
+          const countReq = store.index('status').count('pending');
+          countReq.onsuccess = function() {
+            const count = countReq.result;
+            if (count > 0) {
+              const el = document.getElementById('pending-info');
+              el.textContent = count + ' report' + (count !== 1 ? 's' : '') + ' saved offline — will sync when connected';
+              el.style.display = 'block';
+            }
+          };
+        };
+      } catch(e) {}
+    })();
+  </script>
+</body>
 </html>

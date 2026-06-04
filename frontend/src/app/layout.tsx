@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, DM_Mono } from "next/font/google";
+import Script from "next/script";
 import { getLocale } from "next-intl/server";
 
 import "./globals.css";
@@ -40,8 +41,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#EFF2F9" },
-    { media: "(prefers-color-scheme: dark)", color: "#1A1F2E" },
+    { media: "(prefers-color-scheme: light)", color: "#3B82F6" },
+    { media: "(prefers-color-scheme: dark)", color: "#3B82F6" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -87,21 +88,14 @@ export default async function RootLayout({
       className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        {/* Applies saved/OS theme before paint to avoid a flash. */}
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: THEME_INIT }}
-        />
-        {/* Runs before hydration to strip extension-injected attributes.
-            `suppressHydrationWarning` keeps React from diffing this node, which
-            some extensions rewrite before hydration. */}
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }}
-        />
-      </head>
+      <head />
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT}
+        </Script>
+        <Script id="extension-cleanup" strategy="beforeInteractive">
+          {EXTENSION_ATTR_CLEANUP}
+        </Script>
         {children}
       </body>
     </html>
