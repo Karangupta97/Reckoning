@@ -76,7 +76,11 @@ export default function IndiaMapInner({
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [viewMode, setViewMode] = useState('Risk View');
+  const [isExpanded, setIsExpanded] = useState(false);
   const [statesBorderGeoJSON, setStatesBorderGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null);
+
+  const expandedHeight = '85vh';
+  const activeHeight = isExpanded ? expandedHeight : height;
 
   // Ensure client-only rendering to prevent hydration mismatch
   useEffect(() => {
@@ -265,7 +269,7 @@ export default function IndiaMapInner({
     return (
       <div
         className={`relative w-full overflow-hidden ${className}`}
-        style={{ height, width: '100%', borderRadius: '12px' }}
+        style={{ height: activeHeight, width: '100%', borderRadius: '12px' }}
       >
         <div
           className="flex h-full w-full items-center justify-center"
@@ -284,10 +288,11 @@ export default function IndiaMapInner({
     <div
       className={`relative w-full overflow-hidden ${className}`}
       style={{
-        height,
+        height: activeHeight,
         width: '100%',
         borderRadius: '12px',
         overflow: 'hidden',
+        transition: 'height 0.3s ease',
       }}
     >
       {/* Breadcrumb */}
@@ -297,7 +302,13 @@ export default function IndiaMapInner({
 
       {/* Controls */}
       {showControls && (
-        <MapControls mapRef={mapRef} viewMode={viewMode} onViewModeChange={setViewMode} />
+        <MapControls
+          mapRef={mapRef}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          isExpanded={isExpanded}
+          onToggleExpand={() => setIsExpanded(e => !e)}
+        />
       )}
 
       {/* Map */}
@@ -363,7 +374,7 @@ export default function IndiaMapInner({
       {/* Drill-down Loading Overlay — semi-transparent, keeps map visible */}
       {isLoading && (
         <div
-          className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none"
+          className="absolute inset-0 z-[1001] flex flex-col items-center justify-center pointer-events-none"
           style={{ background: isDark ? 'rgba(34,40,56,0.6)' : 'rgba(255,255,255,0.6)', backdropFilter: 'blur(1px)' }}
         >
           <div className="flex flex-col items-center gap-2.5 rounded-xl px-5 py-4" style={{ background: isDark ? 'rgba(26,31,46,0.92)' : 'rgba(255,255,255,0.92)', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>

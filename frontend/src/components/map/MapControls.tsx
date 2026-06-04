@@ -1,17 +1,19 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Minus, Layers } from 'lucide-react';
+import { Plus, Minus, Layers, Maximize2, Minimize2 } from 'lucide-react';
 
 interface MapControlsProps {
   mapRef: React.RefObject<L.Map | null>;
   viewMode: string;
   onViewModeChange: (mode: string) => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const VIEW_MODES = ['Risk View', 'Report Density', 'Resolution Rate'];
 
-export function MapControls({ mapRef, viewMode, onViewModeChange }: MapControlsProps) {
+export function MapControls({ mapRef, viewMode, onViewModeChange, isExpanded, onToggleExpand }: MapControlsProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +36,25 @@ export function MapControls({ mapRef, viewMode, onViewModeChange }: MapControlsP
   };
 
   return (
-    <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5" ref={dropdownRef}>
+    <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-1.5" ref={dropdownRef}>
+      {onToggleExpand && (
+        <button
+          onClick={onToggleExpand}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border transition-all hover:scale-105"
+          style={{
+            background: 'var(--color-card)',
+            borderColor: 'var(--color-border)',
+            boxShadow: 'var(--shadow-neu)',
+          }}
+          aria-label={isExpanded ? 'Minimize map' : 'Maximize map'}
+        >
+          {isExpanded
+            ? <Minimize2 size={16} className="text-[var(--color-text-primary)]" />
+            : <Maximize2 size={16} className="text-[var(--color-text-primary)]" />
+          }
+        </button>
+      )}
+
       <button
         onClick={handleZoomIn}
         className="flex h-9 w-9 items-center justify-center rounded-lg border transition-all hover:scale-105"
@@ -77,7 +97,7 @@ export function MapControls({ mapRef, viewMode, onViewModeChange }: MapControlsP
 
         {showDropdown && (
           <div
-            className="absolute top-0 right-11 w-36 rounded-lg border overflow-hidden"
+            className="absolute top-0 right-11 z-[1001] w-36 rounded-lg border overflow-hidden"
             style={{
               background: 'var(--color-card)',
               borderColor: 'var(--color-border)',

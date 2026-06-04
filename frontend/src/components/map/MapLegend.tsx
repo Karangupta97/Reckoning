@@ -19,7 +19,7 @@ export function MapLegend({ isDark }: MapLegendProps) {
 
   return (
     <div
-      className="absolute bottom-3 right-3 z-10 rounded-xl p-3 select-none"
+      className="absolute bottom-3 right-3 z-[1000] rounded-xl p-3 select-none"
       style={{
         background: isDark ? 'rgba(34,40,56,0.92)' : 'rgba(26,31,46,0.88)',
         backdropFilter: 'blur(8px)',
