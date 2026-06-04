@@ -1,26 +1,227 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ─── Design tokens ─────────────────────────────────────────── */
+@theme {
+  --font-sans: var(--font-dm-sans), "DM Sans", sans-serif;
+  --font-mono: var(--font-dm-mono), "DM Mono", monospace;
+
+  /* Light palette */
+  --color-page: #EFF2F9;
+  --color-card: #FFFFFF;
+  --color-surface: #E4EBF1;
+  --color-border: #D6DFE8;
+  --color-text-primary: #1C2B3A;
+  --color-text-secondary: #4A5D70;
+  --color-text-muted: #8A9BAD;
+
+  /* Accent */
+  --color-amber: #F59E0B;
+  --color-danger: #EF4444;
+  --color-success: #22C55E;
+  --color-info: #3B82F6;
+
+  /* Neumorphic shadows (light) */
+  --shadow-neu:
+    -5px -5px 10px #FAFBFF,
+    5px 5px 10px rgba(22, 27, 29, 0.23);
+  --shadow-neu-lg:
+    -10px -10px 20px #FAFBFF,
+    10px 10px 20px rgba(22, 27, 29, 0.23);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─── Dark mode overrides ────────────────────────────────────── */
+.dark {
+  --color-page: #1A1F2E;
+  --color-card: #222838;
+  --color-surface: #2A3144;
+  --color-border: #313A50;
+  --color-text-primary: #EDF1F7;
+  --color-text-secondary: #A8B6C8;
+  --color-text-muted: #5C6E82;
+
+  --shadow-neu:
+    -5px -5px 10px rgba(255, 255, 255, 0.03),
+    5px 5px 10px rgba(0, 0, 0, 0.4);
+  --shadow-neu-lg:
+    -10px -10px 20px rgba(255, 255, 255, 0.03),
+    10px 10px 20px rgba(0, 0, 0, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not(.light) {
+    --color-page: #1A1F2E;
+    --color-card: #222838;
+    --color-surface: #2A3144;
+    --color-border: #313A50;
+    --color-text-primary: #EDF1F7;
+    --color-text-secondary: #A8B6C8;
+    --color-text-muted: #5C6E82;
+
+    --shadow-neu:
+      -5px -5px 10px rgba(255, 255, 255, 0.03),
+      5px 5px 10px rgba(0, 0, 0, 0.4);
+    --shadow-neu-lg:
+      -10px -10px 20px rgba(255, 255, 255, 0.03),
+      10px 10px 20px rgba(0, 0, 0, 0.5);
+    --shadow-card:   0 2px 16px rgba(28,43,58,0.08);
   }
 }
 
+/* ─── Base ───────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-page);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Utility classes ────────────────────────────────────────── */
+.neu-card {
+  background-color: var(--color-card);
+  box-shadow: var(--shadow-neu);
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.neu-card-lg {
+  background-color: var(--color-card);
+  box-shadow: var(--shadow-neu-lg);
+  border-radius: 1.25rem;
+  border: 1px solid var(--color-border);
+}
+
+/* Road dashed-line hero background */
+.road-pattern {
+  background-color: var(--color-page);
+  background-image:
+    repeating-linear-gradient(90deg,
+      transparent,
+      transparent 40px,
+      var(--color-border) 40px,
+      var(--color-border) 41px),
+    repeating-linear-gradient(180deg,
+      transparent,
+      transparent 20px,
+      var(--color-surface) 20px,
+      var(--color-surface) 21px);
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-amber) 0%, #f97316 50%, var(--color-amber) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Scroll fade-in */
+.fade-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Amber CTA button */
+.btn-amber {
+  background-color: var(--color-amber);
+  color: #1c2b3a;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.btn-amber:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.btn-amber:active {
+  transform: translateY(0);
+}
+
+/* Outline button */
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-outline:hover {
+  background-color: var(--color-surface);
+  transform: translateY(-1px);
+}
+
+/* Status badges */
+.badge-active {
+  background-color: color-mix(in srgb, var(--color-success) 18%, transparent);
+  color: var(--color-success);
+}
+
+.badge-soon {
+  background-color: color-mix(in srgb, var(--color-text-muted) 18%, transparent);
+  color: var(--color-text-muted);
+}
+
+/* Focus ring for accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+  border-radius: 0.375rem;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* ─── Predictive mini map ────────────────────────────────────── */
+/* Hide Mapbox logo + attribution inside the landing card only. The full
+   /analytics page keeps attribution visible per Mapbox ToS. */
+.reckoning-mini-map .mapboxgl-ctrl-logo,
+.reckoning-mini-map .mapboxgl-ctrl-attrib {
+  display: none !important;
+}
+
+.reckoning-mini-map .mapboxgl-canvas {
+  outline: none;
 }

@@ -1,0 +1,327 @@
+{
+  "meta": {
+    "title": "Reckoning — Roads that report themselves",
+    "description": "AI-powered civic road damage reporting for BIMSTEC nations. Snap, submit and track road issues in seconds."
+  },
+  "nav": {
+    "howItWorks": "How it works",
+    "features": "Features",
+    "countries": "Countries",
+    "reportNow": "Report Now",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "selectLanguage": "Select language"
+  },
+  "hero": {
+    "badge": "Road Safety Hackathon 2026",
+    "headline": "Roads that report themselves.",
+    "subheadline": "AI-powered civic road damage reporting for BIMSTEC nations. Snap. Submit. Track.",
+    "ctaPrimary": "Report a Road Issue",
+    "ctaSecondary": "Learn How It Works",
+    "stats": {
+      "reports": "reports",
+      "countries": "countries",
+      "resolution": "resolution rate"
+    }
+  },
+  "howItWorks": {
+    "title": "How it works",
+    "subtitle": "Three steps from pothole to fixed.",
+    "step1": {
+      "label": "Step 1",
+      "title": "Snap a photo",
+      "description": "Capture the road damage with your phone. Location is tagged automatically."
+    },
+    "step2": {
+      "label": "Step 2",
+      "title": "AI detects the issue",
+      "description": "Our model identifies the damage type and severity in seconds."
+    },
+    "step3": {
+      "label": "Step 3",
+      "title": "Routed to authorities",
+      "description": "The report reaches the right local authority and you get email updates."
+    }
+  },
+  "aiIntelligence": {
+    "badge": "AI-Powered Intelligence",
+    "title": "AI-Powered Safety Intelligence",
+    "subtitle": "Advanced computer vision, risk analysis, and predictive insights help communities identify hazards faster, prioritize responses, and prevent accidents before they happen.",
+    "detection": {
+      "title": "Smart Hazard Detection",
+      "description": "AI automatically identifies potholes, flooding, road debris, fallen trees, damaged infrastructure, and traffic hazards from images and reports in real time.",
+      "imageAlt": "AI computer vision detecting a pothole and flooding on a road",
+      "pills": {
+        "potholes": "Potholes",
+        "flooding": "Flooding",
+        "fallenTrees": "Fallen Trees",
+        "debris": "Road Debris",
+        "damagedRoads": "Damaged Roads",
+        "trafficHazards": "Traffic Hazards"
+      }
+    },
+    "severity": {
+      "title": "Severity Assessment",
+      "description": "Every detected hazard receives an AI-generated risk score to help authorities prioritize critical incidents and allocate resources efficiently.",
+      "riskScore": "Risk Score",
+      "riskLevel": "High Risk",
+      "scoreSuffix": "/ 100",
+      "indicators": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "metrics": {
+        "priority": "Response Priority",
+        "impact": "Estimated Impact",
+        "urgency": "Urgency Level"
+      },
+      "metricValues": {
+        "priority": "High",
+        "impact": "Severe",
+        "urgency": "Immediate"
+      }
+    },
+    "predictive": {
+      "title": "Predictive Analytics",
+      "description": "Analyze historical reports, environmental conditions, and community activity to predict accident hotspots and emerging risk zones.",
+      "legend": {
+        "hotspots": "Accident Hotspots",
+        "forecasting": "Risk Forecasting",
+        "weather": "Weather Impact",
+        "trends": "Trend Analysis"
+      },
+      "features": {
+        "prediction": "Accident Prediction",
+        "mapping": "Hotspot Mapping",
+        "forecasting": "Risk Forecasting",
+        "insights": "Infrastructure Insights"
+      },
+      "viewFull": "Explore full analytics",
+      "mapAttribution": "© Mapbox © OpenStreetMap"
+    },
+    "process": {
+      "title": "From report to resolution",
+      "step1": {
+        "title": "Capture",
+        "description": "Photo • Video • Location"
+      },
+      "step2": {
+        "title": "AI Analysis",
+        "description": "Computer Vision Detection"
+      },
+      "step3": {
+        "title": "Risk Scoring",
+        "description": "Severity Classification"
+      },
+      "step4": {
+        "title": "Authority Alert",
+        "description": "Real-Time Notifications"
+      },
+      "step5": {
+        "title": "Resolution",
+        "description": "Monitor Progress"
+      }
+    }
+  },
+  "features": {
+    "title": "Built to get roads fixed",
+    "subtitle": "Everything you need to report, track and resolve road damage.",
+    "items": {
+      "detection": {
+        "title": "AI damage detection",
+        "description": "Detects potholes, cracks, waterlogging and debris automatically."
+      },
+      "tracking": {
+        "title": "Real-time status tracking",
+        "description": "Follow every report from submitted to resolved."
+      },
+      "notifications": {
+        "title": "Email notifications",
+        "description": "Stay informed at every step with timely email updates."
+      },
+      "offline": {
+        "title": "Offline report drafting",
+        "description": "Draft reports without a connection and sync when you're back online."
+      },
+      "multilingual": {
+        "title": "Multi-language support",
+        "description": "Report in your language across all BIMSTEC nations."
+      },
+      "location": {
+        "title": "Precise location",
+        "description": "PostGIS-powered geolocation pinpoints damage accurately."
+      }
+    }
+  },
+  "countries": {
+    "title": "Built for all BIMSTEC nations",
+    "subtitle": "Serving seven member nations, with more coming online.",
+    "status": {
+      "active": "Active",
+      "comingSoon": "Coming soon"
+    },
+    "names": {
+      "india": "India",
+      "bangladesh": "Bangladesh",
+      "nepal": "Nepal",
+      "bhutan": "Bhutan",
+      "myanmar": "Myanmar",
+      "srilanka": "Sri Lanka",
+      "thailand": "Thailand"
+    }
+  },
+  "stats": {
+    "title": "Real impact on real roads",
+    "items": {
+      "reports": "Reports submitted",
+      "countries": "Countries supported",
+      "resolution": "Avg. resolution time",
+      "accuracy": "AI accuracy"
+    },
+    "values": {
+      "resolution": "4.2 days"
+    }
+  },
+  "cta": {
+    "title": "See a damaged road? Report it now.",
+    "subtitle": "Takes less than 60 seconds. No login required for basic reports.",
+    "button": "Report a Road Issue"
+  },
+  "analytics": {
+    "badge": "Predictive Analytics",
+    "title": "Predictive Risk Analytics",
+    "subtitle": "Live predictive intelligence across India and the BIMSTEC region. Explore accident hotspots, high-risk areas, weather impact and infrastructure trends.",
+    "back": "Back to home",
+    "legend": {
+      "accident": "Accident Hotspots",
+      "highRisk": "High Risk Areas",
+      "weather": "Weather Impact",
+      "infrastructure": "Infrastructure Trends"
+    },
+    "note": "Sample data shown for demonstration. Live incident feeds connect in production."
+  },
+  "footer": {
+    "tagline": "AI-powered civic road damage reporting for BIMSTEC nations.",
+    "links": {
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "github": "GitHub",
+      "contact": "Contact"
+    },
+    "attribution": "BIMSTEC · IIT Madras / CoERS",
+    "builtFor": "Built for Road Safety Hackathon 2026",
+    "rights": "All rights reserved."
+  },
+  "dashboard": {
+    "greeting": "Good Morning, {name} 👋",
+    "subtitle": "Stay informed about road safety in your area.",
+    "quickActions": {
+      "reportHazard": "Report Hazard",
+      "reportHazardSub": "Submit new report",
+      "openSafetyMap": "Open Safety Map",
+      "openSafetyMapSub": "View live hazards",
+      "emergencyContacts": "Emergency Contacts",
+      "emergencyContactsSub": "Quick call help",
+      "viewMyReports": "View My Reports",
+      "viewMyReportsSub": "Track your reports"
+    },
+    "overview": {
+      "reportsSubmitted": "Reports Submitted",
+      "thisMonth": "{count} this month",
+      "verifiedReports": "Verified Reports",
+      "percentVerified": "{percent}% verified",
+      "resolvedIssues": "Resolved Issues",
+      "percentResolved": "{percent}% resolved",
+      "safetyScore": "Safety Score",
+      "communityContributor": "Community Contributor"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "viewAll": "View All",
+      "potholeNH48": "Pothole reported on NH48",
+      "verifiedByCitizens": "Verified by {count} citizens",
+      "floodingPanvel": "Flooding detected near Panvel",
+      "authorityNotified": "Authority notified",
+      "debrisCleared": "Road debris cleared",
+      "resolved": "Resolved",
+      "brokenStreetLight": "Broken street light reported",
+      "underReview": "Under review by authorities",
+      "hoursAgo": "{count} hours ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{count} days ago"
+    },
+    "myReports": {
+      "title": "My Reports",
+      "viewAll": "View All",
+      "columns": {
+        "reportId": "Report ID",
+        "type": "Type",
+        "location": "Location",
+        "status": "Status",
+        "date": "Date"
+      },
+      "status": {
+        "verified": "Verified",
+        "inReview": "In Review",
+        "resolved": "Resolved",
+        "pending": "Pending"
+      },
+      "types": {
+        "pothole": "Pothole",
+        "flooding": "Flooding",
+        "brokenSignal": "Broken Signal",
+        "roadDebris": "Road Debris"
+      },
+      "dates": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "daysAgo": "{count} days ago"
+      }
+    },
+    "safetyMap": {
+      "title": "Safety Map Preview",
+      "openFullMap": "Open Full Map"
+    },
+    "achievements": {
+      "title": "Achievements",
+      "viewAll": "View All",
+      "level": "Level {level}",
+      "roadGuardian": "Road Guardian",
+      "progress": "Progress",
+      "toNextLevel": "{percent}% to next level",
+      "badges": {
+        "firstReport": "First Report",
+        "verifiedContributor": "Verified Contributor",
+        "communityHelper": "Community Helper",
+        "safetyChampion": "Safety Champion"
+      }
+    },
+    "emergencyContacts": {
+      "title": "Emergency Contacts",
+      "trafficPolice": "Traffic Police",
+      "highwayHelpline": "Highway Helpline",
+      "emergencyServices": "Emergency Services",
+      "municipalCorporation": "Municipal Corporation",
+      "emergencyCta": "In Emergency, Call 112"
+    },
+    "nearbyHazards": {
+      "title": "Nearby Hazards",
+      "viewMap": "View Map",
+      "types": {
+        "pothole": "Pothole",
+        "flooding": "Flooding",
+        "roadDebris": "Road Debris",
+        "brokenSignal": "Broken Signal"
+      },
+      "distance": "{km} km away",
+      "risk": {
+        "high": "High Risk",
+        "medium": "Medium Risk",
+        "low": "Low Risk"
+      }
+    },
+    "footer": "Together, we can build safer roads and stronger communities."
+  }
+}
