@@ -8,7 +8,7 @@ import { useNotificationStore } from "@/store/notificationStore";
 
 /* ─── Props ───────────────────────────────────────────────────── */
 interface BottomNavProps {
-  notificationCount?: number; // default 0 — overrides store count if provided
+  notificationCount?: number;
 }
 
 /* ─── Icon Components (outlined + filled variants) ────────────── */
@@ -84,7 +84,7 @@ function UserFilled({ className }: { className?: string }) {
   );
 }
 
-/* ─── Tab configuration ───────────────────────────────────────── */
+/* ─── Tab configuration (4 tabs only — FAB is separate) ───────── */
 interface TabConfig {
   id: string;
   label: string;
@@ -110,14 +110,6 @@ const TABS: TabConfig[] = [
     ariaLabel: "Open Safety Map",
     IconOutlined: MapOutlined,
     IconFilled: MapFilled,
-  },
-  {
-    id: "fab",
-    label: "",
-    href: "/dashboard/report",
-    ariaLabel: "Report a Road Hazard",
-    IconOutlined: () => null,
-    IconFilled: () => null,
   },
   {
     id: "notifications",
@@ -150,14 +142,13 @@ function TabItem({
   onPress: () => void;
 }) {
   return (
-    <motion.button
+    <button
       onClick={onPress}
-      whileTap={{ scale: 0.88 }}
       tabIndex={0}
       role="button"
       aria-label={tab.ariaLabel}
       aria-current={isActive ? "page" : undefined}
-      className="relative flex flex-col items-center justify-center flex-1 h-full min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg whitespace-nowrap"
+      className="relative flex flex-col items-center justify-center flex-1 h-full min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg whitespace-nowrap active:scale-90 transition-transform duration-100"
     >
       {/* Icon */}
       <span className="relative w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
@@ -203,18 +194,19 @@ function TabItem({
       </span>
 
       {/* Active dot indicator */}
-      <AnimatePresence>
-        {isActive && (
-          <motion.span
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-1 h-1 rounded-full bg-[var(--color-amber)] mt-[2px]"
-          />
-        )}
-      </AnimatePresence>
-      {!isActive && <span className="w-1 h-1 mt-[2px] opacity-0" />}
+      <span className="w-1 h-1 mt-[2px]">
+        <AnimatePresence>
+          {isActive && (
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className="block w-1 h-1 rounded-full bg-[var(--color-amber)]"
+            />
+          )}
+        </AnimatePresence>
+      </span>
 
       {/* Label */}
       <span
@@ -226,73 +218,7 @@ function TabItem({
       >
         {tab.label}
       </span>
-    </motion.button>
-  );
-}
-
-/* ─── Center FAB ──────────────────────────────────────────────── */
-function CenterFAB({
-  isActive,
-  onPress,
-}: {
-  isActive: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <div className="relative flex items-center justify-center flex-1 min-w-0 h-full">
-      {/* Outer touch target — centered, positioned above navbar */}
-      <motion.button
-        onClick={onPress}
-        whileHover={{ scale: 1.08 }}
-        whileTap={{ scale: 0.9, rotate: 45 }}
-        tabIndex={0}
-        role="button"
-        aria-label="Report a Road Hazard"
-        className="absolute left-1/2 flex items-center justify-center w-[56px] h-[56px] sm:w-[64px] sm:h-[64px] md:w-[72px] md:h-[72px] rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
-        style={{
-          bottom: "14px",
-          transform: "translateX(-50%)",
-        }}
-      >
-        {/* Inner visible circle */}
-        <div
-          className="relative w-[44px] h-[44px] sm:w-[48px] sm:h-[48px] md:w-[52px] md:h-[52px] rounded-full flex items-center justify-center"
-          style={{
-            backgroundColor: "#F59E0B",
-            border: "3px solid var(--color-card)",
-            boxShadow: "var(--shadow-fab, 0 4px 20px rgba(245,158,11,0.45))",
-          }}
-        >
-          {/* Active glow ring pulse */}
-          {isActive && (
-            <motion.span
-              className="absolute inset-0 rounded-full"
-              animate={{
-                boxShadow: [
-                  "0 0 0 0px rgba(245,158,11,0)",
-                  "0 0 0 8px rgba(245,158,11,0.3)",
-                  "0 0 0 0px rgba(245,158,11,0)",
-                ],
-              }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            />
-          )}
-
-          {/* Plus icon */}
-          <Plus size={22} strokeWidth={2.2} className="text-white sm:w-6 sm:h-6" />
-        </div>
-      </motion.button>
-
-      {/* Idle float animation when on /report */}
-      {isActive && (
-        <motion.div
-          className="absolute left-1/2 flex items-center justify-center w-[56px] h-[56px] sm:w-[64px] sm:h-[64px] md:w-[72px] md:h-[72px] pointer-events-none"
-          style={{ bottom: "14px", transform: "translateX(-50%)" }}
-          animate={{ y: [0, -2, 0] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        />
-      )}
-    </div>
+    </button>
   );
 }
 
@@ -303,10 +229,10 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
   const storeUnreadCount = useNotificationStore((s) => s.getUnreadCount());
   const [pwaExtraPadding, setPwaExtraPadding] = useState(0);
 
-  // Resolve notification count: prop override > store
   const badgeCount = notificationCount ?? storeUnreadCount;
 
-  // PWA standalone detection
+  const isFabActive = pathname === "/dashboard/report" || pathname.startsWith("/dashboard/report/");
+
   useEffect(() => {
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -337,49 +263,128 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
       initial={{ y: 72, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
+      layout={false}
       className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
       role="navigation"
       aria-label="Mobile navigation"
       style={{
         maxWidth: "100vw",
-        overflowX: "hidden",
+        overflow: "visible",
         paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${pwaExtraPadding}px)`,
       }}
     >
-      {/* Background container — max-width for large tablets, centered */}
+      {/* ─── Navbar background container ─── */}
       <div
-        className="relative w-full max-w-screen-lg mx-auto backdrop-blur-md"
+        className="relative w-full max-w-screen-lg mx-auto"
         style={{
+          overflow: "visible",
           backgroundColor: "color-mix(in srgb, var(--color-card) 92%, transparent)",
-          borderTop: "0.5px solid var(--color-border)",
           borderRadius: "20px 20px 0 0",
           boxShadow: "var(--shadow-bottom-nav, 0 -4px 24px rgba(0,0,0,0.08))",
+          backdropFilter: "blur(16px)",
+          WebkitBackdropFilter: "blur(16px)",
         }}
       >
-        {/* 5-column flex container */}
-        <div className="flex flex-row items-stretch justify-around w-full h-[60px] sm:h-[66px] md:h-[72px] px-1 sm:px-2 md:px-4">
-          {TABS.map((tab) => {
-            if (tab.id === "fab") {
-              return (
-                <CenterFAB
-                  key={tab.id}
-                  isActive={isTabActive(tab.href)}
-                  onPress={() => navigate(tab.href)}
-                />
-              );
-            }
-
-            return (
-              <TabItem
-                key={tab.id}
-                tab={tab}
-                isActive={isTabActive(tab.href)}
-                badge={tab.id === "notifications" ? badgeCount : undefined}
-                onPress={() => navigate(tab.href)}
-              />
-            );
-          })}
+        {/* Top border — split into two halves to leave a notch gap for FAB */}
+        <div className="absolute top-0 left-0 right-0 h-[0.5px] pointer-events-none" aria-hidden="true">
+          {/* Left segment */}
+          <div
+            className="absolute top-0 left-0 h-full bg-[var(--color-border)]"
+            style={{ width: "calc(50% - 32px)", borderRadius: "20px 0 0 0" }}
+          />
+          {/* Right segment */}
+          <div
+            className="absolute top-0 right-0 h-full bg-[var(--color-border)]"
+            style={{ width: "calc(50% - 32px)", borderRadius: "0 20px 0 0" }}
+          />
         </div>
+
+        {/* 5-slot grid: [tab] [tab] [spacer] [tab] [tab] */}
+        <div className="grid grid-cols-5 items-stretch w-full h-[60px] sm:h-[66px] md:h-[72px] px-1 sm:px-2 md:px-4">
+          {/* Left tabs: Home, Map */}
+          <TabItem
+            tab={TABS[0]}
+            isActive={isTabActive(TABS[0].href)}
+            onPress={() => navigate(TABS[0].href)}
+          />
+          <TabItem
+            tab={TABS[1]}
+            isActive={isTabActive(TABS[1].href)}
+            onPress={() => navigate(TABS[1].href)}
+          />
+
+          {/* Center spacer — reserved for FAB, never rendered into */}
+          <div aria-hidden="true" />
+
+          {/* Right tabs: Alerts, Profile */}
+          <TabItem
+            tab={TABS[2]}
+            isActive={isTabActive(TABS[2].href)}
+            badge={TABS[2].id === "notifications" ? badgeCount : undefined}
+            onPress={() => navigate(TABS[2].href)}
+          />
+          <TabItem
+            tab={TABS[3]}
+            isActive={isTabActive(TABS[3].href)}
+            onPress={() => navigate(TABS[3].href)}
+          />
+        </div>
+      </div>
+
+      {/* ─── FAB — Rendered AFTER navbar so it paints on top ─── */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          zIndex: 100,
+          left: "50%",
+          transform: "translateX(-50%)",
+          bottom: `calc(14px + env(safe-area-inset-bottom, 0px) + ${pwaExtraPadding}px)`,
+        }}
+      >
+        <button
+          onClick={() => navigate("/dashboard/report")}
+          aria-label="Report a Road Hazard"
+          className="pointer-events-auto relative flex items-center justify-center w-[56px] h-[56px] sm:w-[60px] sm:h-[60px] rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 active:scale-90 transition-transform duration-150"
+        >
+          {/* FAB visible circle */}
+          <div
+            className="relative w-[52px] h-[52px] sm:w-[56px] sm:h-[56px] rounded-full flex items-center justify-center"
+            style={{
+              backgroundColor: "#F59E0B",
+              border: "3.5px solid var(--color-card)",
+              boxShadow: isFabActive
+                ? "0 4px 24px rgba(245,158,11,0.55), 0 0 0 4px rgba(245,158,11,0.15)"
+                : "var(--shadow-fab, 0 4px 20px rgba(245,158,11,0.45))",
+              transition: "box-shadow 0.3s ease, background-color 0.2s ease",
+            }}
+          >
+            {/* Active glow pulse — visual only, no layout effect */}
+            {isFabActive && (
+              <motion.span
+                className="absolute inset-0 rounded-full pointer-events-none"
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0px rgba(245,158,11,0)",
+                    "0 0 0 8px rgba(245,158,11,0.25)",
+                    "0 0 0 0px rgba(245,158,11,0)",
+                  ],
+                }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+            )}
+
+            {/* Plus icon — never changes position */}
+            <Plus
+              size={22}
+              strokeWidth={2.2}
+              className="text-white sm:w-6 sm:h-6"
+              style={{
+                transform: isFabActive ? "rotate(45deg)" : "rotate(0deg)",
+                transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            />
+          </div>
+        </button>
       </div>
     </motion.nav>
   );
