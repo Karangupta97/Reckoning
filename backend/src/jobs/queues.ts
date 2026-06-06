@@ -20,6 +20,7 @@ export const QUEUE_NAMES = {
   adminNotify: "admin-notify",
   complaintConfirmation: "complaint-confirmation",
   slaEscalation: "sla-escalation",
+  slaEngine: "sla-engine",
   authorityAssignment: "authority-assignment",
   notificationUser: "notification-user",
 } as const;
@@ -61,10 +62,12 @@ export interface AuthorityAssignmentJob {
 
 /** Payload for the `notification-user` queue (citizen notifications). */
 export interface NotificationUserJob {
-  type: "TICKET_ASSIGNED" | "STATUS_UPDATE";
+  type: "TICKET_ASSIGNED" | "TICKET_UNASSIGNED" | "STATUS_UPDATE";
   complaintId: string;
   ticketId?: string;
   userId: string;
+  ticketNumber?: string;
+  subDistrictName?: string | null;
   newStatus?: string;
 }
 
@@ -115,6 +118,9 @@ export const complaintConfirmationQueue: Queue | null = makeQueue(
 export const slaEscalationQueue: Queue | null = makeQueue(
   QUEUE_NAMES.slaEscalation,
 );
+
+/** `sla-engine` queue (or `null` without Redis). */
+export const slaEngineQueue: Queue | null = makeQueue(QUEUE_NAMES.slaEngine);
 
 /** `authority-assignment` queue (or `null` without Redis). */
 export const authorityAssignmentQueue: Queue | null = makeQueue(

@@ -16,6 +16,7 @@
 import { Prisma, type Country } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
 import { query } from "../../config/db.js";
+import { getSignedDownloadUrl } from "../../config/s3.js";
 import { AppError } from "../../utils/AppError.js";
 import { reverseGeocode, isoCodeForCountry } from "../../services/geocode.service.js";
 import {
@@ -23,6 +24,7 @@ import {
   enqueueAuthorityNotification,
   enqueueAdminNotification,
   enqueueComplaintConfirmation,
+  enqueueAuthorityAssignment,
 } from "../../services/queue.service.js";
 import {
   composeAddress,
@@ -371,6 +373,7 @@ export async function createComplaint(
             aiRawResult: input.aiRawResult
               ? (input.aiRawResult as Prisma.InputJsonValue)
               : Prisma.JsonNull,
+            aiAnnotatedImageKey: input.aiAnnotatedImageKey ?? null,
             severity,
             assignedTo,
             ticketNumber,
@@ -421,6 +424,8 @@ export async function createComplaint(
   // Always alert the platform admin and confirm receipt to the reporter.
   await enqueueAdminNotification(complaint.id);
   await enqueueComplaintConfirmation(complaint.id, userId);
+  // Ticket creation + sub-district admin assignment via PostGIS geofence.
+  await enqueueAuthorityAssignment(complaint.id);
 
   // 8. Response.
   return {
@@ -691,46 +696,54 @@ function paginate(total: number, page: number, limit: number) {
 function toDetail(
   c: ComplaintWithRelations & { user: { fullName: string } | null },
   requester?: Requester,
-): ComplaintDetail {
+): Promise<ComplaintDetail> {
   const isOwner = requester?.id === c.userId;
   const fullName = c.user?.fullName ?? null;
 
-  const detail: ComplaintDetail = {
-    id: c.id,
-    ticketNumber: c.ticketNumber,
-    category: c.category,
-    severity: c.severity,
-    status: c.status,
-    description: c.description,
-    suggestedFix: c.suggestedFix,
-    location: {
-      latitude: c.latitude,
-      longitude: c.longitude,
-      address: c.address,
-      roadName: c.roadName,
-      roadNumber: c.roadNumber,
-      landmark: c.landmark,
-      direction: c.direction,
-    },
-    country: c.country,
-    submittedBy: reporterLabel(c.isAnonymous, fullName),
-    media: toMediaViews(c),
-    aiDetected: c.aiDetected,
-    aiCategory: c.aiCategory,
-    aiConfidence: c.aiConfidence,
-    upvotes: c.upvotes,
-    viewCount: c.viewCount,
-    assignedAuthority: c.authority
-      ? { id: c.authority.id, name: c.authority.name, type: c.authority.type, country: c.authority.country }
-      : null,
-    timeline: [], // populated by the workflow layer (SOON)
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
-  };
+  // Generate presigned URL for annotated image if available.
+  const annotatedImagePromise = c.aiAnnotatedImageKey
+    ? getSignedDownloadUrl(c.aiAnnotatedImageKey, 3600).catch(() => null)
+    : Promise.resolve(null);
 
-  // Only the owner learns the anonymity setting of their own complaint.
-  if (isOwner) detail.isAnonymous = c.isAnonymous;
-  return detail;
+  return annotatedImagePromise.then((aiAnnotatedImage) => {
+    const detail: ComplaintDetail = {
+      id: c.id,
+      ticketNumber: c.ticketNumber,
+      category: c.category,
+      severity: c.severity,
+      status: c.status,
+      description: c.description,
+      suggestedFix: c.suggestedFix,
+      location: {
+        latitude: c.latitude,
+        longitude: c.longitude,
+        address: c.address,
+        roadName: c.roadName,
+        roadNumber: c.roadNumber,
+        landmark: c.landmark,
+        direction: c.direction,
+      },
+      country: c.country,
+      submittedBy: reporterLabel(c.isAnonymous, fullName),
+      media: toMediaViews(c),
+      aiDetected: c.aiDetected,
+      aiCategory: c.aiCategory,
+      aiConfidence: c.aiConfidence,
+      aiAnnotatedImage,
+      upvotes: c.upvotes,
+      viewCount: c.viewCount,
+      assignedAuthority: c.authority
+        ? { id: c.authority.id, name: c.authority.name, type: c.authority.type, country: c.authority.country }
+        : null,
+      timeline: [], // populated by the workflow layer (SOON)
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    };
+
+    // Only the owner learns the anonymity setting of their own complaint.
+    if (isOwner) detail.isAnonymous = c.isAnonymous;
+    return detail;
+  });
 }
 
 /**

@@ -1,50 +1,77 @@
 /**
  * Authority-assignment worker.
  *
- * Consumes `authority-assignment` jobs, performs PostGIS geofence lookup to
- * find the responsible sub-district + admin, creates a Ticket record, and
- * pushes a user notification job.
+ * Consumes `authority-assignment` jobs, performs a two-step PostGIS geofence
+ * lookup (ST_Contains → ST_DWithin nearest 5 km) to find the responsible
+ * sub-district + admin, creates a Ticket record, and pushes a user notification
+ * job.
  *
- * Job payload: { complaintId: string }
+ * Job payload: `{ complaintId: string }`
  *
- * Run in its own process: `tsx src/workers/authorityAssignment.worker.ts`.
+ * Run in its own process: `tsx src/workers/authorityAssignment.worker.ts`
+ * (or `npm run worker:assignment`).
  */
 
-import { Worker } from "bullmq";
+import { Worker, type Job } from "bullmq";
 import { prisma } from "../config/prisma.js";
+import { query } from "../config/db.js";
 import {
   connection,
   QUEUE_NAMES,
   notificationUserQueue,
   type AuthorityAssignmentJob,
-  type NotificationUserJob,
 } from "../jobs/queues.js";
 import { getSlaDeadline } from "../utils/sla.js";
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 /** Result of the PostGIS sub-district lookup. */
-interface GeoLookupResult {
-  id: string;
+interface RoutingResult {
+  subDistrictId: string;
   districtId: string;
-  adminUserId: string;
+  assignedAdminId: string;
+  subDistrictName?: string;
 }
 
+/** Row shape returned by ST_Contains query. */
+interface ContainsRow {
+  subDistrictId: string;
+  districtId: string;
+  assignedAdminId: string;
+  subDistrictName: string;
+}
+
+/** Row shape returned by ST_DWithin nearest query. */
+interface NearestRow extends ContainsRow {
+  distance: number;
+}
+
+/** Row shape returned by ticket_number_seq nextval. */
+interface SeqRow {
+  seq: string;
+}
+
+// ─── PostGIS Routing (raw pg pool) ──────────────────────────────────────────
+
 /**
- * Find the sub-district whose geofence contains the complaint point, along
- * with the active SUB_DISTRICT_ADMIN assigned to it.
+ * ATTEMPT 1: Find the sub-district whose geofence contains the complaint point.
+ *
+ * Uses `ST_Contains` for an exact spatial inclusion test.
  *
  * @param longitude Complaint longitude.
  * @param latitude  Complaint latitude.
- * @returns The matching sub-district + admin, or `null`.
+ * @returns The matching sub-district routing result, or `null`.
  */
-async function findSubDistrictByPoint(
+async function findByContains(
   longitude: number,
   latitude: number,
-): Promise<GeoLookupResult | null> {
-  const rows = await prisma.$queryRaw<GeoLookupResult[]>`
+): Promise<RoutingResult | null> {
+  const sql = `
     SELECT
-      sd.id,
+      sd.id        AS "subDistrictId",
       sd."districtId",
-      au.id AS "adminUserId"
+      au.id        AS "assignedAdminId",
+      sd.name      AS "subDistrictName"
     FROM "sub_districts" sd
     JOIN "admin_users" au
       ON au."subDistrictId" = sd.id
@@ -52,59 +79,117 @@ async function findSubDistrictByPoint(
       AND au.status = 'ACTIVE'
     WHERE ST_Contains(
       sd.geofence,
-      ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)
+      ST_SetSRID(ST_MakePoint($1, $2), 4326)
     )
     LIMIT 1
   `;
-  return rows[0] ?? null;
+
+  const result = await query<ContainsRow>(sql, [longitude, latitude]);
+  return result.rows[0] ?? null;
 }
+
+/**
+ * ATTEMPT 2: Find the nearest sub-district within 5 km of the complaint point.
+ *
+ * Falls back to a distance-ordered search when the point doesn't lie inside any
+ * geofence boundary. Only returns results within a 5 km radius.
+ *
+ * @param longitude Complaint longitude.
+ * @param latitude  Complaint latitude.
+ * @returns The nearest sub-district routing result within 5 km, or `null`.
+ */
+async function findByNearest(
+  longitude: number,
+  latitude: number,
+): Promise<RoutingResult | null> {
+  const sql = `
+    SELECT
+      sd.id        AS "subDistrictId",
+      sd."districtId",
+      au.id        AS "assignedAdminId",
+      sd.name      AS "subDistrictName",
+      ST_Distance(
+        sd.geofence::geography,
+        ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+      ) AS distance
+    FROM "sub_districts" sd
+    JOIN "admin_users" au
+      ON au."subDistrictId" = sd.id
+      AND au.role = 'SUB_DISTRICT_ADMIN'
+      AND au.status = 'ACTIVE'
+    WHERE ST_DWithin(
+      sd.geofence::geography,
+      ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+      5000
+    )
+    ORDER BY distance ASC
+    LIMIT 1
+  `;
+
+  const result = await query<NearestRow>(sql, [longitude, latitude]);
+  return result.rows[0] ?? null;
+}
+
+/**
+ * Two-step PostGIS routing: ST_Contains first, then nearest fallback.
+ *
+ * @param longitude Complaint longitude.
+ * @param latitude  Complaint latitude.
+ * @returns Routing result or `null` (UNASSIGNED).
+ */
+async function resolveRouting(
+  longitude: number,
+  latitude: number,
+): Promise<RoutingResult | null> {
+  // Step 1: exact containment
+  const containsResult = await findByContains(longitude, latitude);
+  if (containsResult) return containsResult;
+
+  // Step 2: nearest within proximity
+  const nearestResult = await findByNearest(longitude, latitude);
+  return nearestResult;
+}
+
+// ─── Ticket Number Generation ────────────────────────────────────────────────
 
 /**
  * Generate the next ticket number using a PostgreSQL sequence.
  *
- * Format: TKT-{YYYY}-{6-digit-zero-padded-seq}
+ * Format: `TKT-{YYYY}-{6-digit-zero-padded-seq}`
  *
  * @returns The formatted ticket number string.
  */
 async function generateTicketNumber(): Promise<string> {
-  const year = new Date().getUTCFullYear();
-  const result = await prisma.$queryRaw<Array<{ nextval: bigint }>>`
-    SELECT nextval('ticket_number_seq')
-  `;
-  const seq = Number(result[0].nextval);
-  return `TKT-${year}-${String(seq).padStart(6, "0")}`;
+  const result = await query<SeqRow>(
+    `SELECT NEXTVAL('ticket_number_seq') AS seq`,
+  );
+  const row = result.rows[0];
+  if (!row) {
+    throw new Error("Failed to obtain ticket_number_seq nextval");
+  }
+  const seq = Number(row.seq);
+  return `TKT-${new Date().getFullYear()}-${String(seq).padStart(6, "0")}`;
 }
 
-/**
- * Push a notification job to the user notification queue.
- *
- * Logs the payload for now — the notification delivery worker is built later.
- *
- * @param payload Notification job payload.
- */
-async function pushUserNotification(payload: NotificationUserJob): Promise<void> {
-  if (notificationUserQueue) {
-    await notificationUserQueue.add(QUEUE_NAMES.notificationUser, payload);
-  }
-  // eslint-disable-next-line no-console
-  console.log("[authorityAssignment.worker] Notification payload:", JSON.stringify(payload));
-}
+// ─── Core Job Processor ──────────────────────────────────────────────────────
 
 /**
  * Process a single authority-assignment job.
  *
- * 1. Fetch complaint (latitude, longitude, severity, category).
- * 2. PostGIS query to find the responsible sub-district + admin.
+ * Steps:
+ * 1. Fetch complaint (id, latitude, longitude, severity, category, userId).
+ * 2. PostGIS two-step routing (ST_Contains → nearest fallback).
  * 3. Generate ticket number from sequence.
  * 4. Calculate SLA deadline from severity.
- * 5. Create Ticket record.
- * 6. Update Complaint: set ticketId + status = UNDER_REVIEW.
- * 7. Push notification-user job.
+ * 5. Prisma transaction: create ticket + update complaint.
+ * 6. Push notification-user job (fire and forget).
+ * 7. Logging.
  *
  * @param complaintId The complaint to process.
+ * @throws Error when complaint is not found (triggers BullMQ retry).
  */
 async function processAuthorityAssignment(complaintId: string): Promise<void> {
-  // 1. Fetch complaint
+  // ─── Step 1: Fetch complaint ─────────────────────────────────────────────
   const complaint = await prisma.complaint.findUnique({
     where: { id: complaintId },
     select: {
@@ -119,51 +204,52 @@ async function processAuthorityAssignment(complaintId: string): Promise<void> {
   });
 
   if (!complaint) {
-    // eslint-disable-next-line no-console
-    console.warn(
+    throw new Error(
       `[authorityAssignment.worker] Complaint not found: ${complaintId}`,
     );
-    return;
   }
 
-  // Guard: if a ticket already exists, skip (idempotency).
+  // Idempotency guard: skip if ticket already exists.
   if (complaint.ticketId) {
     // eslint-disable-next-line no-console
-    console.warn(
-      `[authorityAssignment.worker] Ticket already exists for complaint: ${complaintId}`,
+    console.info(
+      `[authorityAssignment.worker] Ticket already exists for complaint: ${complaintId} — skipping.`,
     );
     return;
   }
 
-  // 2. PostGIS lookup
-  const lookup = await findSubDistrictByPoint(
+  // ─── Step 2: PostGIS routing (two-step) ──────────────────────────────────
+  const routingResult = await resolveRouting(
     complaint.longitude,
     complaint.latitude,
   );
 
-  const subDistrictId = lookup?.id ?? null;
-  const districtId = lookup?.districtId ?? null;
-  const assignedAdminId = lookup?.adminUserId ?? null;
-  const status = lookup ? "OPEN" : "UNASSIGNED";
+  if (!routingResult) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[authorityAssignment.worker] No sub-district found for complaint ${complaintId} at [${complaint.latitude}, ${complaint.longitude}]`,
+    );
+  }
 
-  // 3. Generate ticket number
+  // ─── Step 3: Generate ticket number ──────────────────────────────────────
   const ticketNumber = await generateTicketNumber();
 
-  // 4. SLA deadline
+  // ─── Step 4: Calculate SLA deadline ──────────────────────────────────────
   const slaDeadline = getSlaDeadline(complaint.severity);
 
-  // 5 + 6. Create Ticket and update Complaint atomically
+  // ─── Step 5: Prisma transaction (atomic) ─────────────────────────────────
   const ticket = await prisma.$transaction(async (tx) => {
     const created = await tx.ticket.create({
       data: {
         ticketNumber,
         complaintId: complaint.id,
-        subDistrictId,
-        districtId,
-        assignedAdminId,
-        status,
+        subDistrictId: routingResult?.subDistrictId ?? null,
+        districtId: routingResult?.districtId ?? null,
+        assignedAdminId: routingResult?.assignedAdminId ?? null,
+        status: routingResult ? "OPEN" : "UNASSIGNED",
         priority: complaint.severity,
         slaDeadline,
+        escalationLevel: 0,
       },
     });
 
@@ -171,59 +257,69 @@ async function processAuthorityAssignment(complaintId: string): Promise<void> {
       where: { id: complaint.id },
       data: {
         ticketId: created.id,
-        status: "UNDER_REVIEW",
+        status: routingResult ? "UNDER_REVIEW" : "SUBMITTED",
       },
     });
-
-    // Create initial status history entry
-    if (assignedAdminId) {
-      await tx.ticketStatusHistory.create({
-        data: {
-          ticketId: created.id,
-          status,
-          changedById: assignedAdminId,
-          note: "Ticket created and assigned automatically via geofence.",
-        },
-      });
-    }
 
     return created;
   });
 
-  // 7. Push notification
-  await pushUserNotification({
-    type: "TICKET_ASSIGNED",
-    complaintId: complaint.id,
-    ticketId: ticket.id,
-    userId: complaint.userId,
-  });
+  // ─── Step 6: Push notification job (fire and forget) ─────────────────────
+  if (notificationUserQueue) {
+    await notificationUserQueue.add(QUEUE_NAMES.notificationUser, {
+      type: routingResult ? "TICKET_ASSIGNED" : "TICKET_UNASSIGNED",
+      complaintId: complaint.id,
+      ticketId: ticket.id,
+      userId: complaint.userId,
+      ticketNumber,
+      subDistrictName: routingResult?.subDistrictName ?? null,
+    });
+  }
 
+  // ─── Step 7: Logging ─────────────────────────────────────────────────────
   // eslint-disable-next-line no-console
-  console.log(
-    `[authorityAssignment.worker] Ticket ${ticketNumber} created for complaint ${complaintId}` +
-      ` → ${lookup ? `assigned to admin ${assignedAdminId}` : "UNASSIGNED (no geofence match)"}`,
+  console.info(
+    `[authorityAssignment.worker] Ticket ${ticketNumber} created → complaintId: ${complaintId} → admin: ${routingResult?.assignedAdminId ?? "UNASSIGNED"}`,
   );
 }
 
+// ─── Worker Bootstrap ────────────────────────────────────────────────────────
+
 /**
- * Start the authority-assignment worker.
+ * Start the authority-assignment BullMQ worker.
+ *
+ * Concurrency: 5 — processes up to 5 jobs in parallel.
  *
  * @returns The running {@link Worker}, or `null` when Redis is unconfigured.
  */
-export function startAuthorityAssignmentWorker(): Worker | null {
+export function startAuthorityAssignmentWorker(): Worker<AuthorityAssignmentJob> | null {
   if (!connection) {
     // eslint-disable-next-line no-console
-    console.warn("[authorityAssignment.worker] REDIS_URL not set — worker not started.");
+    console.warn(
+      "[authorityAssignment.worker] REDIS_URL not set — worker not started.",
+    );
     return null;
   }
 
   const worker = new Worker<AuthorityAssignmentJob>(
     QUEUE_NAMES.authorityAssignment,
-    async (job) => {
+    async (job: Job<AuthorityAssignmentJob>) => {
       await processAuthorityAssignment(job.data.complaintId);
     },
-    { connection },
+    {
+      connection,
+      concurrency: 5,
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
+    },
   );
+
+  worker.on("completed", (job) => {
+    // eslint-disable-next-line no-console
+    console.debug(
+      `[authorityAssignment.worker] Job ${job.id} completed.`,
+    );
+  });
 
   worker.on("failed", (job, err) => {
     // eslint-disable-next-line no-console
@@ -234,11 +330,17 @@ export function startAuthorityAssignmentWorker(): Worker | null {
   });
 
   // eslint-disable-next-line no-console
-  console.log("[authorityAssignment.worker] Started.");
+  console.log("[authorityAssignment.worker] Started (concurrency: 5).");
   return worker;
 }
 
 // Allow running this module directly as a standalone worker process.
-if (import.meta.url === `file://${process.argv[1]}`) {
+const scriptPath = `file://${process.argv[1]}`;
+const isDirectRun =
+  import.meta.url === scriptPath ||
+  import.meta.url === `file://${encodeURI(process.argv[1]!)}` ||
+  import.meta.url.replace(/%20/g, " ") === scriptPath;
+
+if (isDirectRun) {
   startAuthorityAssignmentWorker();
 }

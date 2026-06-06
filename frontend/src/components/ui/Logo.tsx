@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type LogoProps = {
   className?: string;
   /** Size of the mark in px. */
@@ -5,31 +7,22 @@ type LogoProps = {
 };
 
 /**
- * Reckoning road/warning mark — an inline SVG so it inherits color and needs no
- * network request. A wedge of road with a dashed amber centre line.
+ * Reckoning logo mark — uses the app icon image.
  */
 export function LogoMark({ className, size = 28 }: LogoProps) {
   return (
-    <svg
+    <Image
+      src="/android-chrome-192x192.png"
+      alt="Reckoning"
       width={size}
       height={size}
-      viewBox="0 0 32 32"
-      fill="none"
-      aria-hidden="true"
-      className={className}
-    >
-      <rect width="32" height="32" rx="8" fill="#1C2B3A" />
-      <path d="M11 25 L14 8 L18 8 L21 25 Z" fill="#3A4658" />
-      <g fill="#F59E0B">
-        <rect x="15" y="9" width="2" height="4" rx="1" />
-        <rect x="15" y="15" width="2" height="4" rx="1" />
-        <rect x="15" y="21" width="2" height="4" rx="1" />
-      </g>
-    </svg>
+      className={`rounded-md ${className ?? ""}`}
+      aria-hidden
+    />
   );
 }
 
-/** Full wordmark: icon + RECKONING in DM Sans 600. */
+/** Full wordmark: icon + RECKONING. */
 export function Logo({ className }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 ${className ?? ""}`}>

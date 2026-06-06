@@ -52,9 +52,6 @@ async function dbGuard<T>(operation: () => Promise<T>, context: string): Promise
 
 /**
  * Generate a signed thumbnail URL for a complaint's primary media.
- *
- * @param s3Key The S3 key of the media, or undefined.
- * @returns A presigned URL, or null.
  */
 async function signedThumbnail(s3Key: string | undefined | null): Promise<string | null> {
   if (!s3Key) return null;
@@ -118,7 +115,7 @@ export async function listTickets(
     ...(priority ? { priority } : {}),
   };
 
-  const [total, tickets, stats] = await dbGuard(
+  const [total, tickets, statsGrouped] = await dbGuard(
     () =>
       prisma.$transaction([
         prisma.ticket.count({ where }),
@@ -145,7 +142,6 @@ export async function listTickets(
           skip: offset,
           take: limit,
         }),
-        // Stats for the admin's tickets
         prisma.ticket.groupBy({
           by: ["status"],
           where: { assignedAdminId: adminId },
@@ -156,8 +152,8 @@ export async function listTickets(
   );
 
   // Compute stats
-  const statusCounts = new Map(
-    stats.map((s) => [s.status, s._count.id]),
+  const statusCounts = new Map<string, number>(
+    statsGrouped.map((s) => [s.status, s._count.id]),
   );
 
   const criticalCount = await dbGuard(
@@ -211,11 +207,6 @@ export async function listTickets(
 
 /**
  * Get full ticket detail by id.
- *
- * @param ticketId Ticket id.
- * @param adminId  Authenticated admin id (for ownership guard).
- * @param adminRole Admin role (SUPER_ADMIN / DISTRICT_ADMIN bypass).
- * @param adminSubDistrictId Admin's sub-district (for matching).
  */
 export async function getTicketById(
   ticketId: string,
@@ -278,17 +269,12 @@ export async function getTicketById(
   }
 
   // District Admin can see tickets in their district's sub-districts
-  if (adminRole === "DISTRICT_ADMIN" && ticket.subDistrictId !== adminSubDistrictId) {
-    // Check if the ticket's sub-district is in the admin's district
-    if (ticket.districtId) {
-      const admin = await prisma.adminUser.findUnique({
-        where: { id: adminId },
-        select: { districtId: true },
-      });
-      if (admin?.districtId !== ticket.districtId) {
-        throw new AppError("Access denied.", 403, { code: "FORBIDDEN" });
-      }
-    } else {
+  if (adminRole === "DISTRICT_ADMIN") {
+    const admin = await prisma.adminUser.findUnique({
+      where: { id: adminId },
+      select: { districtId: true },
+    });
+    if (!ticket.districtId || admin?.districtId !== ticket.districtId) {
       throw new AppError("Access denied.", 403, { code: "FORBIDDEN" });
     }
   }
@@ -400,7 +386,7 @@ export async function updateTicketStatus(
 
   // Build update data
   const updateData: Prisma.TicketUpdateInput = {
-    status: input.status,
+    status: input.status as TicketStatus,
     ...(input.status === "RESOLVED" ? { resolvedAt: now } : {}),
     ...(input.status === "REJECTED"
       ? { rejectedAt: now, rejectionReason: input.note ?? null }
@@ -408,7 +394,7 @@ export async function updateTicketStatus(
   };
 
   // Build complaint status update
-  let complaintStatus: string | undefined;
+  let complaintStatus: "RESOLVED" | "REJECTED" | undefined;
   if (input.status === "RESOLVED") complaintStatus = "RESOLVED";
   if (input.status === "REJECTED") complaintStatus = "REJECTED";
 
@@ -427,7 +413,7 @@ export async function updateTicketStatus(
           await tx.complaint.update({
             where: { id: ticket.complaintId },
             data: {
-              status: complaintStatus as "RESOLVED" | "REJECTED",
+              status: complaintStatus,
               ...(complaintStatus === "RESOLVED"
                 ? { resolvedAt: now, resolvedByAdmin: adminId }
                 : {}),
@@ -439,7 +425,7 @@ export async function updateTicketStatus(
         await tx.ticketStatusHistory.create({
           data: {
             ticketId,
-            status: input.status,
+            status: input.status as TicketStatus,
             changedById: adminId,
             note: input.note ?? null,
           },
@@ -463,7 +449,7 @@ export async function updateTicketStatus(
     ticketId: updated.id,
     ticketNumber: updated.ticketNumber,
     previousStatus,
-    newStatus: input.status,
+    newStatus: input.status as TicketStatus,
     updatedAt: updated.updatedAt,
   };
 }
@@ -651,7 +637,9 @@ export async function listAllTickets(
     "listAllTickets",
   );
 
-  const statusCounts = new Map(statsRaw.map((s) => [s.status, s._count.id]));
+  const statusCounts = new Map<string, number>(
+    statsRaw.map((s) => [s.status, s._count.id]),
+  );
 
   const criticalCount = await dbGuard(
     () => prisma.ticket.count({ where: { ...where, priority: "CRITICAL" } }),

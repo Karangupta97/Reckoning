@@ -36,7 +36,7 @@ const NAV_ITEMS: Array<{
   { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
   { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/notifications" },
-  { id: "community", label: "Community", icon: Users, href: "/dashboard" },
+  { id: "community", label: "Community", icon: Users, href: "/community" },
   { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard" },
   { id: "profile", label: "Profile", icon: User, href: "/dashboard" },
   { id: "settings", label: "Settings", icon: Settings, href: "/dashboard" },

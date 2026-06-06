@@ -15,6 +15,7 @@ import { healthRouter } from "./middleware/dbHealth.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
 import { uploadRouter } from "./modules/upload/upload.routes.js";
 import { complaintRouter } from "./modules/complaints/complaint.routes.js";
+import { aiRouter } from "./modules/ai/ai.routes.js";
 import { adminAuthRouter } from "./modules/admin/auth/adminAuth.routes.js";
 import { districtRouter } from "./modules/admin/district/district.routes.js";
 import { subDistrictRouter } from "./modules/admin/subDistrict/subDistrict.routes.js";
@@ -23,6 +24,9 @@ import { ticketRouter, citizenTicketRouter, superAdminTicketRouter } from "./mod
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
 import { verifyEmailTransport } from "./services/email.service.js";
+import { startAllWorkers } from "./workers/index.js";
+import { checkReckoningHealth } from "./modules/ai/ai.service.js";
+import { logger } from "./utils/logger.js";
 
 const app: Express = express();
 
@@ -48,6 +52,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/complaints", complaintRouter);
 app.use("/api/complaints", citizenTicketRouter);
+app.use("/api/ai", aiRouter);
 app.use("/api/tickets", ticketRouter);
 
 // Admin realm. Mount the specific onboarding prefixes BEFORE the catch-all
@@ -86,6 +91,17 @@ async function bootstrap(): Promise<void> {
   // non-email routes stay available, but the failure is logged loudly so the
   // operator knows transactional email is currently degraded.
   await verifyEmailTransport();
+
+  // Start background BullMQ workers (no-ops gracefully without Redis).
+  startAllWorkers();
+
+  // Non-fatal: check Reckoning AI availability at startup.
+  const Reckoning = await checkReckoningHealth();
+  if (Reckoning.online) {
+    logger.info(`✅ Reckoning AI online — ${Reckoning.modelInfo} (${Reckoning.latencyMs}ms)`);
+  } else {
+    logger.warn("⚠️  Reckoning AI unreachable — complaint AI detection will be skipped");
+  }
 
   const server = app.listen(env.PORT, () => {
     // eslint-disable-next-line no-console

@@ -156,18 +156,32 @@ export default function IndiaMapInner({
 
   // Style function for GeoJSON features (data layer)
   const styleFeature = useCallback((feature: GeoJSON.Feature | undefined): PathOptions => {
-    if (!feature) return { fillColor: '#94A3B8', fillOpacity: 0.4, color: 'rgba(255,255,255,0.3)', weight: 0.8 };
+    if (!feature) return { fillColor: '#94A3B8', fillOpacity: 0.20, color: '#FFFFFF', weight: 1.5, opacity: 0.8 };
 
     const regionId = getFeatureId(feature);
     const stats = currentData[regionId];
     const isSelected = selectedRegion?.id === regionId;
+    const hasSelection = selectedRegion !== null;
+
+    // Determine fill opacity based on state
+    let fillOpacity = 0.35; // default — transparent enough to see map tiles
+    if (isSelected) {
+      fillOpacity = 0.70;
+    } else if (hasSelection) {
+      fillOpacity = 0.10; // dimmed — other regions when one is selected
+    }
+
+    // No-data regions get even lighter opacity
+    if (!stats) {
+      fillOpacity = 0.20;
+    }
 
     return {
       fillColor: stats ? getRiskColor(stats.riskScore) : '#94A3B8',
-      fillOpacity: 0.65,
-      color: isSelected ? '#F59E0B' : 'rgba(255,255,255,0.3)',
-      weight: isSelected ? 3 : 0.8,
-      opacity: 1,
+      fillOpacity,
+      color: isSelected ? '#F59E0B' : '#FFFFFF',
+      weight: isSelected ? 3 : 1.5,
+      opacity: isSelected ? 1.0 : 0.8,
     };
   }, [currentData, selectedRegion]);
 
@@ -175,9 +189,9 @@ export default function IndiaMapInner({
   const borderStyle = useCallback((): PathOptions => ({
     fillColor: 'transparent',
     fillOpacity: 0,
-    color: '#3B82F6',
+    color: '#FFFFFF',
     weight: 1.5,
-    opacity: 0.6,
+    opacity: 0.8,
   }), []);
 
   // Feature event handlers
@@ -201,9 +215,10 @@ export default function IndiaMapInner({
         hoverRegion(regionId);
         const target = e.target;
         target.setStyle({
-          fillOpacity: 0.85,
+          fillOpacity: 0.55,
           color: '#FFFFFF',
-          weight: 2,
+          weight: 2.5,
+          opacity: 1.0,
         });
         target.bringToFront();
       },
@@ -211,10 +226,23 @@ export default function IndiaMapInner({
         hoverRegion(null);
         const target = e.target;
         const isSelected = selectedRegion?.id === regionId;
+        const hasSelection = selectedRegion !== null;
+        const hasStats = !!currentData[regionId];
+
+        let fillOpacity = 0.35;
+        if (isSelected) {
+          fillOpacity = 0.70;
+        } else if (hasSelection) {
+          fillOpacity = 0.10;
+        } else if (!hasStats) {
+          fillOpacity = 0.20;
+        }
+
         target.setStyle({
-          fillOpacity: 0.65,
-          color: isSelected ? '#F59E0B' : 'rgba(255,255,255,0.3)',
-          weight: isSelected ? 3 : 0.8,
+          fillOpacity,
+          color: isSelected ? '#F59E0B' : '#FFFFFF',
+          weight: isSelected ? 3 : 1.5,
+          opacity: isSelected ? 1.0 : 0.8,
         });
       },
       click: () => {

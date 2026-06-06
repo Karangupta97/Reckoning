@@ -82,8 +82,8 @@ async function syncOfflineReports(): Promise<void> {
     if (syncedCount > 0) {
       await sw.registration.showNotification("Reckoning", {
         body: `${syncedCount} report${syncedCount !== 1 ? "s" : ""} synced successfully`,
-        icon: "/icon-192.png",
-        badge: "/icon-192.png",
+        icon: "/android-chrome-192x192.png",
+        badge: "/android-chrome-192x192.png",
         tag: "sync-complete",
       });
     }
@@ -134,14 +134,14 @@ sw.addEventListener("push", (event: any) => {
     data = {
       title: "Reckoning",
       body: event.data.text(),
-      icon: "/icon-192.png",
+      icon: "/android-chrome-192x192.png",
     };
   }
 
   const options: any = {
     body: data.body || "New notification",
-    icon: data.icon || "/icon-192.png",
-    badge: "/icon-192.png",
+    icon: data.icon || "/android-chrome-192x192.png",
+    badge: "/android-chrome-192x192.png",
     tag: data.tag || "reckoning-push",
     data: { url: data.url || "/notifications" },
     actions: data.actions || [],

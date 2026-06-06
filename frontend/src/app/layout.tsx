@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     title: "Reckoning",
   },
   icons: {
-    icon: "/icon-192.png",
+    icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
 };
@@ -46,6 +46,7 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 const THEME_INIT = `(function(){try{var t=localStorage.getItem('RECKONING_THEME');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);}catch(e){}})();`;
@@ -66,7 +67,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head />
-      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col overflow-x-hidden" suppressHydrationWarning>
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT}
         </Script>

@@ -1,6 +1,7 @@
 /**
- * Generates the PWA icons (icon-192.png, icon-512.png) and favicon-friendly
- * assets from an inline SVG using sharp. Run with: `node scripts/generate-icons.mjs`.
+ * Generates the PWA icons (android-chrome-192x192.png, android-chrome-512x512.png)
+ * and apple-touch-icon from an inline SVG using sharp.
+ * Run with: `node scripts/generate-icons.mjs`.
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -37,11 +38,11 @@ async function main() {
   const buffer = Buffer.from(svg);
   await fs.mkdir(publicDir, { recursive: true });
 
-  await sharp(buffer).resize(192, 192).png().toFile(path.join(publicDir, "icon-192.png"));
-  await sharp(buffer).resize(512, 512).png().toFile(path.join(publicDir, "icon-512.png"));
+  await sharp(buffer).resize(192, 192).png().toFile(path.join(publicDir, "android-chrome-192x192.png"));
+  await sharp(buffer).resize(512, 512).png().toFile(path.join(publicDir, "android-chrome-512x512.png"));
   await sharp(buffer).resize(180, 180).png().toFile(path.join(publicDir, "apple-touch-icon.png"));
 
-  console.log("Generated icon-192.png, icon-512.png, apple-touch-icon.png");
+  console.log("Generated android-chrome-192x192.png, android-chrome-512x512.png, apple-touch-icon.png");
 }
 
 main().catch((err) => {

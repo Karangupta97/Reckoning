@@ -12,11 +12,10 @@ interface BottomNavProps {
 }
 
 /* ─── Icon Components (outlined + filled variants) ────────────── */
-/* Using inline SVG so we can swap between outlined/filled states */
 
 function HomeOutlined({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       <polyline points="9 22 9 12 15 12 15 22" />
     </svg>
@@ -25,7 +24,7 @@ function HomeOutlined({ className }: { className?: string }) {
 
 function HomeFilled({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="0" className={className}>
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="0" className={className}>
       <path d="M12.707 2.293a1 1 0 0 0-1.414 0l-9 9A1 1 0 0 0 3 13h1v7a2 2 0 0 0 2 2h4v-6h4v6h4a2 2 0 0 0 2-2v-7h1a1 1 0 0 0 .707-1.707l-9-9z" />
     </svg>
   );
@@ -33,7 +32,7 @@ function HomeFilled({ className }: { className?: string }) {
 
 function MapOutlined({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
       <line x1="8" y1="2" x2="8" y2="18" />
       <line x1="16" y1="6" x2="16" y2="22" />
@@ -43,7 +42,7 @@ function MapOutlined({ className }: { className?: string }) {
 
 function MapFilled({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
       <path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z" />
     </svg>
   );
@@ -51,7 +50,7 @@ function MapFilled({ className }: { className?: string }) {
 
 function BellOutlined({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
     </svg>
@@ -60,7 +59,7 @@ function BellOutlined({ className }: { className?: string }) {
 
 function BellFilled({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9z" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" fill="currentColor" stroke="currentColor" strokeWidth="0.5" />
     </svg>
@@ -69,7 +68,7 @@ function BellFilled({ className }: { className?: string }) {
 
 function UserOutlined({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
@@ -78,7 +77,7 @@ function UserOutlined({ className }: { className?: string }) {
 
 function UserFilled({ className }: { className?: string }) {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
       <circle cx="12" cy="7" r="4" />
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2h16z" />
     </svg>
@@ -106,7 +105,7 @@ const TABS: TabConfig[] = [
   },
   {
     id: "map",
-    label: "Safety Map",
+    label: "Map",
     href: "/map",
     ariaLabel: "Open Safety Map",
     IconOutlined: MapOutlined,
@@ -158,11 +157,10 @@ function TabItem({
       role="button"
       aria-label={tab.ariaLabel}
       aria-current={isActive ? "page" : undefined}
-      className="relative flex flex-col items-center justify-center flex-1 h-full outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg"
-      style={{ maxWidth: "74px" }}
+      className="relative flex flex-col items-center justify-center flex-1 h-full min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg whitespace-nowrap"
     >
-      {/* Icon with AnimatePresence swap */}
-      <span className="relative w-6 h-6 flex items-center justify-center">
+      {/* Icon */}
+      <span className="relative w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center">
         <AnimatePresence mode="wait">
           {isActive ? (
             <motion.span
@@ -173,7 +171,7 @@ function TabItem({
               transition={{ duration: 0.15, ease: "easeOut" }}
               className="absolute inset-0 flex items-center justify-center text-[var(--color-amber)]"
             >
-              <tab.IconFilled />
+              <tab.IconFilled className="w-5 h-5 sm:w-6 sm:h-6" />
             </motion.span>
           ) : (
             <motion.span
@@ -184,7 +182,7 @@ function TabItem({
               transition={{ duration: 0.15, ease: "easeOut" }}
               className="absolute inset-0 flex items-center justify-center text-[var(--color-text-muted)]"
             >
-              <tab.IconOutlined />
+              <tab.IconOutlined className="w-5 h-5 sm:w-6 sm:h-6" />
             </motion.span>
           )}
         </AnimatePresence>
@@ -195,8 +193,8 @@ function TabItem({
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 500, damping: 25 }}
-            className="absolute top-0 right-0 translate-x-[4px] -translate-y-[4px] min-w-[16px] h-[16px] px-[3px] flex items-center justify-center rounded-full bg-[var(--color-danger)] text-white font-sans"
-            style={{ fontSize: "10px", fontWeight: 700, lineHeight: 1 }}
+            className="absolute -top-0.5 -right-1.5 min-w-[14px] h-[14px] sm:min-w-[16px] sm:h-[16px] px-[2px] sm:px-[3px] flex items-center justify-center rounded-full bg-[var(--color-danger)] text-white font-sans"
+            style={{ fontSize: "9px", fontWeight: 700, lineHeight: 1 }}
             aria-label={`${badge} unread notifications`}
           >
             {badge > 9 ? "9+" : badge}
@@ -220,7 +218,7 @@ function TabItem({
 
       {/* Label */}
       <span
-        className="text-[12px] text-center leading-tight mt-[2px] font-sans"
+        className="text-[10px] sm:text-[11px] md:text-[12px] text-center leading-tight mt-[1px] sm:mt-[2px] font-sans whitespace-nowrap"
         style={{
           color: isActive ? "var(--color-amber)" : "var(--color-text-muted)",
           fontWeight: isActive ? 600 : 400,
@@ -241,8 +239,8 @@ function CenterFAB({
   onPress: () => void;
 }) {
   return (
-    <div className="relative flex items-center justify-center flex-1 h-full" style={{ maxWidth: "74px" }}>
-      {/* Outer touch target — 72×72, centered, positioned above navbar */}
+    <div className="relative flex items-center justify-center flex-1 min-w-0 h-full">
+      {/* Outer touch target — centered, positioned above navbar */}
       <motion.button
         onClick={onPress}
         whileHover={{ scale: 1.08 }}
@@ -250,12 +248,15 @@ function CenterFAB({
         tabIndex={0}
         role="button"
         aria-label="Report a Road Hazard"
-        className="absolute flex items-center justify-center w-[72px] h-[72px] rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
-        style={{ bottom: "20px" }}
+        className="absolute left-1/2 flex items-center justify-center w-[56px] h-[56px] sm:w-[64px] sm:h-[64px] md:w-[72px] md:h-[72px] rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+        style={{
+          bottom: "14px",
+          transform: "translateX(-50%)",
+        }}
       >
-        {/* Inner visible circle — 52px */}
+        {/* Inner visible circle */}
         <div
-          className="relative w-[52px] h-[52px] rounded-full flex items-center justify-center"
+          className="relative w-[44px] h-[44px] sm:w-[48px] sm:h-[48px] md:w-[52px] md:h-[52px] rounded-full flex items-center justify-center"
           style={{
             backgroundColor: "#F59E0B",
             border: "3px solid var(--color-card)",
@@ -278,15 +279,15 @@ function CenterFAB({
           )}
 
           {/* Plus icon */}
-          <Plus size={26} strokeWidth={2} className="text-white" />
+          <Plus size={22} strokeWidth={2.2} className="text-white sm:w-6 sm:h-6" />
         </div>
       </motion.button>
 
       {/* Idle float animation when on /report */}
       {isActive && (
         <motion.div
-          className="absolute flex items-center justify-center w-[72px] h-[72px] pointer-events-none"
-          style={{ bottom: "20px" }}
+          className="absolute left-1/2 flex items-center justify-center w-[56px] h-[56px] sm:w-[64px] sm:h-[64px] md:w-[72px] md:h-[72px] pointer-events-none"
+          style={{ bottom: "14px", transform: "translateX(-50%)" }}
           animate={{ y: [0, -2, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         />
@@ -312,8 +313,6 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
       (navigator as unknown as { standalone?: boolean }).standalone === true;
 
     if (isStandalone) {
-      // Additional bottom padding for Android nav bar
-      // iOS safe area handled by env(safe-area-inset-bottom) automatically
       setPwaExtraPadding(8);
     }
   }, []);
@@ -338,16 +337,18 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
       initial={{ y: 72, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1], delay: 0.1 }}
-      className="fixed bottom-0 left-0 right-0 z-50 flex lg:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
       role="navigation"
       aria-label="Mobile navigation"
       style={{
+        maxWidth: "100vw",
+        overflowX: "hidden",
         paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + ${pwaExtraPadding}px)`,
       }}
     >
-      {/* Background container */}
+      {/* Background container — max-width for large tablets, centered */}
       <div
-        className="relative w-full backdrop-blur-md"
+        className="relative w-full max-w-screen-lg mx-auto backdrop-blur-md"
         style={{
           backgroundColor: "color-mix(in srgb, var(--color-card) 92%, transparent)",
           borderTop: "0.5px solid var(--color-border)",
@@ -355,8 +356,8 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
           boxShadow: "var(--shadow-bottom-nav, 0 -4px 24px rgba(0,0,0,0.08))",
         }}
       >
-        {/* 5-column flex container — 72px tall */}
-        <div className="flex flex-row items-stretch w-full h-[72px]">
+        {/* 5-column flex container */}
+        <div className="flex flex-row items-stretch justify-around w-full h-[60px] sm:h-[66px] md:h-[72px] px-1 sm:px-2 md:px-4">
           {TABS.map((tab) => {
             if (tab.id === "fab") {
               return (

@@ -21,6 +21,8 @@ export interface AiHints {
   aiCategory?: IssueCategory;
   aiConfidence?: number;
   aiRawResult?: Record<string, unknown>;
+  /** S3 key of the annotated result image (from POST /api/ai/detect). */
+  aiAnnotatedImageKey?: string;
 }
 
 /** Validated payload accepted by `createComplaint`. */
@@ -150,6 +152,8 @@ export interface ComplaintDetail {
   aiDetected: boolean;
   aiCategory: IssueCategory | null;
   aiConfidence: number | null;
+  /** Presigned S3 URL for the AI-annotated result image (1h expiry). */
+  aiAnnotatedImage: string | null;
   upvotes: number;
   viewCount: number;
   assignedAuthority: AssignedAuthorityView | null;

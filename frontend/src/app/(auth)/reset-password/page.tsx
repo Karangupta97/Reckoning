@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
-import { Eye, EyeOff, KeyRound, CheckCircle, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle, ArrowRight } from 'lucide-react';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -44,9 +45,13 @@ export default function ResetPasswordPage() {
 
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-amber)] text-[#1C2B3A] flex items-center justify-center mb-3">
-              <KeyRound size={22} strokeWidth={2} />
-            </div>
+            <Image
+              src="/android-chrome-192x192.png"
+              alt="Reckoning"
+              width={48}
+              height={48}
+              className="rounded-xl mb-3"
+            />
             <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">Reckoning</h1>
           </div>
 

@@ -24,16 +24,8 @@ const severityEnum = z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
 export const listTicketsQuerySchema = z.object({
   status: ticketStatusEnum.optional(),
   priority: severityEnum.optional(),
-  page: z
-    .string()
-    .regex(/^\d+$/)
-    .transform((v) => Math.max(1, Number.parseInt(v, 10)))
-    .default("1"),
-  limit: z
-    .string()
-    .regex(/^\d+$/)
-    .transform((v) => Math.min(100, Math.max(1, Number.parseInt(v, 10))))
-    .default("20"),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
 /** Query params for GET /api/admin/tickets (Super Admin). */
@@ -42,16 +34,8 @@ export const superAdminListTicketsQuerySchema = z.object({
   priority: severityEnum.optional(),
   subDistrictId: z.string().min(1).optional(),
   districtId: z.string().min(1).optional(),
-  page: z
-    .string()
-    .regex(/^\d+$/)
-    .transform((v) => Math.max(1, Number.parseInt(v, 10)))
-    .default("1"),
-  limit: z
-    .string()
-    .regex(/^\d+$/)
-    .transform((v) => Math.min(100, Math.max(1, Number.parseInt(v, 10))))
-    .default("20"),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
 /** Path param for ticket-specific routes. */

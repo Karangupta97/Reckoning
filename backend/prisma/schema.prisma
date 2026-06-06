@@ -1,8 +1,3 @@
-// Prisma schema for RoadWatch AI
-// Supabase (PostgreSQL) with PostGIS enabled.
-// `directUrl` is used by `prisma migrate` (no pgBouncer);
-// `url` should be the pooled connection string for the app runtime.
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -12,7 +7,7 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  extensions = [postgis]
+  extensions = [postgis, uuid_ossp(map: "uuid-ossp", schema: "extensions")]
   schemas    = ["public"]
 }
 
@@ -25,10 +20,6 @@ model HealthPing {
   @@map("health_pings")
   @@schema("public")
 }
-
-// ---------------------------------------------------------------------------
-// Authentication & onboarding
-// ---------------------------------------------------------------------------
 
 /// A fully-onboarded RoadWatch AI account. Created only after a successful
 /// OTP verification. `passwordHash` is a bcrypt digest — never the plaintext.
@@ -45,9 +36,9 @@ model User {
   lastLoginAt   DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
   complaints    Complaint[]
   mediaUploads  MediaUpload[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
   @@schema("public")
@@ -81,7 +72,6 @@ model RefreshToken {
   id         String    @id @default(cuid())
   tokenHash  String    @unique
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt  DateTime
   createdAt  DateTime  @default(now())
   revoked    Boolean   @default(false)
@@ -89,9 +79,285 @@ model RefreshToken {
   ipAddress  String?
   userAgent  String?
   deviceInfo Json?
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("refresh_tokens")
+  @@schema("public")
+}
+
+/// A government administrator in the RoadWatch AI hierarchy.
+///
+/// `passwordHash` is null until the invitee activates their account. Invite
+/// tokens are stored ONLY as a SHA-256 hash (`inviteTokenHash`); the raw token
+/// lives solely in the activation email link. Jurisdiction columns are null
+/// for SUPER_ADMIN, district-scoped for DISTRICT_ADMIN, and district +
+/// sub-district scoped for SUB_DISTRICT_ADMIN.
+model AdminUser {
+  id                String              @id @default(cuid())
+  fullName          String
+  email             String              @unique
+  passwordHash      String?
+  phone             String?
+  designation       String?
+  department        String?
+  role              AdminRole
+  status            AdminStatus         @default(PENDING)
+  isVerified        Boolean             @default(false)
+  districtId        String?
+  subDistrictId     String?
+  inviteTokenHash   String?             @unique
+  inviteTokenExpiry DateTime?
+  inviteAcceptedAt  DateTime?
+  invitedById       String?
+  resendCount       Int                 @default(0)
+  loginAttempts     Int                 @default(0)
+  lockedUntil       DateTime?
+  lastLoginAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  refreshTokens     AdminRefreshToken[]
+  district          District?           @relation(fields: [districtId], references: [id])
+  subDistrict       SubDistrict?        @relation(fields: [subDistrictId], references: [id])
+
+  @@index([role])
+  @@index([status])
+  @@index([districtId])
+  @@index([subDistrictId])
+  @@map("admin_users")
+  @@schema("public")
+}
+
+/// A district jurisdiction with a PostGIS polygon boundary. The `geofence`
+/// column is `geometry(Polygon, 4326)`; Prisma cannot write it directly, so it
+/// is set via raw `ST_GeomFromGeoJSON` inside the create transaction. The GIST
+/// index is created by the raw SQL migration.
+model District {
+  id           String                   @id @default(cuid())
+  name         String
+  country      Country
+  geofence     Unsupported("geometry")?
+  isActive     Boolean                  @default(true)
+  createdAt    DateTime                 @default(now())
+  admins       AdminUser[]
+  subDistricts SubDistrict[]
+
+  @@index([country])
+  @@map("districts")
+  @@schema("public")
+}
+
+/// A sub-district jurisdiction nested inside exactly one {@link District}. Its
+/// `geofence` MUST be fully contained within the parent district boundary
+/// (enforced with `ST_Within` at invite time).
+model SubDistrict {
+  id         String                   @id @default(cuid())
+  name       String
+  districtId String
+  geofence   Unsupported("geometry")?
+  isActive   Boolean                  @default(true)
+  createdAt  DateTime                 @default(now())
+  admins     AdminUser[]
+  tickets    Ticket[]
+  district   District                 @relation(fields: [districtId], references: [id])
+
+  @@index([districtId])
+  @@map("sub_districts")
+  @@schema("public")
+}
+
+/// A persisted admin refresh-token handle. Only the SHA-256 `tokenHash` is
+/// stored, never the raw JWT. Mirrors the citizen {@link RefreshToken} model
+/// but is bound to the separate admin auth realm.
+model AdminRefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  adminId   String
+  expiresAt DateTime
+  revoked   Boolean   @default(false)
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_refresh_tokens")
+  @@schema("public")
+}
+
+/// An audit record raised when a complaint reaches a terminal escalation
+/// state (e.g. max escalation reached, or both tiers breached their SLA). Used
+/// to drive the public "Unresolved" surface and accountability reporting.
+model AuditFlag {
+  id              String    @id @default(cuid())
+  complaintId     String
+  districtId      String?
+  subDistrictId   String?
+  reason          String
+  resolvedByAdmin String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([complaintId])
+  @@index([reason])
+  @@map("audit_flags")
+  @@schema("public")
+}
+
+/// A citizen-submitted road issue.
+///
+/// Identity is hybrid-anonymous: `userId` is ALWAYS stored (for moderation and
+/// abuse prevention) but is never exposed publicly. When `isAnonymous` is true
+/// the public/authority surfaces show "Anonymous Citizen" instead of the name.
+///
+/// `location` is a PostGIS `geography(Point,4326)` column. Prisma cannot create
+/// or back-fill it directly, so it is added/maintained via the raw SQL
+/// migration in `prisma/migrations` and written with a raw `UPDATE` inside the
+/// create transaction.
+model Complaint {
+  id                    String                    @id @default(cuid())
+  userId                String
+  isAnonymous           Boolean                   @default(false)
+  category              IssueCategory
+  description           String?
+  suggestedFix          String?
+  latitude              Float
+  longitude             Float
+  location              Unsupported("geography")?
+  address               String?
+  roadName              String?
+  roadNumber            String?
+  landmark              String?
+  direction             String?
+  country               Country
+  aiDetected            Boolean                   @default(false)
+  aiCategory            IssueCategory?
+  aiConfidence          Float?
+  aiRawResult           Json?
+  aiAnnotatedImageKey   String?
+  severity              SeverityLevel             @default(MEDIUM)
+  status                ComplaintStatus           @default(SUBMITTED)
+  assignedTo            String?
+  ticketNumber          String                    @unique
+  upvotes               Int                       @default(0)
+  viewCount             Int                       @default(0)
+  deletedAt             DateTime?
+  deletedBy             String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  escalatedAt           DateTime?
+  escalatedToDistrictId String?
+  escalationLevel       Int                       @default(0)
+  escalationReason      String?
+  resolutionNote        String?
+  resolvedAt            DateTime?
+  resolvedByAdmin       String?
+  slaDeadline           DateTime?
+  ticketId              String?                   @unique
+  ticket                Ticket?
+  media                 ComplaintMedia[]
+  authority             Authority?                @relation(fields: [assignedTo], references: [id])
+  user                  User                      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([country])
+  @@index([severity])
+  @@index([createdAt])
+  @@index([escalatedToDistrictId])
+  @@map("complaints")
+  @@schema("public")
+}
+
+/// Join row binding an uploaded media asset to a complaint, preserving display
+/// order and which asset is the primary (thumbnail) one.
+model ComplaintMedia {
+  id          String      @id @default(cuid())
+  complaintId String
+  mediaId     String
+  isPrimary   Boolean     @default(false)
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  complaint   Complaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  media       MediaUpload @relation(fields: [mediaId], references: [id])
+
+  @@unique([complaintId, mediaId])
+  @@index([complaintId])
+  @@index([mediaId])
+  @@map("complaint_media")
+  @@schema("public")
+}
+
+/// A single uploaded file (image or video) stored in S3.
+///
+/// Created by `POST /api/upload` BEFORE it is ever linked to a complaint.
+/// `linkedAt` is stamped when the asset is attached to a complaint so it can
+/// never be reused for a second complaint. `isDeleted` supports soft cleanup
+/// when its owning complaint is removed.
+model MediaUpload {
+  id         String           @id @default(cuid())
+  userId     String
+  s3Key      String           @unique
+  url        String
+  mimeType   String
+  size       Int
+  width      Int?
+  height     Int?
+  duration   Float?
+  linkedAt   DateTime?
+  isDeleted  Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  complaints ComplaintMedia[]
+  user       User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("media_uploads")
+  @@schema("public")
+}
+
+/// A government body a complaint can be auto-assigned to, scoped by a PostGIS
+/// `geography(Polygon,4326)` boundary. The polygon is managed via raw SQL.
+model Authority {
+  id         String                    @id @default(cuid())
+  name       String
+  type       String
+  country    Country
+  boundary   Unsupported("geography")?
+  email      String
+  phone      String?
+  isActive   Boolean                   @default(true)
+  createdAt  DateTime                  @default(now())
+  complaints Complaint[]
+
+  @@index([country])
+  @@map("authorities")
+  @@schema("public")
+}
+
+/// Atomic, per-country monotonic counter used to mint sequential ticket
+/// numbers (e.g. `RW-IN-2026-000042`). One row per (country, year); the
+/// `lastSeq` is bumped inside the complaint-create transaction.
+model TicketCounter {
+  country   Country
+  year      Int
+  lastSeq   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@id([country, year])
+  @@map("ticket_counters")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+
   @@schema("public")
 }
 
@@ -117,10 +383,6 @@ enum Role {
   @@schema("public")
 }
 
-// ---------------------------------------------------------------------------
-// Admin & Authority onboarding (3-tier hierarchy)
-// ---------------------------------------------------------------------------
-
 /// The three administrative tiers. SUPER_ADMIN is seeded only; DISTRICT_ADMIN
 /// is invited by a SUPER_ADMIN; SUB_DISTRICT_ADMIN is invited by a
 /// DISTRICT_ADMIN. Role is the single source of truth for RBAC decisions.
@@ -133,10 +395,10 @@ enum AdminRole {
 }
 
 /// Lifecycle of an admin account.
-///   PENDING     — invited, not yet activated (no password set).
-///   ACTIVE      — activated and able to log in.
-///   SUSPENDED   — temporarily blocked by a higher tier; reversible.
-///   DEACTIVATED — soft-deleted; cannot log in (terminal via API).
+/// PENDING     — invited, not yet activated (no password set).
+/// ACTIVE      — activated and able to log in.
+/// SUSPENDED   — temporarily blocked by a higher tier; reversible.
+/// DEACTIVATED — soft-deleted; cannot log in (terminal via API).
 enum AdminStatus {
   PENDING
   ACTIVE
@@ -145,139 +407,6 @@ enum AdminStatus {
 
   @@schema("public")
 }
-
-/// A government administrator in the RoadWatch AI hierarchy.
-///
-/// `passwordHash` is null until the invitee activates their account. Invite
-/// tokens are stored ONLY as a SHA-256 hash (`inviteTokenHash`); the raw token
-/// lives solely in the activation email link. Jurisdiction columns are null
-/// for SUPER_ADMIN, district-scoped for DISTRICT_ADMIN, and district +
-/// sub-district scoped for SUB_DISTRICT_ADMIN.
-model AdminUser {
-  id                String    @id @default(cuid())
-  fullName          String
-  email             String    @unique
-  passwordHash      String?
-  phone             String?
-  designation       String?
-  department        String?
-  role              AdminRole
-  status            AdminStatus @default(PENDING)
-  isVerified        Boolean   @default(false)
-
-  // Jurisdiction (null for SUPER_ADMIN)
-  districtId        String?
-  district          District?    @relation(fields: [districtId], references: [id])
-  subDistrictId     String?
-  subDistrict       SubDistrict? @relation(fields: [subDistrictId], references: [id])
-
-  // Invite flow
-  inviteTokenHash   String?   @unique
-  inviteTokenExpiry DateTime?
-  inviteAcceptedAt  DateTime?
-  invitedById       String?
-  resendCount       Int       @default(0)
-
-  // Security
-  loginAttempts     Int       @default(0)
-  lockedUntil       DateTime?
-  lastLoginAt       DateTime?
-
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  refreshTokens     AdminRefreshToken[]
-
-  @@index([role])
-  @@index([status])
-  @@index([districtId])
-  @@index([subDistrictId])
-  @@map("admin_users")
-  @@schema("public")
-}
-
-/// A district jurisdiction with a PostGIS polygon boundary. The `geofence`
-/// column is `geometry(Polygon, 4326)`; Prisma cannot write it directly, so it
-/// is set via raw `ST_GeomFromGeoJSON` inside the create transaction. The GIST
-/// index is created by the raw SQL migration.
-model District {
-  id           String        @id @default(cuid())
-  name         String
-  country      Country
-  geofence     Unsupported("geometry(Polygon, 4326)")?
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-
-  admins       AdminUser[]
-  subDistricts SubDistrict[]
-
-  @@index([country])
-  @@map("districts")
-  @@schema("public")
-}
-
-/// A sub-district jurisdiction nested inside exactly one {@link District}. Its
-/// `geofence` MUST be fully contained within the parent district boundary
-/// (enforced with `ST_Within` at invite time).
-model SubDistrict {
-  id         String   @id @default(cuid())
-  name       String
-  districtId String
-  district   District @relation(fields: [districtId], references: [id])
-  geofence   Unsupported("geometry(Polygon, 4326)")?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-
-  admins     AdminUser[]
-  tickets    Ticket[]
-
-  @@index([districtId])
-  @@map("sub_districts")
-  @@schema("public")
-}
-
-/// A persisted admin refresh-token handle. Only the SHA-256 `tokenHash` is
-/// stored, never the raw JWT. Mirrors the citizen {@link RefreshToken} model
-/// but is bound to the separate admin auth realm.
-model AdminRefreshToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  adminId   String
-  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  revoked   Boolean   @default(false)
-  revokedAt DateTime?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime  @default(now())
-
-  @@index([adminId])
-  @@map("admin_refresh_tokens")
-  @@schema("public")
-}
-
-/// An audit record raised when a complaint reaches a terminal escalation
-/// state (e.g. max escalation reached, or both tiers breached their SLA). Used
-/// to drive the public "Unresolved" surface and accountability reporting.
-model AuditFlag {
-  id              String    @id @default(cuid())
-  complaintId     String
-  districtId      String?
-  subDistrictId   String?
-  reason          String // "MAX_ESCALATION_REACHED" | "DOUBLE_SLA_BREACH"
-  resolvedByAdmin String?
-  resolvedAt      DateTime?
-  createdAt       DateTime  @default(now())
-
-  @@index([complaintId])
-  @@index([reason])
-  @@map("audit_flags")
-  @@schema("public")
-}
-
-// ---------------------------------------------------------------------------
-// SmartReport — complaints, media uploads, and assignable authorities
-// ---------------------------------------------------------------------------
 
 /// Road-issue categories a citizen can report. `OTHERS` is the catch-all.
 enum IssueCategory {
@@ -320,162 +449,6 @@ enum SeverityLevel {
   @@schema("public")
 }
 
-/// A citizen-submitted road issue.
-///
-/// Identity is hybrid-anonymous: `userId` is ALWAYS stored (for moderation and
-/// abuse prevention) but is never exposed publicly. When `isAnonymous` is true
-/// the public/authority surfaces show "Anonymous Citizen" instead of the name.
-///
-/// `location` is a PostGIS `geography(Point,4326)` column. Prisma cannot create
-/// or back-fill it directly, so it is added/maintained via the raw SQL
-/// migration in `prisma/migrations` and written with a raw `UPDATE` inside the
-/// create transaction.
-model Complaint {
-  id           String           @id @default(cuid())
-  // Identity (hybrid anonymous model)
-  userId       String
-  user         User             @relation(fields: [userId], references: [id])
-  isAnonymous  Boolean          @default(false)
-  // Issue details
-  category     IssueCategory
-  description  String?          @db.Text
-  suggestedFix String?          @db.Text
-  // Location (PostGIS geography column added via raw SQL migration)
-  latitude     Float
-  longitude    Float
-  location     Unsupported("geography(Point,4326)")?
-  address      String?
-  roadName     String?
-  roadNumber   String?
-  landmark     String?
-  direction    String?
-  country      Country
-  // Media
-  media        ComplaintMedia[]
-  // AI fields (populated by AI service — SOON)
-  aiDetected   Boolean          @default(false)
-  aiCategory   IssueCategory?
-  aiConfidence Float?
-  aiRawResult  Json?
-  // Severity (set by AI heuristics or an admin)
-  severity     SeverityLevel    @default(MEDIUM)
-  // Status & workflow
-  status       ComplaintStatus  @default(SUBMITTED)
-  assignedTo   String?
-  authority    Authority?       @relation(fields: [assignedTo], references: [id])
-  ticketNumber String           @unique
-  // Ticket (assigned after complaint creation by authority-assignment worker)
-  ticketId       String?        @unique
-  ticket         Ticket?
-  // Resolution
-  resolutionNote String?        @db.Text
-  resolvedAt     DateTime?
-  resolvedByAdmin String?
-  // SLA & escalation (managed by the SLA worker + admin actions)
-  slaDeadline           DateTime?
-  escalationLevel       Int       @default(0)
-  escalatedAt           DateTime?
-  escalatedToDistrictId String?
-  escalationReason      String?
-  // Engagement
-  upvotes      Int              @default(0)
-  viewCount    Int              @default(0)
-  // Soft delete
-  deletedAt    DateTime?
-  deletedBy    String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@index([category])
-  @@index([country])
-  @@index([severity])
-  @@index([createdAt])
-  @@index([escalatedToDistrictId])
-  @@map("complaints")
-  @@schema("public")
-}
-
-/// Join row binding an uploaded media asset to a complaint, preserving display
-/// order and which asset is the primary (thumbnail) one.
-model ComplaintMedia {
-  id          String      @id @default(cuid())
-  complaintId String
-  complaint   Complaint   @relation(fields: [complaintId], references: [id], onDelete: Cascade)
-  mediaId     String
-  media       MediaUpload @relation(fields: [mediaId], references: [id])
-  isPrimary   Boolean     @default(false)
-  order       Int         @default(0)
-  createdAt   DateTime    @default(now())
-
-  @@unique([complaintId, mediaId])
-  @@index([complaintId])
-  @@index([mediaId])
-  @@map("complaint_media")
-  @@schema("public")
-}
-
-/// A single uploaded file (image or video) stored in S3.
-///
-/// Created by `POST /api/upload` BEFORE it is ever linked to a complaint.
-/// `linkedAt` is stamped when the asset is attached to a complaint so it can
-/// never be reused for a second complaint. `isDeleted` supports soft cleanup
-/// when its owning complaint is removed.
-model MediaUpload {
-  id        String           @id @default(cuid())
-  userId    String
-  user      User             @relation(fields: [userId], references: [id])
-  s3Key     String           @unique
-  url       String
-  mimeType  String
-  size      Int
-  width     Int?
-  height    Int?
-  duration  Float?
-  linkedAt  DateTime?
-  isDeleted Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  complaints ComplaintMedia[]
-
-  @@index([userId])
-  @@map("media_uploads")
-  @@schema("public")
-}
-
-/// A government body a complaint can be auto-assigned to, scoped by a PostGIS
-/// `geography(Polygon,4326)` boundary. The polygon is managed via raw SQL.
-model Authority {
-  id         String      @id @default(cuid())
-  name       String
-  type       String // NHAI | PWD | MUNICIPAL | STATE
-  country    Country
-  boundary   Unsupported("geography(Polygon,4326)")?
-  email      String
-  phone      String?
-  isActive   Boolean     @default(true)
-  complaints Complaint[]
-  createdAt  DateTime    @default(now())
-
-  @@index([country])
-  @@map("authorities")
-  @@schema("public")
-}
-
-/// Atomic, per-country monotonic counter used to mint sequential ticket
-/// numbers (e.g. `RW-IN-2026-000042`). One row per (country, year); the
-/// `lastSeq` is bumped inside the complaint-create transaction.
-model TicketCounter {
-  country   Country
-  year      Int
-  lastSeq   Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  @@id([country, year])
-  @@map("ticket_counters")
-  @@schema("public")
-}
-
 // ---------------------------------------------------------------------------
 // Ticket System — authority assignment & SLA tracking
 // ---------------------------------------------------------------------------
@@ -494,31 +467,29 @@ enum TicketStatus {
 }
 
 /// A ticket assigned to a sub-district admin for resolution tracking.
-///
-/// Created automatically by the authority-assignment worker after a complaint
-/// is submitted. Carries SLA deadline, escalation state, and an independent
-/// status lifecycle that mirrors the complaint's progression.
 model Ticket {
-  id              String       @id @default(cuid())
-  ticketNumber    String       @unique
-  complaintId     String       @unique
-  complaint       Complaint    @relation(fields: [complaintId], references: [id])
-  subDistrictId   String?
-  subDistrict     SubDistrict? @relation(fields: [subDistrictId], references: [id])
-  districtId      String?
-  assignedAdminId String?
-  status          TicketStatus @default(OPEN)
-  priority        SeverityLevel
-  slaDeadline     DateTime
-  escalationLevel Int          @default(0)
-  escalatedAt     DateTime?
-  resolvedAt      DateTime?
-  rejectedAt      DateTime?
-  rejectionReason String?
-  notes           TicketNote[]
-  statusHistory   TicketStatusHistory[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                    String                @id @default(cuid())
+  ticketNumber          String                @unique
+  complaintId           String                @unique
+  complaint             Complaint             @relation(fields: [complaintId], references: [id])
+  subDistrictId         String?
+  subDistrict           SubDistrict?          @relation(fields: [subDistrictId], references: [id])
+  districtId            String?
+  assignedAdminId       String?
+  previousAdminId       String?
+  status                TicketStatus          @default(OPEN)
+  priority              SeverityLevel
+  slaDeadline           DateTime
+  slaWarningNotifiedAt  DateTime?
+  escalationLevel       Int                   @default(0)
+  escalatedAt           DateTime?
+  resolvedAt            DateTime?
+  rejectedAt            DateTime?
+  rejectionReason       String?
+  notes                 TicketNote[]
+  statusHistory         TicketStatusHistory[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   @@index([status])
   @@index([subDistrictId])

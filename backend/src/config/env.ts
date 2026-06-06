@@ -126,7 +126,10 @@ const envSchema = z.object({
   // (fine for a single instance / local dev).
   REDIS_URL: z
     .string()
-    .url("REDIS_URL must be a valid redis:// connection URL")
+    .refine(
+      (val) => /^rediss?:\/\/.+/.test(val),
+      "REDIS_URL must be a valid redis:// or rediss:// connection URL",
+    )
     .optional(),
 
   // AWS S3 — media storage. Optional so the app still boots in environments
@@ -147,6 +150,19 @@ const envSchema = z.object({
     .string()
     .url("NOMINATIM_BASE_URL must be a valid URL")
     .default("https://nominatim.openstreetmap.org"),
+
+  // Reckoning AI — YOLOv8 road-defect detection model (HuggingFace Spaces).
+  // Optional: when unset the AI detection layer is skipped gracefully.
+  RECKONING_API_URL: z
+    .string()
+    .url("RECKONING_API_URL must be a valid URL (your HuggingFace Space URL)")
+    .optional(),
+  RECKONING_API_SECRET: z
+    .string()
+    .min(1, "RECKONING_API_SECRET is required when RECKONING_API_URL is set")
+    .optional(),
+  RECKONING_TIMEOUT_MS: z.coerce.number().default(30000),
+  RECKONING_CONFIDENCE_THRESHOLD: z.coerce.number().default(0.40),
 })
   .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",

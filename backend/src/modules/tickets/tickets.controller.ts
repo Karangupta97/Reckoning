@@ -47,7 +47,7 @@ export async function getById(
     if (!req.admin) {
       throw new AppError("No token", 401, { code: "NO_TOKEN" });
     }
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await ticketsService.getTicketById(
       id,
       req.admin.id,
@@ -72,7 +72,7 @@ export async function updateStatus(
     if (!req.admin) {
       throw new AppError("No token", 401, { code: "NO_TOKEN" });
     }
-    const { id } = req.params;
+    const id = req.params.id as string;
     const input = req.body as UpdateTicketStatusInput;
     const result = await ticketsService.updateTicketStatus(id, req.admin.id, input);
     res.status(200).json({ success: true, data: result });
@@ -93,7 +93,7 @@ export async function addNote(
     if (!req.admin) {
       throw new AppError("No token", 401, { code: "NO_TOKEN" });
     }
-    const { id } = req.params;
+    const id = req.params.id as string;
     const input = req.body as CreateTicketNoteInput;
     const result = await ticketsService.createTicketNote(
       id,
@@ -120,7 +120,7 @@ export async function getComplaintTicket(
     if (!req.user) {
       throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
     }
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await ticketsService.getComplaintTicket(id, req.user.id);
     res.status(200).json({ success: true, data: result });
   } catch (error) {
