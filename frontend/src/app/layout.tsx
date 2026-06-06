@@ -49,7 +49,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const THEME_INIT = `(function(){try{var t=localStorage.getItem('RECKONING_THEME');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);}catch(e){}})();`;
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('RECKONING_THEME');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}catch(e){}})();`;
 
 const EXTENSION_ATTR_CLEANUP = `(function(){try{function strip(el){if(!el||!el.attributes)return;for(var i=el.attributes.length-1;i>=0;i--){var n=el.attributes[i].name;if(n.indexOf('bis_')===0||n.indexOf('__processed')===0||n==='bis_register'){el.removeAttribute(n);}}}new MutationObserver(function(muts){for(var i=0;i<muts.length;i++){var m=muts[i];if(m.type==='attributes'){var n=m.attributeName||'';if(n.indexOf('bis_')===0||n.indexOf('__processed')===0){if(m.target&&m.target.removeAttribute)m.target.removeAttribute(n);}}else{for(var j=0;j<m.addedNodes.length;j++){strip(m.addedNodes[j]);}}}}).observe(document.documentElement,{attributes:true,childList:true,subtree:true});}catch(e){}})();`;
 

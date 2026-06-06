@@ -86,6 +86,68 @@
   box-sizing: border-box;
 }
 
+/* ─── Theme Transition ───────────────────────────────────────── */
+/* Applied via JS class after initial render to prevent FOUC transitions */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    fill 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    stroke 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Exclude elements that need their own transition timing */
+html.theme-transition .no-theme-transition,
+html.theme-transition .no-theme-transition * {
+  transition: none !important;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: none !important;
+  }
+}
+
+/* ─── Theme Toggle Micro-interactions ────────────────────────── */
+.theme-toggle-knob {
+  transition:
+    transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle-icon {
+  transition:
+    transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 200ms ease;
+}
+
+.theme-toggle-glow {
+  transition: box-shadow 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle-glow-light {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-amber) 20%, transparent),
+    0 0 12px color-mix(in srgb, var(--color-amber) 15%, transparent);
+}
+
+.theme-toggle-glow-dark {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--color-info) 25%, transparent),
+    0 0 12px color-mix(in srgb, var(--color-info) 20%, transparent);
+}
+
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;

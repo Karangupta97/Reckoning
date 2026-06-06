@@ -21,33 +21,37 @@ import {
 
 import { LogoMark } from "@/components/ui/Logo";
 import { useSidebarStore } from "@/store/sidebarStore";
-import { useDashboardStore, type NavItem } from "@/store/dashboardStore";
+import { useDashboardStore } from "@/store/dashboardStore";
 
 const NAV_ITEMS: Array<{
-  id: NavItem | "reportHazard";
+  id: string;
   label: string;
   icon: React.ElementType;
   href: string;
   highlight?: boolean;
+  exactMatch?: boolean;
 }> = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
   { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
   { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
-  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
-  { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
+  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard/hazards" },
+  { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
   { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
-  { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard" },
-  { id: "profile", label: "Profile", icon: User, href: "/dashboard" },
-  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard" },
-  { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard" },
+  { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard/achievements" },
+  { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
+  { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard/help" },
 ];
 
 export function Sidebar() {
   const { expanded, toggle } = useSidebarStore();
-  const { activeNav, setActiveNav, notificationCount } = useDashboardStore();
+  const { notificationCount } = useDashboardStore();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Strip locale prefix if present (e.g. /en/dashboard → /dashboard)
+  const normalizedPath = pathname.replace(/^\/[a-z]{2}(?=\/)/, "");
 
   return (
     <motion.aside
@@ -80,7 +84,10 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href && (item.id === "reportHazard" ? pathname === "/dashboard/report" : activeNav === item.id);
+          // Derive active state purely from pathname
+          const isActive = item.exactMatch
+            ? normalizedPath === item.href
+            : normalizedPath === item.href || normalizedPath.startsWith(item.href + "/");
           const Icon = item.icon;
           const showBadge = item.id === "notifications" && notificationCount > 0;
           const isHighlight = item.highlight;
@@ -89,9 +96,6 @@ export function Sidebar() {
             <button
               key={item.id}
               onClick={() => {
-                if (item.id !== "reportHazard") {
-                  setActiveNav(item.id as NavItem);
-                }
                 router.push(item.href);
               }}
               className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
@@ -19,30 +19,35 @@ import {
 
 import { LogoMark } from "@/components/ui/Logo";
 import { useSidebarStore } from "@/store/sidebarStore";
-import { useDashboardStore, type NavItem } from "@/store/dashboardStore";
+import { useDashboardStore } from "@/store/dashboardStore";
 
 const NAV_ITEMS: Array<{
-  id: NavItem;
+  id: string;
   label: string;
   icon: React.ElementType;
   href: string;
+  exactMatch?: boolean;
 }> = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
   { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
-  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
-  { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
+  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard/hazards" },
+  { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
   { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
-  { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard" },
-  { id: "profile", label: "Profile", icon: User, href: "/dashboard" },
-  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard" },
-  { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard" },
+  { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard/achievements" },
+  { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile" },
+  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
+  { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard/help" },
 ];
 
 export function MobileSidebar() {
   const { mobileOpen, setMobileOpen } = useSidebarStore();
-  const { activeNav, setActiveNav, notificationCount } = useDashboardStore();
+  const { notificationCount } = useDashboardStore();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Strip locale prefix if present (e.g. /en/dashboard → /dashboard)
+  const normalizedPath = pathname.replace(/^\/[a-z]{2}(?=\/)/, "");
 
   return (
     <AnimatePresence>
@@ -90,7 +95,10 @@ export function MobileSidebar() {
             {/* Nav */}
             <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
               {NAV_ITEMS.map((item) => {
-                const isActive = activeNav === item.id;
+                // Derive active state purely from pathname
+                const isActive = item.exactMatch
+                  ? normalizedPath === item.href
+                  : normalizedPath === item.href || normalizedPath.startsWith(item.href + "/");
                 const Icon = item.icon;
                 const showBadge = item.id === "notifications" && notificationCount > 0;
 
@@ -98,7 +106,6 @@ export function MobileSidebar() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      setActiveNav(item.id);
                       router.push(item.href);
                       setMobileOpen(false);
                     }}
