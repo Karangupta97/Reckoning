@@ -32,7 +32,7 @@ const NAV_ITEMS: Array<{
 }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
-  { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard" },
+  { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
   { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
   { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },

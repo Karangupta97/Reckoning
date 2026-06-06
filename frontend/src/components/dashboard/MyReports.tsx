@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 type ReportStatus = "verified" | "inReview" | "resolved" | "pending";
@@ -35,6 +36,7 @@ const rowVariants = {
 
 export function MyReports() {
   const t = useTranslations("dashboard.myReports");
+  const router = useRouter();
 
   return (
     <div className="neu-card p-5 flex flex-col">
@@ -42,7 +44,10 @@ export function MyReports() {
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
           {t("title")}
         </h3>
-        <button className="text-xs font-medium text-[var(--color-amber)] hover:underline">
+        <button
+          onClick={() => router.push("/dashboard/my-reports")}
+          className="text-xs font-medium text-[var(--color-amber)] hover:underline"
+        >
           {t("viewAll")}
         </button>
       </div>
