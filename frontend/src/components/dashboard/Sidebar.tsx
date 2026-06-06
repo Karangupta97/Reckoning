@@ -31,12 +31,12 @@ const NAV_ITEMS: Array<{
   highlight?: boolean;
 }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/report", highlight: true },
+  { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
   { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard" },
   { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard" },
   { id: "map", label: "Safety Map", icon: Map, href: "/dashboard" },
-  { id: "notifications", label: "Notifications", icon: Bell, href: "/notifications" },
-  { id: "community", label: "Community", icon: Users, href: "/community" },
+  { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
+  { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
   { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard" },
   { id: "profile", label: "Profile", icon: User, href: "/dashboard" },
   { id: "settings", label: "Settings", icon: Settings, href: "/dashboard" },
@@ -80,7 +80,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href && (item.id === "reportHazard" ? pathname === "/report" : activeNav === item.id);
+          const isActive = pathname === item.href && (item.id === "reportHazard" ? pathname === "/dashboard/report" : activeNav === item.id);
           const Icon = item.icon;
           const showBadge = item.id === "notifications" && notificationCount > 0;
           const isHighlight = item.highlight;

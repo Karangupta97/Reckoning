@@ -1,77 +1,94 @@
-/* ─── Community Feed Types ───────────────────────────────────── */
+// ─── Report Feed Item ─────────────────────────────────────────────────────────
 
 export interface ReportFeedItem {
-  id: string;
-  userName: string;
-  userInitial: string;
-  userColor: string;
-  isAnonymous: boolean;
-  isVerified: boolean;
-  isFollowing: boolean;
-  location: string;
-  road: string;
-  timeAgo: string;
-  hazardType: HazardType;
-  hazardEmoji: string;
-  severity: Severity;
-  title: string;
-  description: string;
-  hasPhoto: boolean;
-  photoPlaceholderColor: string;
-  status: ReportStatusType;
-  statusStep: number;
-  upvotes: number;
-  hasUpvoted: boolean;
-  comments: number;
-  shares: number;
-  saves: number;
-  views: number;
-  isSaved: boolean;
+  id:           string;
+  userName:     string;
+  userInitial:  string;
+  userColor:    string;
+  isAnonymous:  boolean;
+  isVerified:   boolean;
+  isFollowing:  boolean;
+  location:     string;
+  road:         string;
+  timeAgo:      string;
+  hazardType:   string;
+  hazardEmoji:  string;
+  severity:     "low" | "medium" | "high" | "critical";
+  title:        string;
+  description:  string;
+
+  // ── Media ────────────────────────────────────────────────────────
+  mediaType:     "image" | "video";
+  mediaUrl:      string;
+  thumbnailUrl:  string;
+
+  // ── Intelligence Scores ──────────────────────────────────────────
+  riskScore:              number;   // 0–100
+  trustScore:             number;   // 0–100
+  verificationPercent:    number;   // 0–100
+  authorityStatus:        string;   // e.g. "Assigned — BMC Mumbai"
+  verifiedCitizensCount:  number;
+
+  // ── Status & Engagement ──────────────────────────────────────────
+  status:          "submitted" | "verified" | "in_progress" | "resolved" | "rejected";
+  statusStep:      number;
+  upvotes:         number;
+  hasUpvoted:      boolean;
+  comments:        number;
+  shares:          number;
+  saves:           number;
+  views:           number;
+  isSaved:         boolean;
   officialResponse: boolean;
-  coordinates?: { lat: number; lng: number };
+  coordinates:     { lat: number; lng: number };
 }
 
-export type HazardType = "pothole" | "flooding" | "broken-signal" | "road-damage" | "debris" | "accident" | "waterlogging" | "street-light" | "cave-in" | "guardrail";
-export type Severity = "low" | "medium" | "high" | "critical";
-export type ReportStatusType = "submitted" | "verified" | "assigned" | "in_progress" | "resolved";
+// ─── Comment Item ─────────────────────────────────────────────────────────────
 
-export interface CommentReply {
-  id: string;
+export interface ReplyItem {
+  id:       string;
   userName: string;
-  text: string;
-  likes: number;
-  timeAgo: string;
+  text:     string;
+  likes:    number;
+  timeAgo:  string;
 }
+
+export type CommentReply = ReplyItem;
 
 export interface CommentItem {
-  id: string;
-  userName: string;
-  initial: string;
-  color: string;
-  text: string;
-  likes: number;
-  timeAgo: string;
+  id:         string;
+  userName:   string;
+  initial:    string;
+  color:      string;
+  text:       string;
+  likes:      number;
+  timeAgo:    string;
   isOfficial: boolean;
-  isPinned: boolean;
-  replies: CommentReply[];
+  isPinned:   boolean;
+  replies:    ReplyItem[];
 }
 
+// ─── Story Item ───────────────────────────────────────────────────────────────
+
 export interface StoryItem {
-  id: string;
-  type: "new" | "report";
-  emoji?: string;
-  location?: string;
-  severity?: Severity;
-  reportId?: string;
-  label?: string;
+  id:           string;
+  type:         "new" | "report";
+  label?:       string;
+  emoji?:       string;
+  location?:    string;
+  severity?:    "low" | "medium" | "high" | "critical";
+  reportId?:    string;
+  thumbnailUrl?: string;
 }
+
+// ─── Scope Option ─────────────────────────────────────────────────────────────
 
 export type FeedScope = "sub-district" | "district" | "state" | "national";
 
 export interface ScopeOption {
-  key: FeedScope;
-  icon: string;
-  label: string;
+  key:      FeedScope;
+  icon:     string;
+  label:    string;
   sublabel: string;
-  count: string;
+  count:    string;
 }

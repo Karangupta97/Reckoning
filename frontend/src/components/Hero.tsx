@@ -35,7 +35,7 @@ export function Hero() {
 
         <div className="mt-8 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
           <Link
-            href="/report"
+            href="/dashboard/report"
             className="btn-amber w-full px-6 py-3 text-base sm:w-auto"
           >
             {t("ctaPrimary")}

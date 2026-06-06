@@ -25,7 +25,7 @@ export function ReportCTA() {
               {t("subtitle")}
             </p>
             <Link
-              href="/report"
+              href="/dashboard/report"
               className="btn-amber mt-8 inline-flex px-8 py-4 text-lg"
             >
               {t("button")}

@@ -114,7 +114,7 @@ const TABS: TabConfig[] = [
   {
     id: "fab",
     label: "",
-    href: "/report",
+    href: "/dashboard/report",
     ariaLabel: "Report a Road Hazard",
     IconOutlined: () => null,
     IconFilled: () => null,
@@ -122,7 +122,7 @@ const TABS: TabConfig[] = [
   {
     id: "notifications",
     label: "Alerts",
-    href: "/notifications",
+    href: "/dashboard/notifications",
     ariaLabel: "View Notifications",
     IconOutlined: BellOutlined,
     IconFilled: BellFilled,
@@ -320,7 +320,7 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
   const isTabActive = useCallback(
     (href: string) => {
       if (href === "/dashboard") return pathname === "/dashboard" || pathname === "/";
-      return pathname.startsWith(href);
+      return pathname === href || pathname.startsWith(href + "/");
     },
     [pathname]
   );

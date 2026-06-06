@@ -513,7 +513,7 @@ async function storeRefreshToken(
 }
 
 /**
- * STEP 1 — Authenticate a user with email + password.
+ * Authenticate a user with email + password.
  *
  * Implements timing-attack resistance (always runs a bcrypt compare, even for
  * unknown emails), user-enumeration resistance (one generic failure message),
@@ -634,7 +634,7 @@ export async function login(
 }
 
 /**
- * STEP 2 — Rotate tokens using a valid refresh token.
+ * Rotate tokens using a valid refresh token.
  *
  * Verifies the JWT signature, confirms the hashed token is present, unused,
  * unexpired, and owned by the JWT subject, then revokes it and issues a brand
@@ -735,7 +735,7 @@ export async function refresh(
 }
 
 /**
- * STEP 3 — Log out the current device or every device.
+ * Log out the current device or every device.
  *
  * Revoking is idempotent: revoking an unknown/already-revoked token is a
  * silent success so logout never leaks token validity.
@@ -771,7 +771,7 @@ export async function logout(input: LogoutInput): Promise<{ message: string }> {
 }
 
 /**
- * STEP 4 — Fetch the authenticated user's fresh profile.
+ * Fetch the authenticated user's fresh profile.
  *
  * Reads from the DB rather than trusting the token payload, so role/country
  * changes take effect immediately and revoked accounts are caught.

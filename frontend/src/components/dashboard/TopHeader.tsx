@@ -84,7 +84,7 @@ export function TopHeader() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => router.push("/report")}
+            onClick={() => router.push("/dashboard/report")}
             className="btn-amber flex items-center gap-2 px-4 py-2.5 text-sm"
           >
             <Plus size={16} strokeWidth={2.5} />

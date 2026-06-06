@@ -137,10 +137,13 @@ export function CommentsPanel({ report, reelRef, onClose }: CommentsPanelProps) 
       {/* Mini report preview */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-[var(--color-border)] shrink-0">
         <div
-          className="w-[48px] h-[48px] rounded-xl shrink-0 flex items-center justify-center text-lg"
-          style={{ backgroundColor: report.photoPlaceholderColor }}
+          className="w-[48px] h-[48px] rounded-xl shrink-0 overflow-hidden"
         >
-          {report.hazardEmoji}
+          <img
+            src={report.thumbnailUrl}
+            alt={report.hazardType}
+            className="w-full h-full object-cover"
+          />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[0.8rem] font-semibold text-[var(--color-text-primary)] line-clamp-2 leading-snug">

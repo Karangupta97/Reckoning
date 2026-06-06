@@ -99,11 +99,12 @@ export function ActionColumn({ report, onUpvote, onComment, onShare, onSave }: A
       {/* Thumbnail */}
       <div
         className="w-11 h-11 rounded-lg border-[1.5px] border-[var(--color-amber)] overflow-hidden"
-        style={{ backgroundColor: report.photoPlaceholderColor }}
       >
-        <div className="w-full h-full flex items-center justify-center text-lg">
-          {report.hazardEmoji}
-        </div>
+        <img
+          src={report.thumbnailUrl}
+          alt={report.hazardType}
+          className="w-full h-full object-cover"
+        />
       </div>
     </div>
   );

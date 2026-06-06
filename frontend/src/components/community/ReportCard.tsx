@@ -55,18 +55,24 @@ export function ReportCard({ report, onUpvote, onComment, onShare, onSave, onFol
     >
       {/* Media background */}
       <div className="absolute inset-0">
-        {report.hasPhoto ? (
-          <div
-            className="w-full h-full"
-            style={{ backgroundColor: report.photoPlaceholderColor }}
-          >
-            {/* Placeholder for photo - in production would use next/image */}
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-6xl opacity-20">{report.hazardEmoji}</span>
-            </div>
-          </div>
+        {report.mediaType === "image" ? (
+          <img
+            src={report.mediaUrl}
+            alt={report.title}
+            className="w-full h-full object-cover"
+          />
+        ) : report.mediaType === "video" ? (
+          <video
+            src={report.mediaUrl}
+            poster={report.thumbnailUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+          />
         ) : (
-          /* Location-only: map placeholder */
+          /* Fallback: no media */
           <div className="w-full h-full bg-[var(--color-surface)] flex items-center justify-center">
             <div className="text-center">
               <span className="text-5xl block mb-2">{report.hazardEmoji}</span>
@@ -80,9 +86,7 @@ export function ReportCard({ report, onUpvote, onComment, onShare, onSave, onFol
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: report.hasPhoto
-            ? "linear-gradient(transparent 40%, rgba(0,0,0,0.85) 100%)"
-            : "linear-gradient(transparent 50%, rgba(0,0,0,0.7) 100%)",
+          background: "linear-gradient(transparent 40%, rgba(0,0,0,0.85) 100%)",
         }}
       />
 

@@ -143,7 +143,7 @@ sw.addEventListener("push", (event: any) => {
     icon: data.icon || "/android-chrome-192x192.png",
     badge: "/android-chrome-192x192.png",
     tag: data.tag || "reckoning-push",
-    data: { url: data.url || "/notifications" },
+    data: { url: data.url || "/dashboard/notifications" },
     actions: data.actions || [],
     vibrate: [100, 50, 100],
   };
