@@ -74,7 +74,6 @@ export default function IndiaMapInner({
   const [mounted, setMounted] = useState(false);
   const isDark = useMapTheme(propIsDark);
   const mapRef = useRef<L.Map | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [viewMode, setViewMode] = useState('Risk View');
   const [isExpanded, setIsExpanded] = useState(false);
   const [statesBorderGeoJSON, setStatesBorderGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null);
@@ -120,33 +119,13 @@ export default function IndiaMapInner({
       .catch(() => {});
   }, []);
 
-  // Lock map to India bounds after mount
-  useEffect(() => {
+  // Lock map to India bounds after mount — via whenReady callback, not a ref effect
+  const handleMapReady = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-
     map.setMaxBounds(INDIA_BOUNDS);
     map.fitBounds(INDIA_FIT_BOUNDS);
   }, []);
-
-  // Handle tile layer switching on theme change
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const tileUrl = isDark ? DARK_TILE : LIGHT_TILE;
-
-    if (tileLayerRef.current) {
-      map.removeLayer(tileLayerRef.current);
-    }
-
-    const newTileLayer = L.tileLayer(tileUrl, {
-      attribution: '',
-      maxZoom: 18,
-    }).addTo(map);
-
-    tileLayerRef.current = newTileLayer;
-  }, [isDark]);
 
   // Check if we can drill deeper
   const canDrillDown = useCallback((currentLevel: MapLevel): boolean => {
@@ -297,7 +276,7 @@ export default function IndiaMapInner({
     return (
       <div
         className={`relative w-full overflow-hidden ${className}`}
-        style={{ height: activeHeight, width: '100%', borderRadius: '12px' }}
+        style={{ height: activeHeight, width: '100%', borderRadius: '12px', isolation: 'isolate' }}
       >
         <div
           className="flex h-full w-full items-center justify-center"
@@ -321,6 +300,7 @@ export default function IndiaMapInner({
         borderRadius: '12px',
         overflow: 'hidden',
         transition: 'height 0.3s ease',
+        isolation: 'isolate',
       }}
     >
       {/* Breadcrumb */}
@@ -351,6 +331,7 @@ export default function IndiaMapInner({
         attributionControl={false}
         className="h-full w-full"
         ref={mapRef}
+        whenReady={handleMapReady}
         style={{
           background: isDark ? '#1A1F2E' : '#EFF2F9',
           cursor: canDrillDown(drillState.level) ? 'pointer' : 'default',
@@ -359,6 +340,7 @@ export default function IndiaMapInner({
           borderRadius: '12px',
         }}
       >
+        {/* Tile layer — reactive: switches URL when isDark changes */}
         <TileLayer
           url={isDark ? DARK_TILE : LIGHT_TILE}
           maxZoom={18}

@@ -1,0 +1,509 @@
+/*
+ * District Admin Portal — Teal / Emerald / Cyan theme
+ * Overrides the --dash-* tokens set in globals.css for the district admin shell.
+ * Import this after super-admin-theme.css (it scopes cleanly because the
+ * district portal lives at /district-admin/* — a different route tree).
+ */
+
+/* ─── District-admin accent tokens ─────────────────────────── */
+:root {
+  --da-teal: #14b8a6;
+  --da-teal-glow: rgba(20, 184, 166, 0.14);
+  --da-border-teal: rgba(20, 184, 166, 0.22);
+  --da-emerald: #10b981;
+  --da-emerald-glow: rgba(16, 185, 129, 0.14);
+  --da-cyan: #06b6d4;
+  --da-cyan-glow: rgba(6, 182, 212, 0.12);
+}
+
+/* ─── Sidebar + header background tokens  ──────────────────── */
+/* Re-use the same deep dark backgrounds from the shared --dash-* tokens;
+   only accent colours change.                                               */
+
+/* ─── Light-mode remaps ─────────────────────────────────────── */
+
+/* Header */
+html.light .da-header-container {
+  color: var(--color-text-primary);
+  background: linear-gradient(
+    to bottom,
+    var(--color-card),
+    var(--color-page),
+    var(--color-page)
+  );
+  border-bottom-color: var(--color-border);
+}
+
+html.light .da-header-search,
+html.light .da-header-button,
+html.light .da-btn-icon,
+html.light .da-btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+html.light .da-header-search input {
+  color: var(--color-text-primary);
+}
+
+html.light .da-header-search input::placeholder {
+  color: var(--color-text-muted);
+}
+
+html.light .da-header-button:hover,
+html.light .da-btn-icon:hover,
+html.light .da-btn-secondary:hover {
+  background: var(--color-card);
+  color: var(--color-text-primary);
+}
+
+html.light .da-header-button-active {
+  border-color: var(--da-border-teal);
+  background: color-mix(in srgb, var(--da-teal) 12%, transparent);
+  color: var(--da-teal);
+}
+
+html.light .da-dropdown-item-active {
+  color: var(--da-teal);
+  background: color-mix(in srgb, var(--da-teal) 10%, transparent);
+}
+
+html.light .da-dropdown-item-unread {
+  background: color-mix(in srgb, var(--da-teal) 8%, transparent);
+}
+
+/* ── Text utility classes ── */
+/* globals.css locks .text-primary/secondary/muted to --dash-text* (always
+   dark-bg values).  Re-map them to semantic tokens in light mode. */
+html.light .text-primary {
+  color: var(--color-text-primary);
+}
+
+html.light .text-secondary {
+  color: var(--color-text-secondary);
+}
+
+html.light .text-muted {
+  color: var(--color-text-muted);
+}
+
+/* ── Table header strip ── */
+/* .dashboard-table-th uses --dash-bg-mid (#0a0f1a) as background — jet black
+   in light mode.  Override to the semantic surface colour. */
+html.light .dashboard-table-th {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-bottom-color: var(--color-border);
+}
+
+/* ── Table cell text ── */
+html.light .dashboard-table-td {
+  color: var(--color-text-secondary);
+  border-bottom-color: var(--color-border);
+}
+
+html.light .dashboard-table-td-primary {
+  color: var(--color-text-primary);
+}
+
+/* ── Table rows ── */
+html.light .dashboard-table-row:hover,
+html.light .da-table-row:hover {
+  background: color-mix(in srgb, var(--da-teal) 6%, transparent);
+}
+
+/* ── Table scroll container border ── */
+html.light .dashboard-table-scroll {
+  border-color: var(--color-border);
+}
+
+/* ── Activity feed ── */
+html.light .activity-timeline-title {
+  color: var(--color-text-primary);
+}
+
+html.light .activity-timeline-desc {
+  color: var(--color-text-secondary);
+}
+
+html.light .activity-timeline-time {
+  color: var(--color-text-muted);
+}
+
+html.light .activity-timeline-icon {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+html.light .activity-timeline-item:hover {
+  background: color-mix(in srgb, var(--da-teal) 5%, transparent);
+  border-color: color-mix(in srgb, var(--da-teal) 20%, transparent);
+}
+
+html.light .activity-timeline-line,
+html.light .da-activity-timeline-line {
+  background: linear-gradient(
+    to bottom,
+    var(--color-border),
+    color-mix(in srgb, var(--da-teal) 30%, transparent),
+    var(--color-border)
+  );
+}
+
+/* ── Dashboard table header row titles ── */
+html.light .dashboard-table-header h3 {
+  color: var(--color-text-primary);
+}
+
+html.light .dashboard-table-header p {
+  color: var(--color-text-muted);
+}
+
+/* ─── Header shell ──────────────────────────────────────────── */
+.da-header-container {
+  width: 100%;
+  height: 72px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  border-bottom: 1px solid var(--dash-border);
+  background: linear-gradient(
+    to bottom,
+    var(--dash-bg-top),
+    var(--dash-bg-mid),
+    var(--dash-bg-deep)
+  );
+}
+
+@media (min-width: 1024px) {
+  .da-header-container {
+    flex-wrap: nowrap;
+  }
+}
+
+.da-header-search {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.5rem;
+  width: 100%;
+  padding: 0 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .da-header-search {
+    width: auto;
+    min-width: 12rem;
+    max-width: 20rem;
+    flex: 1 1 auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .da-header-search {
+    flex: 0 0 18rem;
+    max-width: 18rem;
+  }
+}
+
+.da-header-search:focus-within {
+  border-color: var(--da-border-teal);
+  box-shadow: 0 0 16px var(--da-teal-glow);
+}
+
+.da-header-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.8125rem;
+  color: var(--dash-text);
+}
+
+.da-header-search input::placeholder {
+  color: var(--dash-text-muted);
+}
+
+.da-header-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  font-size: 0.8125rem;
+  color: var(--dash-text-secondary);
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.da-header-button:hover {
+  background: color-mix(in srgb, white 5%, transparent);
+  color: var(--dash-text);
+}
+
+.da-header-button-active {
+  border-color: var(--da-border-teal);
+  background: color-mix(in srgb, var(--da-teal) 10%, transparent);
+  color: var(--da-teal);
+}
+
+/* ─── Shared button primitives ─────────────────────────────── */
+.da-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--da-border-teal);
+  background: color-mix(in srgb, var(--da-teal) 12%, transparent);
+  color: var(--da-teal);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.da-btn-primary:hover {
+  background: color-mix(in srgb, var(--da-teal) 20%, transparent);
+  box-shadow: 0 0 16px var(--da-teal-glow);
+}
+
+.da-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  color: var(--dash-text-secondary);
+  font-size: 0.8125rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.da-btn-secondary:hover {
+  background: color-mix(in srgb, white 5%, transparent);
+  color: var(--dash-text);
+}
+
+.da-btn-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  color: var(--dash-text-secondary);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.da-btn-icon:hover {
+  background: color-mix(in srgb, white 5%, transparent);
+  color: var(--dash-text);
+}
+
+/* ─── Dropdown primitives ───────────────────────────────────── */
+.da-dropdown-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.75rem;
+  color: var(--dash-text-secondary);
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.da-dropdown-item:hover {
+  background: color-mix(in srgb, white 4%, transparent);
+  color: var(--dash-text);
+}
+
+.da-dropdown-item-active {
+  color: var(--da-teal);
+  background: color-mix(in srgb, var(--da-teal) 10%, transparent);
+}
+
+.da-dropdown-item-unread {
+  background: color-mix(in srgb, var(--da-teal) 6%, transparent);
+}
+
+.da-dropdown-item-danger {
+  color: var(--color-danger);
+}
+
+.da-dropdown-item-danger:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--color-danger);
+}
+
+.da-notification-dot {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--color-danger);
+  border: 2px solid var(--dash-bg-mid);
+}
+
+.da-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  border: 1px solid var(--da-border-teal);
+  background: color-mix(in srgb, var(--da-teal) 12%, transparent);
+  color: var(--da-teal);
+}
+
+.da-card-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+}
+
+.da-dropdown-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--dash-border);
+  padding: 0.75rem 1rem;
+}
+
+/* ─── Activity feed timeline (teal variant) ─────────────────── */
+.da-activity-timeline-line {
+  background: linear-gradient(
+    to bottom,
+    var(--dash-border),
+    color-mix(in srgb, var(--da-teal) 25%, transparent),
+    var(--dash-border)
+  );
+}
+
+.da-activity-timeline-icon-teal {
+  border-color: var(--da-border-teal);
+  color: var(--da-teal);
+  box-shadow: 0 0 12px var(--da-teal-glow);
+}
+
+.da-activity-timeline-icon-emerald {
+  border-color: color-mix(in srgb, var(--da-emerald) 35%, transparent);
+  color: var(--da-emerald);
+  box-shadow: 0 0 12px var(--da-emerald-glow);
+}
+
+.da-activity-timeline-icon-cyan {
+  border-color: color-mix(in srgb, var(--da-cyan) 35%, transparent);
+  color: var(--da-cyan);
+  box-shadow: 0 0 12px var(--da-cyan-glow);
+}
+
+/* ─── Dropdown panels (Settings, Notifications, Date picker) ── */
+html.light .dashboard-panel {
+  background: var(--color-card);
+  border-color: var(--color-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 0 1px var(--color-border);
+}
+
+html.light .glass-panel {
+  background: var(--color-card);
+  backdrop-filter: blur(12px);
+}
+
+html.light .da-dropdown-panel-header {
+  border-bottom-color: var(--color-border);
+}
+
+html.light .da-dropdown-item {
+  color: var(--color-text-secondary);
+}
+
+html.light .da-dropdown-item:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+html.light .da-dropdown-item-danger {
+  color: var(--color-danger);
+}
+
+html.light .da-dropdown-item-danger:hover {
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+}
+
+/* ─── Header buttons / icon buttons in light mode ─────────── */
+html.light .da-header-button,
+html.light .da-btn-icon {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+html.light .da-header-button:hover,
+html.light .da-btn-icon:hover {
+  background: var(--color-card);
+  color: var(--color-text-primary);
+}
+
+html.light .da-card-badge {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+html.light .da-notification-dot {
+  border-color: var(--color-card);
+}
+.da-table-row:hover {
+  background: color-mix(in srgb, var(--da-teal) 4%, transparent);
+}
+
+/* ─── SLA / compliance progress bars ───────────────────────── */
+.da-sla-bar-fill-good {
+  background: var(--da-emerald);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--da-emerald) 45%, transparent);
+}
+
+.da-sla-bar-fill-warn {
+  background: var(--color-amber);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-amber) 40%, transparent);
+}
+
+.da-sla-bar-fill-critical {
+  background: var(--color-danger);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-danger) 40%, transparent);
+}
+
+/* ─── Stat-card online indicator ────────────────────────────── */
+.da-online-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--da-emerald);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--da-emerald) 60%, transparent);
+}

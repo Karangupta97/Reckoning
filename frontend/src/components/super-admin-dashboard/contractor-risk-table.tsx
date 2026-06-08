@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { ShieldAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { DashboardCard } from "./dashboard-card";
 
 type RiskLevel = "critical" | "high" | "moderate" | "low";
@@ -87,6 +88,7 @@ const riskBarFillClass: Record<RiskLevel, string> = {
 };
 
 export default function ContractorRiskTable() {
+  const router = useRouter();
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -102,7 +104,7 @@ export default function ContractorRiskTable() {
             AI-generated contractor risk assessment
           </p>
         </div>
-        <button type="button" className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
+        <button type="button" onClick={() => router.push("/super-admin/contractors/risk")} className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
           Full Report
         </button>
       </div>

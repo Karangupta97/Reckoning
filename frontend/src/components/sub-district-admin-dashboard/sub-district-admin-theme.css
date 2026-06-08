@@ -1,0 +1,566 @@
+/*
+ * Sub-District Admin Portal — Amber / Orange / Gold theme
+ * Overrides the --dash-* tokens set in globals.css for the sub-district admin shell.
+ * Import this after super-admin-theme.css (it scopes cleanly because the
+ * sub-district portal lives at /sub-district-admin/* — a different route tree).
+ */
+
+/* ─── Sub-district-admin accent tokens ─────────────────────── */
+:root {
+  --sda-amber: #F59E0B;
+  --sda-amber-glow: rgba(245, 158, 11, 0.14);
+  --sda-border-amber: rgba(245, 158, 11, 0.22);
+  --sda-orange: #F97316;
+  --sda-orange-glow: rgba(249, 115, 22, 0.14);
+  --sda-gold: #FBBF24;
+  --sda-gold-glow: rgba(251, 191, 36, 0.12);
+}
+
+/* ─── Light-mode remaps ─────────────────────────────────────── */
+
+html.light .sda-header-container,
+html[data-theme="light"] .sda-header-container {
+  color: var(--color-text-primary);
+  background: linear-gradient(
+    to bottom,
+    var(--color-card),
+    var(--color-page),
+    var(--color-page)
+  );
+  border-bottom-color: var(--color-border);
+}
+
+html.light .sda-header-search,
+html.light .sda-header-button,
+html.light .sda-btn-icon,
+html.light .sda-btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+html.light .sda-header-search input {
+  color: var(--color-text-primary);
+}
+
+html.light .sda-header-search input::placeholder {
+  color: var(--color-text-muted);
+}
+
+html.light .sda-header-button:hover,
+html.light .sda-btn-icon:hover,
+html.light .sda-btn-secondary:hover {
+  background: var(--color-card);
+  color: var(--color-text-primary);
+}
+
+html.light .sda-header-button-active {
+  border-color: var(--sda-border-amber);
+  background: color-mix(in srgb, var(--sda-amber) 12%, transparent);
+  color: var(--sda-amber);
+}
+
+html.light .sda-dropdown-item-active {
+  color: var(--sda-amber);
+  background: color-mix(in srgb, var(--sda-amber) 10%, transparent);
+}
+
+html.light .sda-dropdown-item-unread {
+  background: color-mix(in srgb, var(--sda-amber) 8%, transparent);
+}
+
+/* ── Text utility classes ── */
+html.light .text-primary {
+  color: var(--color-text-primary);
+}
+
+html.light .text-secondary {
+  color: var(--color-text-secondary);
+}
+
+html.light .text-muted {
+  color: var(--color-text-muted);
+}
+
+/* ── Table header strip ── */
+html.light .dashboard-table-th {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-bottom-color: var(--color-border);
+}
+
+/* ── Table cell text ── */
+html.light .dashboard-table-td {
+  color: var(--color-text-secondary);
+  border-bottom-color: var(--color-border);
+}
+
+html.light .dashboard-table-td-primary {
+  color: var(--color-text-primary);
+}
+
+/* ── Table rows ── */
+html.light .dashboard-table-row:hover,
+html.light .sda-table-row:hover {
+  background: color-mix(in srgb, var(--sda-amber) 6%, transparent);
+}
+
+/* ── Table scroll container border ── */
+html.light .dashboard-table-scroll {
+  border-color: var(--color-border);
+}
+
+/* ── Activity feed ── */
+html.light .activity-timeline-title {
+  color: var(--color-text-primary);
+}
+
+html.light .activity-timeline-desc {
+  color: var(--color-text-secondary);
+}
+
+html.light .activity-timeline-time {
+  color: var(--color-text-muted);
+}
+
+html.light .activity-timeline-icon {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+html.light .activity-timeline-item:hover {
+  background: color-mix(in srgb, var(--sda-amber) 5%, transparent);
+  border-color: color-mix(in srgb, var(--sda-amber) 20%, transparent);
+}
+
+html.light .activity-timeline-line,
+html.light .sda-activity-timeline-line {
+  background: linear-gradient(
+    to bottom,
+    var(--color-border),
+    color-mix(in srgb, var(--sda-amber) 30%, transparent),
+    var(--color-border)
+  );
+}
+
+/* ── Dashboard table header row titles ── */
+html.light .dashboard-table-header h3 {
+  color: var(--color-text-primary);
+}
+
+html.light .dashboard-table-header p {
+  color: var(--color-text-muted);
+}
+
+/* ─── Dropdown panels ── */
+html.light .dashboard-panel {
+  background: var(--color-card);
+  border-color: var(--color-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10), 0 0 1px var(--color-border);
+}
+
+html.light .glass-panel {
+  background: var(--color-card);
+  backdrop-filter: blur(12px);
+}
+
+html.light .sda-dropdown-panel-header {
+  border-bottom-color: var(--color-border);
+}
+
+html.light .sda-dropdown-item {
+  color: var(--color-text-secondary);
+}
+
+html.light .sda-dropdown-item:hover {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+html.light .sda-dropdown-item-danger {
+  color: var(--color-danger);
+}
+
+html.light .sda-dropdown-item-danger:hover {
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+}
+
+html.light .sda-header-button,
+html.light .sda-btn-icon {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+html.light .sda-header-button:hover,
+html.light .sda-btn-icon:hover {
+  background: var(--color-card);
+  color: var(--color-text-primary);
+}
+
+html.light .sda-card-badge {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+html.light .sda-notification-dot {
+  border-color: var(--color-card);
+}
+
+/* ─── Header shell ──────────────────────────────────────────── */
+.sda-header-container {
+  width: 100%;
+  height: 72px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  border-bottom: 1px solid var(--dash-border);
+  background: linear-gradient(
+    to bottom,
+    var(--dash-bg-top),
+    var(--dash-bg-mid),
+    var(--dash-bg-deep)
+  );
+}
+
+@media (min-width: 1024px) {
+  .sda-header-container {
+    flex-wrap: nowrap;
+  }
+}
+
+.sda-header-search {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 2.5rem;
+  width: 100%;
+  padding: 0 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (min-width: 768px) {
+  .sda-header-search {
+    width: auto;
+    min-width: 12rem;
+    max-width: 20rem;
+    flex: 1 1 auto;
+  }
+}
+
+@media (min-width: 1024px) {
+  .sda-header-search {
+    flex: 0 0 18rem;
+    max-width: 18rem;
+  }
+}
+
+.sda-header-search:focus-within {
+  border-color: var(--sda-border-amber);
+  box-shadow: 0 0 16px var(--sda-amber-glow);
+}
+
+.sda-header-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.8125rem;
+  color: var(--dash-text);
+}
+
+.sda-header-search input::placeholder {
+  color: var(--dash-text-muted);
+}
+
+.sda-header-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.5rem;
+  padding: 0 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  font-size: 0.8125rem;
+  color: var(--dash-text-secondary);
+  white-space: nowrap;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.sda-header-button:hover {
+  background: color-mix(in srgb, white 5%, transparent);
+  color: var(--dash-text);
+}
+
+.sda-header-button-active {
+  border-color: var(--sda-border-amber);
+  background: color-mix(in srgb, var(--sda-amber) 10%, transparent);
+  color: var(--sda-amber);
+}
+
+/* ─── Shared button primitives ─────────────────────────────── */
+.sda-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--sda-border-amber);
+  background: color-mix(in srgb, var(--sda-amber) 12%, transparent);
+  color: var(--sda-amber);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sda-btn-primary:hover {
+  background: color-mix(in srgb, var(--sda-amber) 20%, transparent);
+  box-shadow: 0 0 16px var(--sda-amber-glow);
+}
+
+.sda-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  color: var(--dash-text-secondary);
+  font-size: 0.8125rem;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sda-btn-secondary:hover {
+  background: color-mix(in srgb, white 5%, transparent);
+  color: var(--dash-text);
+}
+
+.sda-btn-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+  color: var(--dash-text-secondary);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.sda-btn-icon:hover {
+  background: color-mix(in srgb, white 5%, transparent);
+  color: var(--dash-text);
+}
+
+/* ─── Dropdown primitives ───────────────────────────────────── */
+.sda-dropdown-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-size: 0.75rem;
+  color: var(--dash-text-secondary);
+  text-align: left;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sda-dropdown-item:hover {
+  background: color-mix(in srgb, white 4%, transparent);
+  color: var(--dash-text);
+}
+
+.sda-dropdown-item-active {
+  color: var(--sda-amber);
+  background: color-mix(in srgb, var(--sda-amber) 10%, transparent);
+}
+
+.sda-dropdown-item-unread {
+  background: color-mix(in srgb, var(--sda-amber) 6%, transparent);
+}
+
+.sda-dropdown-item-danger {
+  color: var(--color-danger);
+}
+
+.sda-dropdown-item-danger:hover {
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--color-danger);
+}
+
+.sda-notification-dot {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--color-danger);
+  border: 2px solid var(--dash-bg-mid);
+}
+
+.sda-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  border: 1px solid var(--sda-border-amber);
+  background: color-mix(in srgb, var(--sda-amber) 12%, transparent);
+  color: var(--sda-amber);
+}
+
+.sda-card-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.375rem 0.75rem 0.375rem 0.375rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--dash-border);
+  background: color-mix(in srgb, white 3%, transparent);
+}
+
+.sda-dropdown-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--dash-border);
+  padding: 0.75rem 1rem;
+}
+
+/* ─── Activity feed timeline (amber variant) ─────────────────── */
+.sda-activity-timeline-line {
+  background: linear-gradient(
+    to bottom,
+    var(--dash-border),
+    color-mix(in srgb, var(--sda-amber) 25%, transparent),
+    var(--dash-border)
+  );
+}
+
+.sda-activity-timeline-icon-amber {
+  border-color: var(--sda-border-amber);
+  color: var(--sda-amber);
+  box-shadow: 0 0 12px var(--sda-amber-glow);
+}
+
+.sda-activity-timeline-icon-orange {
+  border-color: color-mix(in srgb, var(--sda-orange) 35%, transparent);
+  color: var(--sda-orange);
+  box-shadow: 0 0 12px var(--sda-orange-glow);
+}
+
+.sda-activity-timeline-icon-success {
+  border-color: color-mix(in srgb, var(--color-success) 35%, transparent);
+  color: var(--color-success);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-success) 20%, transparent);
+}
+
+/* ─── Table row hover (amber) ─────────────────────────────── */
+.sda-table-row:hover {
+  background: color-mix(in srgb, var(--sda-amber) 4%, transparent);
+}
+
+/* ─── Online indicator (amber) ──────────────────────────────── */
+.sda-online-indicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--sda-amber);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--sda-amber) 60%, transparent);
+}
+
+/* ─── SLA / compliance progress bars ───────────────────────── */
+.sda-sla-bar-fill-good {
+  background: var(--color-success);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-success) 45%, transparent);
+}
+
+.sda-sla-bar-fill-warn {
+  background: var(--sda-amber);
+  box-shadow: 0 0 8px var(--sda-amber-glow);
+}
+
+.sda-sla-bar-fill-critical {
+  background: var(--color-danger);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-danger) 40%, transparent);
+}
+
+/* ─── data-theme attribute selectors (mirror class-based selectors) ── */
+[data-theme="light"] .sda-header-container {
+  color: var(--color-text-primary);
+  background: linear-gradient(to bottom, var(--color-card), var(--color-page), var(--color-page));
+  border-bottom-color: var(--color-border);
+}
+[data-theme="light"] .sda-header-search,
+[data-theme="light"] .sda-header-button,
+[data-theme="light"] .sda-btn-icon,
+[data-theme="light"] .sda-btn-secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+[data-theme="light"] .sda-header-search input { color: var(--color-text-primary); }
+[data-theme="light"] .sda-header-search input::placeholder { color: var(--color-text-muted); }
+[data-theme="light"] .sda-dropdown-item { color: var(--color-text-secondary); }
+[data-theme="light"] .sda-dropdown-item:hover { background: var(--color-surface); color: var(--color-text-primary); }
+[data-theme="light"] .sda-dropdown-item-danger { color: var(--color-danger); }
+[data-theme="light"] .sda-card-badge { background: var(--color-surface); border-color: var(--color-border); }
+[data-theme="light"] .sda-notification-dot { border-color: var(--color-card); }
+[data-theme="light"] .dashboard-panel,
+[data-theme="light"] .glass-panel {
+  background: var(--color-card);
+  border-color: var(--color-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 0 1px var(--color-border);
+}
+[data-theme="light"] .sda-dropdown-panel-header { border-bottom-color: var(--color-border); }
+[data-theme="light"] .dashboard-table-th {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border-bottom-color: var(--color-border);
+}
+[data-theme="light"] .dashboard-table-td { color: var(--color-text-secondary); border-bottom-color: var(--color-border); }
+[data-theme="light"] .dashboard-table-td-primary { color: var(--color-text-primary); }
+[data-theme="light"] .dashboard-table-row:hover,
+[data-theme="light"] .sda-table-row:hover { background: color-mix(in srgb, var(--sda-amber) 6%, transparent); }
+[data-theme="light"] .dashboard-table-scroll { border-color: var(--color-border); }
+[data-theme="light"] .activity-timeline-icon { background: var(--color-surface); border-color: var(--color-border); }
+[data-theme="light"] .activity-timeline-title { color: var(--color-text-primary); }
+[data-theme="light"] .activity-timeline-desc { color: var(--color-text-secondary); }
+[data-theme="light"] .activity-timeline-time { color: var(--color-text-muted); }
+
+/* ─── Fix --dash-* tokens in light mode ─────────────────────── */
+/* The sda- CSS classes reference --dash-* tokens which default to dark values.
+   Override them to match semantic light tokens. */
+html.light, [data-theme="light"] {
+  --dash-text: var(--color-text-primary);
+  --dash-text-secondary: var(--color-text-secondary);
+  --dash-text-muted: var(--color-text-muted);
+  --dash-border: var(--color-border);
+  --dash-bg-top: var(--color-card);
+  --dash-bg-mid: var(--color-page);
+  --dash-bg-deep: var(--color-page);
+}
+
+/* ─── Additional light-mode text fixes ──────────────────────── */
+html.light .text-primary,
+[data-theme="light"] .text-primary   { color: var(--color-text-primary); }
+html.light .text-secondary,
+[data-theme="light"] .text-secondary { color: var(--color-text-secondary); }
+html.light .text-muted,
+[data-theme="light"] .text-muted     { color: var(--color-text-muted); }

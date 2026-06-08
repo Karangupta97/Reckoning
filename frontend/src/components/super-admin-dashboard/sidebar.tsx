@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Route,
@@ -39,157 +40,103 @@ const navItems: NavItem[] = [
   {
     label: "Overview",
     icon: <LayoutDashboard size={18} />,
-    href: "/dashboard",
+    href: "/super-admin/dashboard",
     color: "text-[var(--color-text-muted)]",
   },
   {
     label: "Road Intelligence",
     icon: <Route size={18} />,
-    href: "/dashboard/road-intelligence",
+    href: "/super-admin/road-intelligence",
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
-      {
-        label: "Road Conditions",
-        href: "/dashboard/road-intelligence/road-conditions",
-      },
-      {
-        label: "Traffic Analysis",
-        href: "/dashboard/road-intelligence/traffic-analysis",
-      },
-      {
-        label: "Infrastructure Health",
-        href: "/dashboard/road-intelligence/infrastructure-health",
-      },
+      { label: "Road Conditions",       href: "/super-admin/road-intelligence/road-conditions"       },
+      { label: "Traffic Analysis",      href: "/super-admin/road-intelligence/traffic-analysis"      },
+      { label: "Infrastructure Health", href: "/super-admin/road-intelligence/infrastructure-health" },
     ],
   },
   {
     label: "Complaints",
     icon: <AlertTriangle size={18} />,
-    href: "/dashboard/complaints",
+    href: "/super-admin/complaints",
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
-      {
-        label: "Citizen Complaints",
-        href: "/dashboard/complaints/citizen-complaints",
-      },
-      {
-        label: "Escalated Cases",
-        href: "/dashboard/complaints/escalated-cases",
-      },
-      {
-        label: "Resolution Tracker",
-        href: "/dashboard/complaints/resolution-tracker",
-      },
+      { label: "Citizen Complaints",  href: "/super-admin/complaints/citizen-complaints"  },
+      { label: "Escalated Cases",     href: "/super-admin/complaints/escalated-cases"     },
+      { label: "Resolution Tracker",  href: "/super-admin/complaints/resolution-tracker"  },
     ],
   },
   {
     label: "Expenditure Analytics",
     icon: <BarChart3 size={18} />,
-    href: "/dashboard/expenditure",
+    href: "/super-admin/expenditure",
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
-      {
-        label: "Budget Allocation",
-        href: "/dashboard/expenditure/budget-allocation",
-      },
-      {
-        label: "Spending Trends",
-        href: "/dashboard/expenditure/spending-trends",
-      },
-      {
-        label: "Audit Insights",
-        href: "/dashboard/expenditure/audit-insights",
-      },
+      { label: "Budget Allocation", href: "/super-admin/expenditure/budget-allocation" },
+      { label: "Spending Trends",   href: "/super-admin/expenditure/spending-trends"   },
+      { label: "Audit Insights",    href: "/super-admin/expenditure/audit-insights"    },
     ],
   },
   {
     label: "Contractors",
     icon: <Users size={18} />,
-    href: "/dashboard/contractors",
+    href: "/super-admin/contractors",
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
-      {
-        label: "Verified Contractors",
-        href: "/dashboard/contractors/verified-contractors",
-      },
-      {
-        label: "Pending Verification",
-        href: "/dashboard/contractors/pending-verification",
-      },
-      {
-        label: "Risk Assessment",
-        href: "/dashboard/contractors/risk-assessment",
-      },
+      { label: "Verified Contractors", href: "/super-admin/contractors/verified"    },
+      { label: "Pending Verification", href: "/super-admin/contractors/pending"     },
+      { label: "Risk Assessment",      href: "/super-admin/contractors/risk"        },
     ],
   },
   {
     label: "AI Alerts",
     icon: <Bell size={18} />,
-    href: "/dashboard/ai-alerts",
+    href: "/super-admin/ai-alerts",
     color: "text-[var(--color-text-muted)]",
   },
   {
     label: "GIS Monitoring",
     icon: <Map size={18} />,
-    href: "/dashboard/gis",
+    href: "/super-admin/gis",
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
-      {
-        label: "Infrastructure Map",
-        href: "/dashboard/gis/infrastructure-map",
-      },
-      {
-        label: "Risk Zones",
-        href: "/dashboard/gis/risk-zones",
-      },
-      {
-        label: "Satellite View",
-        href: "/dashboard/gis/satellite-view",
-      },
+      { label: "Infrastructure Map", href: "/super-admin/gis/infrastructure-map" },
+      { label: "Risk Zones",         href: "/super-admin/gis/risk-zones"         },
+      { label: "Satellite View",     href: "/super-admin/gis/satellite-view"     },
     ],
   },
   {
     label: "Admin Governance",
     icon: <Shield size={18} />,
-    href: "/dashboard/admin",
+    href: "/super-admin/governance",
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
-      {
-        label: "User Roles",
-        href: "/dashboard/admin/user-roles",
-      },
-      {
-        label: "Access Control",
-        href: "/dashboard/admin/access-control",
-      },
-      {
-        label: "Compliance Review",
-        href: "/dashboard/admin/compliance-review",
-      },
+      { label: "User Roles",        href: "/super-admin/governance/user-roles"       },
+      { label: "Access Control",    href: "/super-admin/governance/access-control"   },
+      { label: "Compliance Review", href: "/super-admin/governance/compliance-review"},
     ],
   },
   {
     label: "Reports",
     icon: <FileText size={18} />,
-    href: "/dashboard/reports",
+    href: "/super-admin/reports",
     color: "text-[var(--color-text-muted)]",
   },
   {
     label: "Audit Logs",
     icon: <ClipboardList size={18} />,
-    href: "/dashboard/audit",
+    href: "/super-admin/audit",
     color: "text-[var(--color-text-muted)]",
   },
   {
     label: "Settings",
     icon: <Settings size={18} />,
-    href: "/dashboard/settings",
+    href: "/super-admin/settings",
     color: "text-[var(--color-text-muted)]",
   },
 ];
@@ -214,7 +161,8 @@ const navScrollClass = [
   "[&::-webkit-scrollbar-thumb:hover]:bg-white/20",
 ].join(" ");
 
-export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
+export default function Sidebar({ activePath = "/super-admin/dashboard" }: SidebarProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
@@ -315,6 +263,8 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
                   onClick={() => {
                     if (item.hasDropdown) {
                       toggleExpand(item.label);
+                    } else {
+                      router.push(item.href);
                     }
                   }}
                   whileHover={{ x: 2 }}
@@ -372,6 +322,7 @@ export default function Sidebar({ activePath = "/dashboard" }: SidebarProps) {
                           return (
                             <motion.button
                               key={sub.label}
+                              onClick={() => router.push(sub.href)}
                               whileHover={{ x: 2 }}
                               whileTap={{ scale: 0.98 }}
                               className={`

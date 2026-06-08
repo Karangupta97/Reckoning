@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/super-admin-dashboard/sidebar";
 import Header from "@/components/super-admin-dashboard/header";
 import "@/components/super-admin-dashboard/super-admin-theme.css";
@@ -13,6 +14,7 @@ export default function SuperAdminLayout({
 }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -28,47 +30,32 @@ export default function SuperAdminLayout({
 
   return (
     <div className="min-h-screen bg-[var(--color-page)] text-[var(--color-text-primary)]">
-      {/* Desktop Layout */}
       <div className="flex min-h-screen">
-        {/* Sidebar - Desktop Only */}
         <div className="hidden lg:block lg:w-[250px] lg:flex-shrink-0">
-          <Sidebar activePath="/dashboard" />
+          <Sidebar activePath={pathname} />
         </div>
-
-        {/* Main Content Area */}
         <div className="flex flex-1 flex-col min-w-0">
-          {/* Header */}
           <Header onMenuToggle={() => setIsMobileSidebarOpen(true)} />
-
-          {/* Page Content */}
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
             {children}
           </main>
         </div>
       </div>
 
-      {/* Mobile Sidebar Drawer */}
       <AnimatePresence>
         {isMobile && isMobileSidebarOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsMobileSidebarOpen(false)}
               className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
             />
-
-            {/* Drawer */}
             <motion.div
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="fixed inset-y-0 left-0 z-50 w-[260px] lg:hidden"
             >
-              <Sidebar activePath="/dashboard" />
+              <Sidebar activePath={pathname} />
             </motion.div>
           </>
         )}

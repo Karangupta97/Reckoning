@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { DashboardCard } from "./dashboard-card";
 import {
   UserPlus,
@@ -71,6 +72,7 @@ const statusIcon: Record<RequestStatus, LucideIcon> = {
 };
 
 export default function OnboardingRequests() {
+  const router = useRouter();
   const [requests, setRequests] = useState(initialRequests);
 
   const updateStatus = useCallback((id: string, status: RequestStatus) => {
@@ -94,7 +96,7 @@ export default function OnboardingRequests() {
             Pending access approvals & governance requests
           </p>
         </div>
-        <button type="button" className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
+        <button type="button" onClick={() => router.push("/super-admin/governance/user-roles")} className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
           Manage All
         </button>
       </div>

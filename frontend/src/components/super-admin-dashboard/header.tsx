@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Bell,
@@ -73,14 +74,15 @@ const NOTIFICATIONS: NotificationItem[] = [
 const SETTINGS_ITEMS: {
   label: string;
   icon: typeof User;
+  href?: string;
   danger?: boolean;
 }[] = [
-  { label: "Profile Settings", icon: User },
-  { label: "System Settings", icon: Sliders },
-  { label: "Security", icon: Shield },
-  { label: "Audit Preferences", icon: Settings },
-  { label: "Help Center", icon: HelpCircle },
-  { label: "Logout", icon: LogOut, danger: true },
+  { label: "Profile Settings",  icon: User,       href: "/super-admin/settings?tab=profile"  },
+  { label: "System Settings",   icon: Sliders,    href: "/super-admin/settings"              },
+  { label: "Security",          icon: Shield,     href: "/super-admin/settings?tab=security" },
+  { label: "Audit Preferences", icon: Settings,   href: "/super-admin/audit"                 },
+  { label: "Help Center",       icon: HelpCircle, href: "/super-admin/settings?tab=help"     },
+  { label: "Logout",            icon: LogOut,     danger: true                               },
 ];
 
 const dropdownMotion = {
@@ -95,6 +97,7 @@ export default function Header({
   title = "Super Admin Dashboard",
   subtitle = "National Infrastructure Overview",
 }: HeaderProps) {
+  const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] =
@@ -298,9 +301,12 @@ export default function Header({
                   <button
                     key={item.label}
                     type="button"
-                    className={`dropdown-item ${
-                      item.danger ? "dropdown-item-danger" : ""
-                    }`}
+                    onClick={() => {
+                      closeAllDropdowns();
+                      if (item.danger) { router.push("/"); }
+                      else if (item.href) { router.push(item.href); }
+                    }}
+                    className={`dropdown-item ${item.danger ? "dropdown-item-danger" : ""}`}
                   >
                     <item.icon size={14} aria-hidden />
                     {item.label}

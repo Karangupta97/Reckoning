@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { DashboardCard } from "./dashboard-card";
 
 interface RiskAlert {
@@ -14,6 +15,7 @@ interface RiskAlert {
 }
 
 export default function RiskAlerts() {
+  const router = useRouter();
   const alerts: RiskAlert[] = [
     {
       rank: 1,
@@ -102,7 +104,7 @@ export default function RiskAlerts() {
             Top 5 High Risk Projects
           </p>
         </div>
-        <button className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
+        <button onClick={() => router.push("/super-admin/ai-alerts")} className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors">
           View All
         </button>
       </div>

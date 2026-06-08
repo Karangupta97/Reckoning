@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { DashboardCard } from "./dashboard-card";
 
 type Priority = "High" | "Medium" | "Low";
@@ -73,6 +74,7 @@ const statusBadgeClass: Record<Status, string> = {
 };
 
 export default function ComplaintsTable() {
+  const router = useRouter();
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -88,7 +90,7 @@ export default function ComplaintsTable() {
             Citizen complaints & escalations
           </p>
         </div>
-        <button type="button" className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
+        <button type="button" onClick={() => router.push("/super-admin/complaints/citizen-complaints")} className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
           View All
         </button>
       </div>

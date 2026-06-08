@@ -1,0 +1,741 @@
+"use client";
+
+import { motion } from "framer-motion";
+import {
+  AlertTriangle, ClipboardList, Clock3, CheckCircle2,
+  MapPin, Ticket, Eye, TrendingUp, TrendingDown, Minus,
+  Activity, Users, FileWarning, Upload, Map, Plus,
+} from "lucide-react";
+import Link from "next/link";
+import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
+import IndiaMap from "@/components/map/IndiaMap";
+import { ComplaintTrendChart, ResolutionRateChart } from "@/components/district-admin-dashboard";
+
+/* ─── Breadcrumb ─────────────────────────────────────────────── */
+function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
+  return (
+    <nav className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] mb-1" aria-label="Breadcrumb">
+      {items.map((item, i) => (
+        <span key={item.label} className="flex items-center gap-1.5">
+          {i > 0 && <span className="opacity-40">›</span>}
+          {item.href ? (
+            <Link href={item.href} className="hover:text-[var(--color-text-secondary)] transition-colors">{item.label}</Link>
+          ) : (
+            <span className="text-[var(--color-text-secondary)] font-medium">{item.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
+
+/* ─── Hero — compact ─────────────────────────────────────────── */
+function HeroBanner() {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border py-4 px-5"
+      style={{
+        borderColor: "var(--sda-border-amber)",
+        background: "linear-gradient(135deg, color-mix(in srgb, var(--sda-amber) 7%, var(--color-card)) 0%, var(--color-card) 55%)",
+      }}
+    >
+      <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full opacity-15 blur-3xl" style={{ background: "var(--sda-amber)" }} aria-hidden />
+      <div className="relative flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        {/* Left */}
+        <div className="flex flex-col gap-2 min-w-0">
+          <div className="flex flex-wrap gap-2">
+            <span className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
+              style={{ borderColor: "rgba(34,197,94,0.3)", color: "var(--color-success)", background: "rgba(34,197,94,0.08)" }}>
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
+              </span>
+              Live Operations
+            </span>
+            <span className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
+              style={{ borderColor: "var(--sda-border-amber)", color: "var(--sda-amber)", background: "var(--sda-amber-glow)" }}>
+              <MapPin size={9} /> Raigad • Panvel Taluka
+            </span>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">Panvel Taluka Operations Desk</h2>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Manage complaints, inspections, tickets and field resolution workflows.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/sub-district-admin/dashboard/tickets">
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-all"
+                style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 12%, transparent)", color: "var(--sda-amber)" }}>
+                <Plus size={12} /> Create Ticket
+              </motion.button>
+            </Link>
+            <Link href="/sub-district-admin/dashboard/map">
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-all"
+                style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-secondary)" }}>
+                <Map size={12} /> View Map
+              </motion.button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Right — zone health + metric pills */}
+        <div className="flex items-center gap-4 lg:shrink-0">
+          {/* Zone Health */}
+          <div className="flex items-center gap-3 rounded-xl border px-4 py-2.5"
+            style={{ borderColor: "var(--sda-border-amber)", background: "var(--sda-amber-glow)" }}>
+            <div className="text-center">
+              <div className="text-2xl font-black tabular-nums" style={{ color: "var(--sda-amber)" }}>87</div>
+              <div className="text-[9px] text-[var(--color-text-muted)]">/100</div>
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold text-[var(--color-text-primary)]">Zone Health</div>
+              <div className="text-[10px] font-medium text-green-400">Excellent</div>
+              <div className="mt-1 h-1 w-16 rounded-full bg-[var(--color-surface)] overflow-hidden">
+                <div className="h-full rounded-full bg-green-400" style={{ width: "87%" }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Metric pills */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {[
+              { label: "Open",      value: "84", color: "var(--color-danger)" },
+              { label: "Tickets",   value: "23", color: "var(--color-info)"   },
+              { label: "SLA Today", value: "7",  color: "var(--sda-amber)"    },
+              { label: "Resolved",  value: "12", color: "var(--color-success)" },
+            ].map((p) => (
+              <div key={p.label} className="rounded-lg border px-2.5 py-1.5 text-center min-w-[54px]"
+                style={{ borderColor: `color-mix(in srgb, ${p.color} 25%, transparent)`, background: `color-mix(in srgb, ${p.color} 8%, transparent)` }}>
+                <div className="text-sm font-black tabular-nums" style={{ color: p.color }}>{p.value}</div>
+                <div className="text-[9px] text-[var(--color-text-muted)] leading-tight">{p.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── KPI Cards ──────────────────────────────────────────────── */
+const kpiCards = [
+  { title: "Open Complaints",  value: "84", change: "+12 today",    trend: "up"      as const, icon: AlertTriangle, iconColor: "var(--color-danger)",  borderColor: "rgba(239,68,68,0.3)",  href: "/sub-district-admin/dashboard/complaints" },
+  { title: "Assigned Tickets", value: "23", change: "8 active",     trend: "neutral" as const, icon: ClipboardList, iconColor: "var(--color-info)",    borderColor: "rgba(59,130,246,0.3)", href: "/sub-district-admin/dashboard/tickets"    },
+  { title: "SLA Due Today",    value: "7",  change: "3 critical",   trend: "up"      as const, icon: Clock3,        iconColor: "var(--sda-amber)",      borderColor: "rgba(245,158,11,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+  { title: "Resolved Today",   value: "12", change: "+4 yesterday", trend: "down"    as const, icon: CheckCircle2,  iconColor: "var(--color-success)",  borderColor: "rgba(34,197,94,0.3)",  href: "/sub-district-admin/dashboard/complaints" },
+];
+
+function KpiCard({ card, index }: { card: typeof kpiCards[0]; index: number }) {
+  const TrendIcon = card.trend === "up" ? TrendingUp : card.trend === "down" ? TrendingDown : Minus;
+  const trendColor = card.trend === "down" ? "var(--color-success)" : card.trend === "up" ? "var(--color-danger)" : "var(--color-text-muted)";
+  return (
+    <Link href={card.href}>
+      <DashboardCard
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        whileHover={{ y: -2, transition: { duration: 0.2 } }}
+        className="px-4 py-3.5 cursor-pointer transition-all duration-200 hover:border-[var(--color-border)]"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border"
+            style={{ borderColor: card.borderColor, background: `color-mix(in srgb, ${card.iconColor} 10%, transparent)` }}>
+            <card.icon size={17} style={{ color: card.iconColor }} />
+          </div>
+          <div className="flex items-center gap-0.5 text-[10px]" style={{ color: trendColor }}>
+            <TrendIcon size={11} />
+            <span>{card.change}</span>
+          </div>
+        </div>
+        <div className="mt-3">
+          <div className="text-2xl font-black tabular-nums text-[var(--color-text-primary)]">{card.value}</div>
+          <div className="mt-0.5 text-xs text-[var(--color-text-secondary)]">{card.title}</div>
+        </div>
+      </DashboardCard>
+    </Link>
+  );
+}
+
+/* ─── SLA Command Center ─────────────────────────────────────── */
+function SlaCommandCenter() {
+  const total = 64;
+  return (
+    <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="px-4 py-3.5">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">SLA Command Center</h3>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Real-time SLA status across all active complaints</p>
+        </div>
+        <Activity size={16} className="text-[var(--color-text-muted)]" />
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        {[
+          { label: "Critical", count: 5,  color: "var(--color-danger)",  pulse: true  },
+          { label: "Warning",  count: 12, color: "var(--sda-amber)",     pulse: false },
+          { label: "Healthy",  count: 47, color: "var(--color-success)", pulse: false },
+        ].map((s) => (
+          <div key={s.label} className="flex-1 flex items-center justify-between rounded-lg border px-3 py-2"
+            style={{ borderColor: `color-mix(in srgb, ${s.color} 25%, transparent)`, background: `color-mix(in srgb, ${s.color} 7%, transparent)` }}>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                {s.pulse && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: s.color }} />}
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: s.color }} />
+              </span>
+              <span className="text-xs font-medium" style={{ color: s.color }}>{s.label}</span>
+            </div>
+            <span className="text-lg font-black tabular-nums" style={{ color: s.color }}>{s.count}</span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3">
+        <div className="flex h-1.5 w-full overflow-hidden rounded-full">
+          <div className="h-full bg-red-500"   style={{ width: `${(5  / total) * 100}%` }} />
+          <div className="h-full"              style={{ width: `${(12 / total) * 100}%`, background: "var(--sda-amber)" }} />
+          <div className="h-full bg-green-500" style={{ width: `${(47 / total) * 100}%` }} />
+        </div>
+        <div className="flex justify-between mt-1">
+          <span className="text-[10px] text-red-400">5 critical</span>
+          <span className="text-[10px] text-[var(--color-text-muted)]">64 total</span>
+          <span className="text-[10px] text-green-400">47 healthy</span>
+        </div>
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Urgent Actions Table ───────────────────────────────────── */
+const urgentRows = [
+  { id: "CMP-1024", priority: "Critical", sla: "BREACHED",  officer: "R. Sharma",  status: "Open"        },
+  { id: "CMP-1011", priority: "Critical", sla: "1h 22m",    officer: "P. Nair",    status: "Assigned"    },
+  { id: "CMP-0987", priority: "High",     sla: "3h 05m",    officer: "A. Kulkarni",status: "In Progress" },
+  { id: "CMP-0974", priority: "High",     sla: "5h 40m",    officer: "M. Patil",   status: "Assigned"    },
+  { id: "CMP-0961", priority: "High",     sla: "7h 15m",    officer: "S. Desai",   status: "Open"        },
+];
+
+function UrgentActionsTable() {
+  return (
+    <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Urgent Actions</h3>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Sorted by urgency — act on critical first</p>
+        </div>
+      </div>
+      <div className="dashboard-table-scroll flex-1">
+        <table className="dashboard-table">
+          <thead>
+            <tr>{["ID", "Priority", "SLA", "Officer", "Status", "Action"].map((h) => (
+              <th key={h} className="dashboard-table-th">{h}</th>
+            ))}</tr>
+          </thead>
+          <tbody>
+            {urgentRows.map((row) => (
+              <tr key={row.id} className="dashboard-table-row sda-table-row">
+                <td className="dashboard-table-td dashboard-table-td-primary font-mono text-xs">{row.id}</td>
+                <td className="dashboard-table-td">
+                  <span className={`dashboard-table-badge ${row.priority === "Critical" ? "dashboard-table-badge-status-open" : "dashboard-table-badge-status-escalated"}`}>
+                    {row.priority}
+                  </span>
+                </td>
+                <td className="dashboard-table-td">
+                  {row.sla === "BREACHED"
+                    ? <span className="dashboard-table-badge dashboard-table-badge-status-open animate-pulse">BREACHED</span>
+                    : <span className="text-xs font-mono text-amber-400">{row.sla}</span>}
+                </td>
+                <td className="dashboard-table-td text-xs">{row.officer}</td>
+                <td className="dashboard-table-td">
+                  <span className={`dashboard-table-badge ${
+                    row.status === "Open" ? "dashboard-table-badge-status-open" :
+                    row.status === "In Progress" ? "dashboard-table-badge-status-review" : "dashboard-table-badge-status-escalated"
+                  }`}>{row.status}</span>
+                </td>
+                <td className="dashboard-table-td">
+                  <Link href={`/sub-district-admin/dashboard/complaints/${row.id}`}>
+                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                      className="flex items-center gap-1 h-7 px-2.5 rounded-md border text-[11px] font-medium"
+                      style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 10%, transparent)", color: "var(--sda-amber)" }}>
+                      <Eye size={11} /> View
+                    </motion.button>
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Quick Actions ──────────────────────────────────────────── */
+function QuickActionsPanel() {
+  const actions = [
+    { label: "Create Ticket",     desc: "Open a new work order",   icon: Ticket,       href: "/sub-district-admin/dashboard/tickets",    color: "var(--sda-amber)"        },
+    { label: "Resolve Complaint", desc: "Close a complaint case",  icon: CheckCircle2, href: "/sub-district-admin/dashboard/complaints", color: "var(--color-success)"    },
+    { label: "Upload Evidence",   desc: "Add photos or documents", icon: Upload,       href: "/sub-district-admin/dashboard/complaints", color: "var(--color-info)"       },
+    { label: "Open Zone Map",     desc: "View complaint heatmap",  icon: Map,          href: "/sub-district-admin/dashboard/map",        color: "var(--color-text-muted)" },
+  ];
+  return (
+    <DashboardCard
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+      className="p-4 flex flex-col gap-3"
+    >
+      <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Quick Actions</h3>
+      <div className="flex flex-col gap-2">
+        {actions.map((a) => (
+          <Link key={a.label} href={a.href}>
+            <motion.div
+              whileHover={{ x: 2, transition: { duration: 0.15 } }}
+              className="flex items-center gap-3 rounded-lg border px-3 transition-all duration-150 cursor-pointer"
+              style={{
+                height: "56px",
+                borderColor: `color-mix(in srgb, ${a.color} 18%, var(--color-border))`,
+                background: `color-mix(in srgb, ${a.color} 5%, transparent)`,
+              }}
+            >
+              <div
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border"
+                style={{
+                  borderColor: `color-mix(in srgb, ${a.color} 28%, transparent)`,
+                  background: `color-mix(in srgb, ${a.color} 10%, transparent)`,
+                }}
+              >
+                <a.icon size={14} style={{ color: a.color }} />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-[var(--color-text-primary)]">{a.label}</div>
+                <div className="text-[10px] text-[var(--color-text-muted)]">{a.desc}</div>
+              </div>
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Officer Workload ───────────────────────────────────────── */
+const officers = [
+  { name: "R. Sharma",   cases: 12, slaRisk: 75, status: "Overloaded" },
+  { name: "P. Nair",     cases: 8,  slaRisk: 50, status: "Active"     },
+  { name: "A. Kulkarni", cases: 6,  slaRisk: 30, status: "Active"     },
+  { name: "M. Patil",    cases: 9,  slaRisk: 60, status: "Active"     },
+  { name: "S. Desai",    cases: 4,  slaRisk: 15, status: "On Leave"   },
+];
+
+function OfficerWorkload() {
+  return (
+    <DashboardCard
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+      className="flex flex-col overflow-hidden"
+    >
+      <div className="px-4 pt-3 pb-2 shrink-0">
+        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Officer Workload</h3>
+        <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Active case distribution</p>
+      </div>
+      {/* Fixed-layout table — no horizontal scroll */}
+      <div className="overflow-y-auto flex-1" style={{ maxHeight: "248px", scrollbarWidth: "thin" }}>
+        <table style={{ tableLayout: "fixed", width: "100%", borderCollapse: "separate", borderSpacing: 0 }}>
+          <colgroup>
+            <col style={{ width: "30%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "35%" }} />
+            <col style={{ width: "20%" }} />
+          </colgroup>
+          <thead className="sticky top-0 z-10">
+            <tr>
+              {["Officer","Cases","SLA Risk","Status"].map((h) => (
+                <th key={h} className="dashboard-table-th text-left">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {officers.map((o) => (
+              <tr key={o.name} className="dashboard-table-row sda-table-row" style={{ height: "44px" }}>
+                <td className="dashboard-table-td dashboard-table-td-primary text-xs truncate max-w-0">
+                  <span className="block truncate">{o.name}</span>
+                </td>
+                <td className="dashboard-table-td font-bold text-xs tabular-nums">{o.cases}</td>
+                <td className="dashboard-table-td pr-3">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-1.5 flex-1 rounded-full overflow-hidden bg-[var(--color-surface)]">
+                      <div className="h-full rounded-full transition-all" style={{
+                        width: `${o.slaRisk}%`,
+                        background: o.slaRisk >= 60 ? "var(--color-danger)" : o.slaRisk >= 40 ? "var(--sda-amber)" : "var(--color-success)",
+                      }} />
+                    </div>
+                    <span className="text-[10px] text-[var(--color-text-muted)] tabular-nums shrink-0">{o.slaRisk}%</span>
+                  </div>
+                </td>
+                <td className="dashboard-table-td">
+                  <span className={`dashboard-table-badge text-[10px] ${
+                    o.status === "Overloaded" ? "dashboard-table-badge-status-open" :
+                    o.status === "On Leave"   ? "dashboard-table-badge-status-escalated" : "dashboard-table-badge-status-resolved"
+                  }`}>{o.status}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Workload Overview ──────────────────────────────────────── */
+function WorkloadOverview() {
+  const stats = [
+    { label: "Pending",     value: "18", color: "var(--sda-amber)",     href: "/sub-district-admin/dashboard/complaints" },
+    { label: "In Progress", value: "31", color: "var(--color-info)",    href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Awaiting",    value: "9",  color: "#a78bfa",              href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Done Today",  value: "12", color: "var(--color-success)", href: "/sub-district-admin/dashboard/complaints" },
+  ];
+  return (
+    <DashboardCard
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+      className="p-4"
+    >
+      <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-2.5">Workload Overview</h3>
+      <div className="grid grid-cols-2 gap-2">
+        {stats.map((s) => (
+          <Link key={s.label} href={s.href}>
+            <motion.div
+              whileHover={{ y: -1, transition: { duration: 0.15 } }}
+              className="rounded-lg border px-3 py-2 cursor-pointer transition-all duration-150"
+              style={{
+                borderColor: `color-mix(in srgb, ${s.color} 22%, transparent)`,
+                background: `color-mix(in srgb, ${s.color} 6%, transparent)`,
+              }}
+            >
+              <div className="text-lg font-black tabular-nums leading-none" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">{s.label}</div>
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Citizen Impact ─────────────────────────────────────────── */
+function CitizenImpact() {
+  const stats = [
+    { label: "Citizens Impacted",  value: "1,240", color: "var(--color-danger)"  },
+    { label: "Roads Affected",     value: "18",    color: "var(--sda-amber)"     },
+    { label: "Avg Resolution",     value: "2.4d",  color: "var(--color-info)"    },
+    { label: "Repeat Complaints",  value: "8%",    color: "var(--sda-orange)"    },
+    { label: "Escalation Rate",    value: "4%",    color: "var(--color-text-muted)" },
+    { label: "Satisfaction",       value: "73%",   color: "var(--color-success)" },
+  ];
+  return (
+    <Link href="/sub-district-admin/dashboard/complaints">
+      <DashboardCard
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+        whileHover={{ y: -1, transition: { duration: 0.15 } }}
+        className="p-4 cursor-pointer"
+      >
+        <div className="flex items-center gap-2 mb-2.5">
+          <Users size={14} className="text-blue-400" />
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Citizen Impact</h3>
+        </div>
+        <div className="flex flex-col divide-y divide-[var(--color-border)]">
+          {stats.map((s) => (
+            <div key={s.label} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
+              <span className="text-xs text-[var(--color-text-secondary)]">{s.label}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </DashboardCard>
+    </Link>
+  );
+}
+
+/* ─── Heatmap Preview ────────────────────────────────────────── */
+function HeatmapPreview() {
+  return (
+    <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="px-4 py-3.5 flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Complaint Heatmap</h3>
+        <span className="text-[10px] text-[var(--color-text-muted)] border border-[var(--color-border)] rounded px-1.5 py-0.5">Zone A</span>
+      </div>
+      <div className="flex-1 rounded-lg overflow-hidden" style={{ minHeight: "160px" }}>
+        <IndiaMap
+          adminRole="sub_district_admin"
+          height="160px"
+          showBreadcrumb={false}
+          showControls={false}
+          showLegend={false}
+          showSidebar={false}
+          isDark
+        />
+      </div>
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-[10px] text-[var(--color-text-muted)]">84 open complaints</span>
+        <Link href="/sub-district-admin/dashboard/map" className="text-[10px] font-medium" style={{ color: "var(--sda-amber)" }}>Open Zone Map →</Link>
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Activity Feed ──────────────────────────────────────────── */
+const feedEvents = [
+  { time: "08:14", title: "Complaint Assigned",   desc: "#CMP-1024 → R. Sharma",         iconClass: "activity-timeline-icon-amber",   icon: FileWarning   },
+  { time: "09:22", title: "Evidence Uploaded",    desc: "3 photos — #CMP-0987",          iconClass: "activity-timeline-icon-info",    icon: Upload        },
+  { time: "10:05", title: "Inspection Completed", desc: "Site verified — Sector 7",       iconClass: "activity-timeline-icon-success", icon: CheckCircle2  },
+  { time: "11:31", title: "Ticket Closed",        desc: "#TKT-0456 by P. Nair",          iconClass: "activity-timeline-icon-success", icon: Ticket        },
+  { time: "12:48", title: "SLA Breach Warning",   desc: "#CMP-1011 — 1h 22m left",       iconClass: "activity-timeline-icon-danger",  icon: AlertTriangle },
+  { time: "13:15", title: "Complaint Resolved",   desc: "#CMP-0924 closed",              iconClass: "activity-timeline-icon-success", icon: CheckCircle2  },
+];
+
+function ActivityFeed() {
+  return (
+    <DashboardCard
+      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+      className="p-4 flex flex-col h-full"
+    >
+      <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-2.5 shrink-0">Activity Feed</h3>
+      <div className="activity-timeline flex-1 min-h-0 overflow-hidden">
+        <div className="sda-activity-timeline-line activity-timeline-line" />
+        <div
+          className="activity-timeline-list overflow-y-auto"
+          style={{ maxHeight: "220px", scrollbarWidth: "thin", scrollbarColor: "rgba(245,158,11,0.2) transparent" }}
+        >
+          {feedEvents.map((ev, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.55 + i * 0.04 }}
+              className="activity-timeline-item"
+            >
+              <div className={`activity-timeline-icon ${ev.iconClass}`}><ev.icon size={13} /></div>
+              <div className="activity-timeline-body">
+                <div className="activity-timeline-meta">
+                  <span className="activity-timeline-title">{ev.title}</span>
+                  <span className="activity-timeline-time">{ev.time}</span>
+                </div>
+                <p className="activity-timeline-desc">{ev.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Upcoming SLA Breaches (Section F) ─────────────────────── */
+const upcomingSLA = [
+  { id: "CMP-1011", title: "Waterlogging — Ward 3",      sla: "1h 22m",  priority: "Critical", officer: "P. Nair"     },
+  { id: "CMP-0987", title: "Road Damage — NH-48",         sla: "3h 05m",  priority: "High",     officer: "A. Kulkarni" },
+  { id: "CMP-0974", title: "Sewage Overflow — Sector 12", sla: "5h 40m",  priority: "High",     officer: "M. Patil"    },
+  { id: "CMP-1008", title: "Streetlight — Sector 9",      sla: "6h 10m",  priority: "Medium",   officer: "S. Desai"    },
+  { id: "CMP-0961", title: "Pothole — Old Panvel Road",   sla: "7h 15m",  priority: "High",     officer: "R. Sharma"   },
+];
+
+function UpcomingSLABreaches() {
+  return (
+    <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Upcoming SLA Breaches</h3>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Act before these breach SLA</p>
+        </div>
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-amber-400">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400" />
+          </span>
+          {upcomingSLA.length} at risk
+        </span>
+      </div>
+      <div className="flex flex-col divide-y divide-[var(--color-border)] px-4 pb-2">
+        {upcomingSLA.map((item) => (
+          <Link key={item.id} href={`/sub-district-admin/dashboard/complaints/${item.id}`}>
+            <motion.div whileHover={{ x: 2 }} className="flex items-center justify-between gap-3 py-2 cursor-pointer group">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`shrink-0 h-1.5 w-1.5 rounded-full ${item.priority === "Critical" ? "bg-red-400 animate-pulse" : item.priority === "High" ? "bg-amber-400" : "bg-blue-400"}`} />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--color-text-primary)] truncate group-hover:text-amber-400 transition-colors">{item.title}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">{item.id} · {item.officer}</p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: item.priority === "Critical" ? "var(--color-danger)" : "var(--sda-amber)" }}>
+                {item.sla}
+              </span>
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Recent Resolutions (Section F) ────────────────────────── */
+const recentResolutions = [
+  { id: "CMP-0924", title: "Garbage Dump — Market Road",    resolvedBy: "S. Desai",    time: "13:15", category: "Garbage",     rating: 5 },
+  { id: "CMP-0912", title: "Tree Fallen — Near Station",    resolvedBy: "A. Kulkarni", time: "11:42", category: "Tree Fallen", rating: 4 },
+  { id: "CMP-0901", title: "Pothole — Sector 5",            resolvedBy: "P. Nair",     time: "10:18", category: "Road Damage", rating: 5 },
+  { id: "CMP-0895", title: "Streetlight — NH-48 Junction",  resolvedBy: "M. Patil",    time: "09:05", category: "Utilities",   rating: 4 },
+  { id: "CMP-0882", title: "Water Leakage — Ward 9",        resolvedBy: "R. Sharma",   time: "08:30", category: "Water",       rating: 5 },
+];
+
+function RecentResolutions() {
+  return (
+    <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Recent Resolutions</h3>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Completed today · {recentResolutions.length} cases</p>
+        </div>
+        <span className="text-[10px] font-medium text-green-400">All within SLA ✓</span>
+      </div>
+      <div className="flex flex-col divide-y divide-[var(--color-border)] px-4 pb-2">
+        {recentResolutions.map((item) => (
+          <Link key={item.id} href={`/sub-district-admin/dashboard/complaints/${item.id}`}>
+            <motion.div whileHover={{ x: 2 }} className="flex items-center justify-between gap-3 py-2 cursor-pointer group">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+                  style={{ borderColor: "rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.08)" }}>
+                  <CheckCircle2 size={12} className="text-green-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-[var(--color-text-primary)] truncate group-hover:text-green-400 transition-colors">{item.title}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">{item.id} · {item.resolvedBy}</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end shrink-0 gap-0.5">
+                <span className="text-[10px] text-[var(--color-text-muted)] tabular-nums">{item.time}</span>
+                <span className="text-[9px] text-green-400">{"★".repeat(item.rating)}</span>
+              </div>
+            </motion.div>
+          </Link>
+        ))}
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Full-width Heatmap Panel (Section D) ───────────────────── */
+function HeatmapPanel() {
+  return (
+    <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-3 pb-2.5 border-b border-[var(--color-border)]">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Complaint Heatmap — Zone A</h3>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Panvel Taluka · 84 active complaints · Last updated 2m ago</p>
+        </div>
+        <Link href="/sub-district-admin/dashboard/map"
+          className="flex items-center gap-1 text-[11px] font-medium transition-colors hover:underline"
+          style={{ color: "var(--sda-amber)" }}>
+          <Map size={12} /> Full Map
+        </Link>
+      </div>
+
+      {/* Real interactive map */}
+      <IndiaMap
+        adminRole="sub_district_admin"
+        height="380px"
+        showBreadcrumb
+        showControls
+        showLegend
+        showSidebar
+        isDark
+      />
+
+      {/* Stats bar */}
+      <div className="flex flex-wrap items-center gap-4 px-4 py-2.5 border-t border-[var(--color-border)]">
+        {[
+          { label: "Open Complaints", value: "84",   color: "var(--color-danger)"  },
+          { label: "Critical Zones",  value: "3",    color: "var(--color-danger)"  },
+          { label: "Active Tickets",  value: "7",    color: "var(--color-info)"    },
+          { label: "Resolved Today",  value: "12",   color: "var(--color-success)" },
+          { label: "Zone Coverage",   value: "100%", color: "var(--sda-amber)"     },
+        ].map((s) => (
+          <div key={s.label} className="flex items-center gap-1.5">
+            <span className="text-sm font-black tabular-nums" style={{ color: s.color }}>{s.value}</span>
+            <span className="text-xs text-[var(--color-text-muted)]">{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </DashboardCard>
+  );
+}
+
+/* ─── Page ───────────────────────────────────────────────────── */
+export default function SubDistrictAdminDashboard() {
+  return (
+    <div className="flex flex-col gap-4">
+      <Breadcrumb items={[{ label: "Dashboard" }]} />
+
+      {/* Hero — untouched */}
+      <section className="min-w-0">
+        <HeroBanner />
+      </section>
+
+      {/* KPI row — untouched */}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {kpiCards.map((card, i) => <KpiCard key={card.title} card={card} index={i} />)}
+      </section>
+
+      {/* SLA Command Center — untouched */}
+      <section className="min-w-0">
+        <SlaCommandCenter />
+      </section>
+
+      {/* SECTION A — Urgent Actions full width */}
+      <section className="min-w-0">
+        <UrgentActionsTable />
+      </section>
+
+      {/* SECTION B — Officer Workload 65% | Quick Actions 35% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[65fr_35fr] lg:items-stretch">
+        <div className="min-w-0 flex flex-col">
+          <OfficerWorkload />
+        </div>
+        <div className="min-w-0">
+          <QuickActionsPanel />
+        </div>
+      </section>
+
+      {/* SECTION C — Citizen Impact 25% | Workload Overview 35% | Activity Feed 40% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[25fr_35fr_40fr] lg:items-stretch">
+        <div className="min-w-0">
+          <CitizenImpact />
+        </div>
+        <div className="min-w-0">
+          <WorkloadOverview />
+        </div>
+        <div className="min-w-0 flex flex-col">
+          <ActivityFeed />
+        </div>
+      </section>
+
+      {/* SECTION D — Complaint Heatmap full width */}
+      <section className="min-w-0">
+        <HeatmapPanel />
+      </section>
+
+      {/* SECTION E — Resolution Trends 50% | Complaint Trends 50% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+        <div className="min-w-0 flex flex-col">
+          <ResolutionRateChart compact />
+        </div>
+        <div className="min-w-0 flex flex-col">
+          <ComplaintTrendChart compact tall />
+        </div>
+      </section>
+
+      {/* SECTION F — Upcoming SLA Breaches 50% | Recent Resolutions 50% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+        <div className="min-w-0 flex flex-col">
+          <UpcomingSLABreaches />
+        </div>
+        <div className="min-w-0 flex flex-col">
+          <RecentResolutions />
+        </div>
+      </section>
+    </div>
+  );
+}

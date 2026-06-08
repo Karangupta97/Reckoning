@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { DashboardCard } from "./dashboard-card";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -92,6 +93,7 @@ function formatRelativeTime(minutesAgo: number): string {
 }
 
 export default function ActivityFeed() {
+  const router = useRouter();
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -105,7 +107,7 @@ export default function ActivityFeed() {
           </h3>
           <p className="text-muted mt-1 text-xs">Recent platform events</p>
         </div>
-        <button type="button" className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
+        <button type="button" onClick={() => router.push("/super-admin/audit")} className="btn-secondary shrink-0 !h-9 !px-3 !text-xs">
           View All
         </button>
       </div>
