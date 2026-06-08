@@ -65,11 +65,28 @@ export default async function RootLayout({
       className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+<<<<<<< Updated upstream
+=======
+<<<<<<< Updated upstream
+      <head />
+      <body className="min-h-full flex flex-col overflow-x-hidden" suppressHydrationWarning>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {THEME_INIT}
+        </Script>
+        <Script id="extension-cleanup" strategy="beforeInteractive">
+          {EXTENSION_ATTR_CLEANUP}
+        </Script>
+=======
+>>>>>>> Stashed changes
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <script dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }} />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
         {children}
       </body>
     </html>
