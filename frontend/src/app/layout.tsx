@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, DM_Mono } from "next/font/google";
-import Script from "next/script";
 import { getLocale } from "next-intl/server";
 
 import "./globals.css";
@@ -66,14 +65,11 @@ export default async function RootLayout({
       className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head />
-      <body className="min-h-full flex flex-col overflow-x-hidden" suppressHydrationWarning>
-        <Script id="theme-init" strategy="beforeInteractive">
-          {THEME_INIT}
-        </Script>
-        <Script id="extension-cleanup" strategy="beforeInteractive">
-          {EXTENSION_ATTR_CLEANUP}
-        </Script>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }} />
+      </head>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}
       </body>
     </html>

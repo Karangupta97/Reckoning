@@ -1,79 +1,33 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Sun, Moon } from "lucide-react";
+import { useThemeStore } from "@/stores/theme-store";
 
-type Theme = "light" | "dark";
-
-const STORAGE_KEY = "RECKONING_THEME";
-const TRANSITION_DURATION = 300; // ms — matches CSS
-
-/**
- * Enables the global theme-transition class, applies the theme,
- * then removes the transition class after the animation completes.
- * This prevents transitions on initial page load (no FOUC) while
- * ensuring smooth switching when the user clicks the toggle.
- */
-function applyTheme(theme: Theme) {
-  const root = document.documentElement;
-
-  // Enable global theme transitions
-  root.classList.add("theme-transition");
-
-  // Apply theme
-  root.classList.remove("light", "dark");
-  root.classList.add(theme);
-  root.style.colorScheme = theme;
-
-  // Persist
-  try {
-    window.localStorage.setItem(STORAGE_KEY, theme);
-  } catch {
-    // Ignore storage failures (private mode, etc.).
-  }
-
-  // Remove transition class after animation completes to avoid
-  // unwanted transitions on scroll, hover, focus etc.
-  setTimeout(() => {
-    root.classList.remove("theme-transition");
-  }, TRANSITION_DURATION + 50);
-}
-
-/**
- * Premium theme toggle with:
- * - Spring-animated sliding knob
- * - 180° icon rotation on switch
- * - Glow effect
- * - Scale micro-interaction on press
- * - No flash on page load
- * - Accessible (role=switch, aria-checked)
- * - Respects prefers-reduced-motion
- */
 export function ThemeToggle({ className = "" }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const { resolved, toggle, syncFromDOM, initSystemListener } = useThemeStore();
   const [mounted, setMounted] = useState(false);
   const [pressing, setPressing] = useState(false);
   const [glowing, setGlowing] = useState(false);
   const glowTimeout = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => {
-    const isDark = document.documentElement.classList.contains("dark");
-    setTheme(isDark ? "dark" : "light");
+    syncFromDOM();
     setMounted(true);
-  }, []);
+    const cleanup = initSystemListener();
+    return cleanup;
+  }, [syncFromDOM, initSystemListener]);
 
-  const toggle = useCallback(() => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    applyTheme(next);
-    setTheme(next);
+  const handleToggle = () => {
+    toggle();
 
     // Trigger glow effect
     setGlowing(true);
     if (glowTimeout.current) clearTimeout(glowTimeout.current);
     glowTimeout.current = setTimeout(() => setGlowing(false), 600);
-  }, [theme]);
+  };
 
-  const isDark = theme === "dark";
+  const isDark = resolved === "dark";
 
   return (
     <button
@@ -81,7 +35,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
       role="switch"
       aria-checked={isDark}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      onClick={toggle}
+      onClick={handleToggle}
       onPointerDown={() => setPressing(true)}
       onPointerUp={() => setPressing(false)}
       onPointerLeave={() => setPressing(false)}

@@ -5,10 +5,10 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
-  AlertTriangle,
   Map,
   Bell,
   Users,
+  Award,
   Trophy,
   User,
   Settings,
@@ -31,18 +31,17 @@ const NAV_ITEMS: Array<{
   highlight?: boolean;
   exactMatch?: boolean;
 }> = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
-  { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
-  { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
-  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard/hazards" },
-  { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
-  { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
-  { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
-  { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard/achievements" },
-  { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile" },
-  { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
-  { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard/help" },
-];
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
+    { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
+    { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
+    { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
+    { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
+    { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
+    { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard/achievements" },
+    { id: "leaderboard", label: "Leaderboard", icon: Award, href: "/dashboard/leaderboard" },
+    { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
+    { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard/help" },
+  ];
 
 export function Sidebar() {
   const { expanded, toggle } = useSidebarStore();
@@ -98,13 +97,12 @@ export function Sidebar() {
               onClick={() => {
                 router.push(item.href);
               }}
-              className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
-                isHighlight && !isActive
+              className={`group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${isHighlight && !isActive
                   ? "bg-[var(--color-amber)] text-[#1c2b3a] font-semibold hover:brightness-105"
                   : isActive
-                  ? "bg-[var(--color-text-primary)] text-[var(--color-card)] shadow-[var(--shadow-neu)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
-              }`}
+                    ? "bg-[var(--color-text-primary)] text-[var(--color-card)] shadow-[var(--shadow-neu)]"
+                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
+                }`}
               title={!expanded ? item.label : undefined}
             >
               <span className="relative shrink-0">

@@ -5,12 +5,12 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FileText,
-  AlertTriangle,
   Map,
   Bell,
   Users,
   Trophy,
   User,
+  Award,
   Settings,
   HelpCircle,
   LogOut,
@@ -30,12 +30,11 @@ const NAV_ITEMS: Array<{
 }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
   { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
-  { id: "hazards", label: "Nearby Hazards", icon: AlertTriangle, href: "/dashboard/hazards" },
   { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
   { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
   { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
   { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard/achievements" },
-  { id: "profile", label: "Profile", icon: User, href: "/dashboard/profile" },
+  { id: "leaderboard", label: "Leaderboard", icon: Award, href: "/dashboard/leaderboard" },
   { id: "settings", label: "Settings", icon: Settings, href: "/dashboard/settings" },
   { id: "help", label: "Help Center", icon: HelpCircle, href: "/dashboard/help" },
 ];

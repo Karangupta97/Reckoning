@@ -36,7 +36,8 @@
 }
 
 /* ─── Dark mode overrides ────────────────────────────────────── */
-.dark {
+.dark,
+[data-theme="dark"] {
   --color-page: #1A1F2E;
   --color-card: #222838;
   --color-surface: #2A3144;
@@ -73,7 +74,7 @@
     --shadow-neu-lg:
       -10px -10px 20px rgba(255, 255, 255, 0.03),
       10px 10px 20px rgba(0, 0, 0, 0.5);
-    --shadow-card:   0 2px 16px rgba(28,43,58,0.08);
+    --shadow-card: 0 2px 16px rgba(28, 43, 58, 0.08);
     --shadow-bottom-nav: 0 -4px 32px rgba(0, 0, 0, 0.3);
     --shadow-fab: 0 4px 24px rgba(245, 158, 11, 0.35);
   }
@@ -110,6 +111,7 @@ html.theme-transition .no-theme-transition * {
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
   html.theme-transition,
   html.theme-transition *,
   html.theme-transition *::before,
@@ -324,7 +326,9 @@ body {
 
 /* ─── India Drill-Down Map ───────────────────────────────────── */
 /* Fix Leaflet default icon paths in Next.js */
-.leaflet-default-icon-path { display: none; }
+.leaflet-default-icon-path {
+  display: none;
+}
 
 /* Map tooltip custom styling */
 .leaflet-tooltip.map-tooltip {
@@ -356,6 +360,7 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -363,12 +368,10 @@ body {
 
 /* Map skeleton shimmer animation */
 .map-skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface) 25%,
-    var(--color-border) 50%,
-    var(--color-surface) 75%
-  );
+  background: linear-gradient(90deg,
+      var(--color-surface) 25%,
+      var(--color-border) 50%,
+      var(--color-surface) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite linear;
 }
@@ -377,6 +380,7 @@ body {
   from {
     background-position: 200% 0;
   }
+
   to {
     background-position: -200% 0;
   }
@@ -418,12 +422,10 @@ body {
   padding-left: 1.5rem;
   padding-right: 1.5rem;
   border-bottom: 1px solid var(--dash-border);
-  background: linear-gradient(
-    to bottom,
-    var(--dash-bg-top),
-    var(--dash-bg-mid),
-    var(--dash-bg-deep)
-  );
+  background: linear-gradient(to bottom,
+      var(--dash-bg-top),
+      var(--dash-bg-mid),
+      var(--dash-bg-deep));
 }
 
 @media (min-width: 1024px) {
@@ -949,12 +951,10 @@ body {
   top: 0.75rem;
   bottom: 0.75rem;
   width: 1px;
-  background: linear-gradient(
-    to bottom,
-    var(--dash-border),
-    color-mix(in srgb, var(--dash-cyan) 20%, transparent),
-    var(--dash-border)
-  );
+  background: linear-gradient(to bottom,
+      var(--dash-border),
+      color-mix(in srgb, var(--dash-cyan) 20%, transparent),
+      var(--dash-border));
 }
 
 .activity-timeline-list {
