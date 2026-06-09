@@ -10,7 +10,6 @@ import {
   Users,
   Award,
   Trophy,
-  User,
   Settings,
   HelpCircle,
   LogOut,
@@ -81,13 +80,7 @@ export function Sidebar() {
     >
       {/* Logo + Brand */}
       <div className="flex items-center gap-3 px-5 pt-6 pb-4">
-        {expanded ? (
-          <div className="shrink-0 w-9 h-9 rounded-2xl bg-gradient-to-br from-[var(--color-amber)] to-orange-500 flex items-center justify-center text-white text-[11px] font-bold">
-            {getInitials(user?.fullName ?? "Citizen")}
-          </div>
-        ) : (
-          <LogoMark size={36} />
-        )}
+        <LogoMark size={36} />
         {expanded && (
           <motion.div
             initial={{ opacity: 0, x: -8 }}

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import type { MyReport } from "@/components/my-reports/types";
 
 type ReportStatus = "verified" | "inReview" | "resolved" | "pending";
 
@@ -17,12 +18,19 @@ const STATUS_STYLES: Record<ReportStatus, string> = {
     "bg-[color-mix(in_srgb,var(--color-amber)_15%,transparent)] text-[var(--color-amber)]",
 };
 
-const REPORTS = [
-  { id: "RW-1001", typeKey: "pothole" as const, location: "Panvel", status: "verified" as ReportStatus, dateKey: "today" as const },
-  { id: "RW-1002", typeKey: "flooding" as const, location: "Mumbai-Pune Hwy", status: "inReview" as ReportStatus, dateKey: "yesterday" as const },
-  { id: "RW-1003", typeKey: "brokenSignal" as const, location: "Navi Mumbai", status: "resolved" as ReportStatus, daysAgo: 2 },
-  { id: "RW-1004", typeKey: "roadDebris" as const, location: "Thane", status: "pending" as ReportStatus, daysAgo: 3 },
-];
+function mapStatus(status: MyReport["status"]): ReportStatus {
+  if (status === "resolved") return "resolved";
+  if (status === "verified") return "verified";
+  if (status === "in_progress" || status === "assigned") return "inReview";
+  return "pending";
+}
+
+function mapTypeKey(hazardType: MyReport["hazardType"]): "pothole" | "flooding" | "brokenSignal" | "roadDebris" {
+  if (hazardType === "flooding") return "flooding";
+  if (hazardType === "signal") return "brokenSignal";
+  if (hazardType === "debris") return "roadDebris";
+  return "pothole";
+}
 
 const tableVariants = {
   hidden: {},
@@ -34,9 +42,22 @@ const rowVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
-export function MyReports() {
+interface MyReportsProps {
+  reports: MyReport[];
+  isLoading?: boolean;
+}
+
+export function MyReports({ reports, isLoading = false }: MyReportsProps) {
   const t = useTranslations("dashboard.myReports");
   const router = useRouter();
+
+  const rows = reports.slice(0, 5).map((report) => ({
+    id: report.reportId || report.id,
+    typeKey: mapTypeKey(report.hazardType),
+    location: report.location.name,
+    status: mapStatus(report.status),
+    dateLabel: report.createdAt,
+  }));
 
   return (
     <div className="neu-card p-5 flex flex-col">
@@ -78,7 +99,7 @@ export function MyReports() {
             initial="hidden"
             animate="visible"
           >
-            {REPORTS.map((report) => (
+            {rows.map((report) => (
               <motion.tr
                 key={report.id}
                 variants={rowVariants}
@@ -101,12 +122,17 @@ export function MyReports() {
                   </span>
                 </td>
                 <td className="py-3 text-xs text-[var(--color-text-muted)]">
-                  {report.dateKey
-                    ? t(`dates.${report.dateKey}`)
-                    : t("dates.daysAgo", { count: report.daysAgo })}
+                  {new Date(report.dateLabel).toLocaleDateString()}
                 </td>
               </motion.tr>
             ))}
+            {!isLoading && rows.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-6 text-center text-xs text-[var(--color-text-muted)]">
+                  No reports found.
+                </td>
+              </tr>
+            )}
           </motion.tbody>
         </table>
       </div>

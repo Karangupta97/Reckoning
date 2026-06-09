@@ -9,6 +9,14 @@ import { useAuth } from '@/hooks/useAuth';
 
 type RegisterStep = 'details' | 'otp';
 
+function getPasswordError(password: string): string | null {
+  if (password.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
+  if (!/[0-9]/.test(password)) return 'Password must include at least one number.';
+  if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include at least one special character.';
+  return null;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register, resendOtp, verifyOtp, error, isLoading, clearError } = useAuth();
@@ -21,7 +29,16 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const canSubmitDetails =
+    name.trim().length >= 2 &&
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    confirmPassword.length > 0 &&
+    !passwordError &&
+    !confirmPasswordError &&
+    !isLoading;
 
   useEffect(() => {
     if (step !== 'otp' || resendCooldown === 0) {
@@ -36,6 +53,8 @@ export default function RegisterPage() {
   }, [step, resendCooldown]);
 
   useEffect(() => {
+    setPasswordError(getPasswordError(password));
+
     if (confirmPassword && password !== confirmPassword) {
       setConfirmPasswordError('Passwords do not match.');
       return;
@@ -48,6 +67,12 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (step === 'details') {
+      const nextPasswordError = getPasswordError(password);
+      if (nextPasswordError) {
+        setPasswordError(nextPasswordError);
+        return;
+      }
+
       if (password !== confirmPassword) {
         setConfirmPasswordError('Passwords do not match.');
         return;
@@ -161,6 +186,13 @@ export default function RegisterPage() {
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {passwordError ? (
+                    <p className="mt-2 text-sm text-red-500">{passwordError}</p>
+                  ) : (
+                    <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                      Use 8+ characters with at least one uppercase letter, one number, and one special character.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -191,7 +223,7 @@ export default function RegisterPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={!canSubmitDetails}
                   className="btn-amber w-full h-11 flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                 >
                   {isLoading ? (

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { FileText, CheckCircle2, CircleCheck, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { UserStats } from "@/components/my-reports/types";
 
 function CountUp({ target, duration = 1.5 }: { target: number; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -36,14 +37,25 @@ const cardVariants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
 };
 
-export function OverviewCards() {
+interface OverviewCardsProps {
+  stats: UserStats;
+  isLoading?: boolean;
+}
+
+export function OverviewCards({ stats, isLoading = false }: OverviewCardsProps) {
   const t = useTranslations("dashboard.overview");
+
+  const verifiedReports = Math.max(0, stats.totalReports - stats.openReports - stats.rejectedReports);
+  const verifiedPercent = stats.totalReports > 0
+    ? Math.round((verifiedReports / stats.totalReports) * 100)
+    : 0;
+  const safetyScore = Math.min(100, Math.max(0, Math.round((stats.resolutionRate * 0.7) + (stats.rankPercentile * 0.3))));
 
   const CARDS = [
     {
       label: t("reportsSubmitted"),
-      value: 24,
-      sub: t("thisMonth", { count: 8 }),
+      value: stats.totalReports,
+      sub: t("thisMonth", { count: stats.totalReports }),
       icon: FileText,
       color: "var(--color-info)",
       prefix: "",
@@ -51,29 +63,29 @@ export function OverviewCards() {
     },
     {
       label: t("verifiedReports"),
-      value: 18,
-      sub: t("percentVerified", { percent: 75 }),
+      value: verifiedReports,
+      sub: t("percentVerified", { percent: verifiedPercent }),
       icon: CheckCircle2,
       color: "var(--color-amber)",
       prefix: "",
       suffix: "",
-      progress: 75,
+      progress: verifiedPercent,
       progressColor: "var(--color-amber)",
     },
     {
       label: t("resolvedIssues"),
-      value: 12,
-      sub: t("percentResolved", { percent: 50 }),
+      value: stats.resolvedReports,
+      sub: t("percentResolved", { percent: Math.round(stats.resolutionRate) }),
       icon: CircleCheck,
       color: "var(--color-success)",
       prefix: "",
       suffix: "",
-      progress: 50,
+      progress: Math.round(stats.resolutionRate),
       progressColor: "var(--color-success)",
     },
     {
       label: t("safetyScore"),
-      value: 87,
+      value: safetyScore,
       sub: t("communityContributor"),
       icon: Shield,
       color: "var(--color-amber)",
@@ -116,7 +128,7 @@ export function OverviewCards() {
             <div className="flex items-baseline gap-0.5">
               <span className="text-3xl font-bold text-[var(--color-text-primary)]">
                 {card.prefix}
-                <CountUp target={card.value} />
+                <CountUp target={isLoading ? 0 : card.value} />
               </span>
               {card.suffix && (
                 <span className="text-lg font-semibold text-[var(--color-text-muted)]">

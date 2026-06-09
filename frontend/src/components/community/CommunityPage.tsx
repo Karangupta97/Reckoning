@@ -1,23 +1,46 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
+import { getCommunityFeed, getReportComments } from "@/lib/api/citizenApi";
 
 import { FeedContainer } from "./FeedContainer";
 import type { FeedContainerRef } from "./FeedContainer";
 import { CommentsBottomSheet } from "./CommentsBottomSheet";
 import { CommentsPanel } from "./CommentsPanel";
-import { MOCK_FEED } from "./mockData";
-import type { ReportFeedItem } from "./types";
+import type { ReportFeedItem, CommentItem } from "./types";
 
 export function CommunityPage() {
+  const email = useAuthStore((state) => state.user?.email);
+
   // State
-  const [reports, setReports] = useState<ReportFeedItem[]>(MOCK_FEED);
+  const [reports, setReports] = useState<ReportFeedItem[]>([]);
   const [commentReportId, setCommentReportId] = useState<string | null>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [commentsByReport, setCommentsByReport] = useState<Record<string, CommentItem[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const feedRef = useRef<FeedContainerRef>(null);
   const reelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function loadFeed() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await getCommunityFeed("district", email);
+        setReports(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unable to load community feed.");
+        setReports([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    void loadFeed();
+  }, [email]);
 
   const activeCommentReport = commentReportId
     ? reports.find((r) => r.id === commentReportId) || null
@@ -25,7 +48,6 @@ export function CommunityPage() {
 
   // Auto-close comments when active post changes
   const handleIndexChange = useCallback((index: number) => {
-    setActiveIndex(index);
     setCommentReportId(null);
   }, []);
 
@@ -52,9 +74,17 @@ export function CommunityPage() {
     );
   }, []);
 
-  const handleComment = useCallback((id: string) => {
+  const handleComment = useCallback(async (id: string) => {
     setCommentReportId(id);
-  }, []);
+    if (commentsByReport[id]) return;
+
+    try {
+      const comments = await getReportComments(id, email);
+      setCommentsByReport((prev) => ({ ...prev, [id]: comments }));
+    } catch {
+      setCommentsByReport((prev) => ({ ...prev, [id]: [] }));
+    }
+  }, [commentsByReport, email]);
 
   const handleShare = useCallback((_id: string) => {
     // Share logic placeholder
@@ -73,6 +103,18 @@ export function CommunityPage() {
 
   return (
     <div className="relative h-full w-full overflow-x-hidden overflow-y-hidden bg-black lg:bg-[var(--color-page)]">
+      {!isLoading && error && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-40 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
+        </div>
+      )}
+
+      {!isLoading && reports.length === 0 && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center px-4">
+          <p className="text-sm text-[var(--color-text-muted)]">No community reports available.</p>
+        </div>
+      )}
+
       {/* ─── Feed Container — NEVER changes when comments open ─── */}
       <div className="h-full w-full flex items-center justify-center">
         <div
@@ -124,6 +166,7 @@ export function CommunityPage() {
           <div className="hidden lg:block">
             <CommentsPanel
               report={activeCommentReport}
+              initialComments={commentsByReport[activeCommentReport.id] ?? []}
               reelRef={reelRef}
               onClose={() => setCommentReportId(null)}
             />
@@ -137,6 +180,7 @@ export function CommunityPage() {
           <div className="lg:hidden">
             <CommentsBottomSheet
               report={activeCommentReport}
+              initialComments={commentsByReport[activeCommentReport.id] ?? []}
               onClose={() => setCommentReportId(null)}
             />
           </div>

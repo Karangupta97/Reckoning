@@ -11,9 +11,11 @@ import { NearbyHazards } from "@/components/dashboard/NearbyHazards";
 import { SafetyMapPreview } from "@/components/dashboard/SafetyMapPreview";
 import { Achievements } from "@/components/dashboard/Achievements";
 import { EmergencyContacts } from "@/components/dashboard/EmergencyContacts";
+import { useMyReports } from "@/hooks/useMyReports";
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
+  const { reports, stats, isLoading } = useMyReports();
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -27,12 +29,12 @@ export default function DashboardPage() {
         <HeroSection />
 
         {/* Overview stats cards */}
-        <OverviewCards />
+        <OverviewCards stats={stats} isLoading={isLoading} />
 
         {/* My Reports (left) + Recent Activity (right) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <MyReports />
-          <RecentActivity />
+          <MyReports reports={reports} isLoading={isLoading} />
+          <RecentActivity activities={stats.recentActivity} isLoading={isLoading} />
         </div>
 
         {/* Map + Achievements row */}

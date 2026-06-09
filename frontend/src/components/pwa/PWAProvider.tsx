@@ -10,6 +10,12 @@ export function PWAProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
+    void navigator.serviceWorker.getRegistration().then((registration) => {
+      if (registration) {
+        void registration.update();
+      }
+    });
+
     // Register for background sync when SW is ready
     navigator.serviceWorker.ready.then(async (registration) => {
       // Request notification permission (non-blocking)

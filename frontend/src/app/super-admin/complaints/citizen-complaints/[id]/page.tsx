@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import IndiaMap from "@/components/map/IndiaMap";
+import { useAuthStore } from "@/stores/authStore";
+import { shouldUseMock } from "@/lib/useMock";
 import {
   SA_COMPLAINT_MAP, priorityBadge, statusBadge, slaBadgeColor,
   type SAStatus, type SAPriority,
@@ -236,19 +238,30 @@ function ApproveClosureDialog({ id, onClose, onSubmit }: { id: string; onClose: 
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function ComplaintDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const base = SA_COMPLAINT_MAP[id] ?? {
-    id, title: `Complaint ${id}`, project: id, state: "Unknown", district: "Unknown",
-    category: "General", priority: "Medium" as SAPriority, status: "Open" as SAStatus,
-    slaStatus: "On Track" as const, slaLabel: "—",
-    reportedOn: "—", updatedOn: "—", reportedBy: "—", assignedTo: "—",
-    location: "Unknown", coordinates: "N/A",
-    description: "No details available for this complaint.",
-    timeline: [], activityLog: [], evidence: [],
-  };
+  const email = useAuthStore((state) => state.user?.email);
+  const canUseMock = shouldUseMock(email);
+  const base = canUseMock ? SA_COMPLAINT_MAP[id] : undefined;
 
-  const [status,      setStatus]      = useState<SAStatus>(base.status);
-  const [assignedTo,  setAssignedTo]  = useState(base.assignedTo);
-  const [activityLog, setActivityLog] = useState(base.activityLog);
+  if (!base) {
+    return (
+      <div className="flex flex-col gap-3 pb-6">
+        <nav className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)]">
+          <Link href="/super-admin/complaints/citizen-complaints" className="hover:text-[var(--color-text-secondary)] transition-colors">Complaints</Link>
+          <span className="opacity-40">›</span>
+          <span className="text-[var(--color-text-secondary)] font-medium font-mono">{id}</span>
+        </nav>
+        <DashboardCard className="p-5">
+          <p className="text-sm text-[var(--color-text-secondary)]">Live complaint details are not available yet for this record.</p>
+        </DashboardCard>
+      </div>
+    );
+  }
+
+  const complaint = base;
+
+  const [status,      setStatus]      = useState<SAStatus>(complaint.status);
+  const [assignedTo,  setAssignedTo]  = useState(complaint.assignedTo);
+  const [activityLog, setActivityLog] = useState(complaint.activityLog);
   const [noteText,    setNoteText]    = useState("");
   const [toast,       setToast]       = useState<string | null>(null);
 
@@ -301,7 +314,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   };
 
   const isResolved = status === "Resolved" || status === "Closed";
-  const slaColor = slaBadgeColor[base.slaStatus] ?? "#94a3b8";
+  const slaColor = slaBadgeColor[complaint.slaStatus] ?? "#94a3b8";
 
   return (
     <div className="flex flex-col gap-3 pb-6">
@@ -309,7 +322,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
       <nav className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)]">
         <Link href="/super-admin/complaints/citizen-complaints" className="hover:text-[var(--color-text-secondary)] transition-colors">Complaints</Link>
         <span className="opacity-40">›</span>
-        <span className="text-[var(--color-text-secondary)] font-medium font-mono">{base.id}</span>
+        <span className="text-[var(--color-text-secondary)] font-medium font-mono">{complaint.id}</span>
       </nav>
 
       {/* Toast */}
@@ -336,11 +349,11 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1">
-              <span className="font-mono text-sm font-bold text-cyan-400">{base.id}</span>
-              <span className={`dashboard-table-badge ${priorityBadge[base.priority]}`}>{base.priority}</span>
+              <span className="font-mono text-sm font-bold text-cyan-400">{complaint.id}</span>
+              <span className={`dashboard-table-badge ${priorityBadge[complaint.priority]}`}>{complaint.priority}</span>
               <span className={`dashboard-table-badge ${statusBadge[status]}`}>{status}</span>
             </div>
-            <h1 className="text-base font-bold text-[var(--color-text-primary)] leading-snug max-w-2xl">{base.title}</h1>
+            <h1 className="text-base font-bold text-[var(--color-text-primary)] leading-snug max-w-2xl">{complaint.title}</h1>
           </div>
         </div>
       </motion.div>
@@ -355,26 +368,26 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <DashboardCard className="p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2"><FileText size={14} className="text-cyan-400" /><h3 className="text-sm font-bold text-[var(--color-text-primary)]">Case Summary</h3></div>
-              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{base.description}</p>
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{complaint.description}</p>
 
               {/* SLA block */}
               <div className="rounded-xl border p-3.5" style={{ background: `${slaColor}10`, borderColor: `${slaColor}35` }}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2"><Timer size={14} style={{ color: slaColor }} /><span className="text-xs font-bold text-[var(--color-text-primary)]">SLA Status</span></div>
-                  <span className="text-xs font-bold" style={{ color: slaColor }}>{base.slaLabel}</span>
+                  <span className="text-xs font-bold" style={{ color: slaColor }}>{complaint.slaLabel}</span>
                 </div>
                 <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.12)" }}>
-                  <div className="h-full rounded-full" style={{ width: base.slaStatus === "Breached" ? "100%" : base.slaStatus === "At Risk" ? "80%" : "40%", background: slaColor }} />
+                  <div className="h-full rounded-full" style={{ width: complaint.slaStatus === "Breached" ? "100%" : complaint.slaStatus === "At Risk" ? "80%" : "40%", background: slaColor }} />
                 </div>
               </div>
 
               {/* Meta grid */}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
-                  { label: "Reported On",  value: base.reportedOn  },
-                  { label: "Updated",      value: base.updatedOn   },
-                  { label: "State",        value: base.state       },
-                  { label: "District",     value: base.district    },
+                  { label: "Reported On",  value: complaint.reportedOn  },
+                  { label: "Updated",      value: complaint.updatedOn   },
+                  { label: "State",        value: complaint.state       },
+                  { label: "District",     value: complaint.district    },
                 ].map((m) => (
                   <div key={m.label} className="rounded-lg border px-3 py-2"
                     style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
@@ -392,10 +405,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
               <div className="flex items-center gap-2"><MapPin size={14} className="text-cyan-400" /><h3 className="text-sm font-bold text-[var(--color-text-primary)]">Location</h3></div>
               <div className="grid grid-cols-1 gap-0 sm:grid-cols-2 sm:gap-x-6 divide-y divide-[var(--color-border)] sm:divide-y-0">
                 {[
-                  { label: "Project",      value: base.project     },
-                  { label: "Coordinates",  value: base.coordinates },
-                  { label: "State",        value: base.state       },
-                  { label: "District",     value: base.district    },
+                  { label: "Project",      value: complaint.project     },
+                  { label: "Coordinates",  value: complaint.coordinates },
+                  { label: "State",        value: complaint.state       },
+                  { label: "District",     value: complaint.district    },
                 ].map((r) => (
                   <div key={r.label} className="flex items-start justify-between gap-3 py-2 border-b border-[var(--color-border)] last:border-0 sm:border-b-0 sm:py-1.5">
                     <span className="text-[11px] text-[var(--color-text-muted)] shrink-0 w-24 pt-px">{r.label}</span>
@@ -415,15 +428,15 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
               <div className="flex items-center gap-2">
                 <Camera size={14} className="text-cyan-400" />
                 <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Evidence</h3>
-                <span className="text-[10px] text-[var(--color-text-muted)]">({base.evidence.length} files)</span>
+                <span className="text-[10px] text-[var(--color-text-muted)]">({complaint.evidence.length} files)</span>
               </div>
-              {base.evidence.length === 0 ? (
+              {complaint.evidence.length === 0 ? (
                 <div className="flex h-20 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)]">
                   <span className="text-xs text-[var(--color-text-muted)]">No evidence uploaded</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {base.evidence.map((e, i) => (
+                  {complaint.evidence.map((e, i) => (
                     <div key={i} className="relative aspect-video rounded-xl border overflow-hidden group cursor-pointer"
                       style={{ borderColor: "rgba(34,211,238,0.2)", background: "rgba(34,211,238,0.05)" }}>
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -536,9 +549,9 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
               <div className="flex flex-col divide-y divide-[var(--color-border)]">
                 {[
                   { label: "Assigned To", value: assignedTo,    highlight: true  },
-                  { label: "Reported By", value: base.reportedBy, highlight: false },
-                  { label: "Category",    value: base.category, highlight: false },
-                  { label: "Project",     value: base.project,  highlight: false },
+                  { label: "Reported By", value: complaint.reportedBy, highlight: false },
+                  { label: "Category",    value: complaint.category, highlight: false },
+                  { label: "Project",     value: complaint.project,  highlight: false },
                 ].map((r) => (
                   <div key={r.label} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
                     <span className="text-[11px] text-[var(--color-text-muted)]">{r.label}</span>
@@ -553,14 +566,14 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}>
             <DashboardCard className="p-4 flex flex-col gap-2">
               <div className="flex items-center gap-2 mb-1"><Clock size={14} className="text-cyan-400" /><h3 className="text-sm font-bold text-[var(--color-text-primary)]">Timeline</h3></div>
-              {base.timeline.map((step, i) => (
+              {complaint.timeline.map((step, i) => (
                 <div key={i} className="flex gap-3 pb-2 last:pb-0">
                   <div className="flex flex-col items-center">
                     <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
                       style={{ borderColor: step.done ? "rgba(16,185,129,0.4)" : "var(--color-border)", background: step.done ? "rgba(16,185,129,0.1)" : "var(--color-surface)" }}>
                       {step.done ? <CheckCircle2 size={12} className="text-emerald-400" /> : <Clock size={12} className="text-[var(--color-text-muted)]" />}
                     </div>
-                    {i < base.timeline.length - 1 && <div className="w-px flex-1 mt-1 min-h-[12px]" style={{ background: step.done ? "rgba(16,185,129,0.3)" : "var(--color-border)" }} />}
+                    {i < complaint.timeline.length - 1 && <div className="w-px flex-1 mt-1 min-h-[12px]" style={{ background: step.done ? "rgba(16,185,129,0.3)" : "var(--color-border)" }} />}
                   </div>
                   <div className="pb-1 min-w-0">
                     <p className={`text-xs font-semibold ${step.done ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"}`}>{step.label}</p>
@@ -576,10 +589,10 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
 
       {/* Dialogs */}
       <AnimatePresence>
-        {statusOpen   && <StatusUpdateDialog   id={base.id} current={status}   onClose={() => setStatusOpen(false)}   onSubmit={handleStatusUpdate} />}
-        {reassignOpen && <ReassignDialog        id={base.id}                     onClose={() => setReassignOpen(false)}  onSubmit={handleReassign}     />}
-        {clarifyOpen  && <ClarificationDialog   id={base.id}                     onClose={() => setClarifyOpen(false)}   onSubmit={handleClarify}      />}
-        {closureOpen  && <ApproveClosureDialog  id={base.id}                     onClose={() => setClosureOpen(false)}   onSubmit={handleClosure}      />}
+        {statusOpen   && <StatusUpdateDialog   id={complaint.id} current={status}   onClose={() => setStatusOpen(false)}   onSubmit={handleStatusUpdate} />}
+        {reassignOpen && <ReassignDialog        id={complaint.id}                     onClose={() => setReassignOpen(false)}  onSubmit={handleReassign}     />}
+        {clarifyOpen  && <ClarificationDialog   id={complaint.id}                     onClose={() => setClarifyOpen(false)}   onSubmit={handleClarify}      />}
+        {closureOpen  && <ApproveClosureDialog  id={complaint.id}                     onClose={() => setClosureOpen(false)}   onSubmit={handleClosure}      />}
       </AnimatePresence>
     </div>
   );

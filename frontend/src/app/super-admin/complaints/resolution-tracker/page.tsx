@@ -7,12 +7,14 @@ import { useRouter } from "next/navigation";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { SA_COMPLAINTS, priorityBadge, statusBadge } from "@/lib/super-admin-mock";
 import { useEscalationStore } from "@/store/escalationStore";
+import { useAuthStore } from "@/stores/authStore";
+import { shouldUseMock } from "@/lib/useMock";
 
 /* ─── Merge complaints + escalations for a full resolution view ─ */
-function useResolutionData() {
+function useResolutionData(complaintsSource: typeof SA_COMPLAINTS) {
   const escalations = useEscalationStore((s) => s.escalations);
 
-  const complaintRows = SA_COMPLAINTS.map((c) => ({
+  const complaintRows = complaintsSource.map((c) => ({
     id: c.id,
     title: c.title,
     type: "Complaint" as const,
@@ -52,7 +54,9 @@ const slaColors = {
 
 export default function ResolutionTrackerPage() {
   const router = useRouter();
-  const rows = useResolutionData();
+  const email = useAuthStore((state) => state.user?.email);
+  const complaints = shouldUseMock(email) ? SA_COMPLAINTS : [];
+  const rows = useResolutionData(complaints);
 
   const [search,     setSearch]    = useState("");
   const [typeF,      setTypeF]     = useState("");

@@ -6,14 +6,18 @@ import { AlertTriangle, Search, ChevronDown, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { SA_COMPLAINTS, priorityBadge, statusBadge, type SAPriority, type SAStatus } from "@/lib/super-admin-mock";
+import { useAuthStore } from "@/stores/authStore";
+import { shouldUseMock } from "@/lib/useMock";
 
 export default function CitizenComplaintsPage() {
   const router = useRouter();
+  const email = useAuthStore((state) => state.user?.email);
+  const complaints = shouldUseMock(email) ? SA_COMPLAINTS : [];
   const [search, setSearch] = useState("");
   const [priorityF, setPriorityF] = useState("");
   const [statusF, setStatusF] = useState("");
 
-  const filtered = SA_COMPLAINTS.filter((c) => {
+  const filtered = complaints.filter((c) => {
     const q = search.toLowerCase();
     const matchQ = !q || c.id.toLowerCase().includes(q) || c.project.toLowerCase().includes(q) || c.state.toLowerCase().includes(q) || c.category.toLowerCase().includes(q);
     return matchQ && (!priorityF || c.priority === priorityF) && (!statusF || c.status === statusF);
@@ -32,10 +36,10 @@ export default function CitizenComplaintsPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total",       value: String(SA_COMPLAINTS.length),                                                   color: "text-cyan-400"    },
-          { label: "Open",        value: String(SA_COMPLAINTS.filter(c => c.status === "Open").length),                   color: "text-red-400"     },
-          { label: "Escalated",   value: String(SA_COMPLAINTS.filter(c => c.status === "Escalated").length),             color: "text-orange-400"  },
-          { label: "Resolved",    value: String(SA_COMPLAINTS.filter(c => c.status === "Resolved" || c.status === "Closed").length), color: "text-emerald-400" },
+          { label: "Total",       value: String(complaints.length),                                                   color: "text-cyan-400"    },
+          { label: "Open",        value: String(complaints.filter(c => c.status === "Open").length),                   color: "text-red-400"     },
+          { label: "Escalated",   value: String(complaints.filter(c => c.status === "Escalated").length),             color: "text-orange-400"  },
+          { label: "Resolved",    value: String(complaints.filter(c => c.status === "Resolved" || c.status === "Closed").length), color: "text-emerald-400" },
         ].map((s) => (
           <DashboardCard key={s.label} className="flex flex-col items-center justify-center py-4 px-3 text-center">
             <span className={`text-xl font-bold ${s.color}`}>{s.value}</span>
@@ -106,7 +110,7 @@ export default function CitizenComplaintsPage() {
             </table>
           </div>
           <div className="px-4 py-2.5 border-t border-[var(--color-border)]">
-            <span className="text-[11px] text-[var(--color-text-muted)]">{filtered.length} of {SA_COMPLAINTS.length} complaints</span>
+            <span className="text-[11px] text-[var(--color-text-muted)]">{filtered.length} of {complaints.length} complaints</span>
           </div>
         </DashboardCard>
       </motion.div>

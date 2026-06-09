@@ -4,13 +4,13 @@ import { useState, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus } from "lucide-react";
 import type { MyReport, FilterTab, SortOption, HazardType, Severity } from "./types";
-import { MOCK_MY_REPORTS, MOCK_STATS } from "./mockData";
 import { StatsOverview, StatsTicker } from "./StatsOverview";
 import { FilterBar } from "./FilterBar";
 import { ReportListCard } from "./ReportListCard";
 import { ReportDetailSheet, DesktopDetailPanel } from "./ReportDetailSheet";
 import { ExportButton } from "./ExportButton";
 import { EmptyState } from "./EmptyState";
+import { useMyReports } from "@/hooks/useMyReports";
 
 /* ─── Status ordering for sort ────────────────────────────────── */
 const STATUS_ORDER: Record<string, number> = {
@@ -31,14 +31,20 @@ const SEVERITY_ORDER: Record<string, number> = {
 
 /* ─── MyReportsPage Component ─────────────────────────────────── */
 export function MyReportsPage() {
-  // State
+  // Live data (with mock fallback for dev team)
+  const { reports: fetchedReports, stats, isLoading } = useMyReports();
+
+  // Local state: start from fetched data, allow optimistic mutations
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [sortOption, setSortOption] = useState<SortOption>("latest");
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
   const [hazardFilter, setHazardFilter] = useState<HazardType | "all">("all");
   const [selectedReport, setSelectedReport] = useState<MyReport | null>(null);
-  const [reports, setReports] = useState<MyReport[]>(MOCK_MY_REPORTS);
+  const [localReports, setLocalReports] = useState<MyReport[] | null>(null);
+
+  // Use local overrides (after delete) or the fetched data
+  const reports = localReports ?? fetchedReports;
 
   // Tab counts
   const tabCounts = useMemo(() => {
@@ -54,24 +60,20 @@ export function MyReportsPage() {
   const filteredReports = useMemo(() => {
     let result = [...reports];
 
-    // Tab filter
     if (activeTab === "open") {
       result = result.filter((r) => ["submitted", "verified", "assigned"].includes(r.status));
     } else if (activeTab !== "all") {
       result = result.filter((r) => r.status === activeTab);
     }
 
-    // Severity filter
     if (severityFilter !== "all") {
       result = result.filter((r) => r.severity === severityFilter);
     }
 
-    // Hazard filter
     if (hazardFilter !== "all") {
       result = result.filter((r) => r.hazardType === hazardFilter);
     }
 
-    // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -80,11 +82,10 @@ export function MyReportsPage() {
           r.reportId.toLowerCase().includes(q) ||
           r.location.name.toLowerCase().includes(q) ||
           r.location.road.toLowerCase().includes(q) ||
-          r.hazardType.includes(q)
+          r.hazardType.includes(q),
       );
     }
 
-    // Sort
     switch (sortOption) {
       case "latest":
         result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -93,10 +94,10 @@ export function MyReportsPage() {
         result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         break;
       case "severity":
-        result.sort((a, b) => (SEVERITY_ORDER[a.severity] || 5) - (SEVERITY_ORDER[b.severity] || 5));
+        result.sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 5) - (SEVERITY_ORDER[b.severity] ?? 5));
         break;
       case "status":
-        result.sort((a, b) => (STATUS_ORDER[a.status] || 0) - (STATUS_ORDER[b.status] || 0));
+        result.sort((a, b) => (STATUS_ORDER[a.status] ?? 0) - (STATUS_ORDER[b.status] ?? 0));
         break;
     }
 
@@ -112,19 +113,27 @@ export function MyReportsPage() {
     setSelectedReport(null);
   }, []);
 
-  const handleDelete = useCallback((report: MyReport) => {
-    setReports((prev) => prev.filter((r) => r.id !== report.id));
-    setSelectedReport(null);
-  }, []);
+  const handleDelete = useCallback(
+    (report: MyReport) => {
+      setLocalReports((prev) => (prev ?? fetchedReports).filter((r) => r.id !== report.id));
+      setSelectedReport(null);
+    },
+    [fetchedReports],
+  );
 
-  const handleToggleNotify = useCallback((report: MyReport) => {
-    setReports((prev) =>
-      prev.map((r) => (r.id === report.id ? { ...r, isNotifying: !r.isNotifying } : r))
-    );
-    if (selectedReport?.id === report.id) {
-      setSelectedReport((prev) => prev ? { ...prev, isNotifying: !prev.isNotifying } : null);
-    }
-  }, [selectedReport]);
+  const handleToggleNotify = useCallback(
+    (report: MyReport) => {
+      setLocalReports((prev) =>
+        (prev ?? fetchedReports).map((r) =>
+          r.id === report.id ? { ...r, isNotifying: !r.isNotifying } : r,
+        ),
+      );
+      if (selectedReport?.id === report.id) {
+        setSelectedReport((prev) => (prev ? { ...prev, isNotifying: !prev.isNotifying } : null));
+      }
+    },
+    [fetchedReports, selectedReport],
+  );
 
   const handleClearFilters = useCallback(() => {
     setActiveTab("all");
@@ -133,13 +142,17 @@ export function MyReportsPage() {
     setHazardFilter("all");
   }, []);
 
-  const hasFilters = activeTab !== "all" || searchQuery !== "" || severityFilter !== "all" || hazardFilter !== "all";
+  const hasFilters =
+    activeTab !== "all" ||
+    searchQuery !== "" ||
+    severityFilter !== "all" ||
+    hazardFilter !== "all";
 
   return (
     <div className="h-full flex flex-col lg:flex-row overflow-hidden">
       {/* Left Stats Panel (desktop only) */}
       <div className="hidden lg:block px-4 pt-4 overflow-y-auto">
-        <StatsOverview stats={MOCK_STATS} />
+        <StatsOverview stats={stats} />
       </div>
 
       {/* Center Column */}
@@ -154,7 +167,9 @@ export function MyReportsPage() {
                   My Reports
                 </h1>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  Track your submitted road hazard reports
+                  {isLoading
+                    ? "Loading your reports…"
+                    : "Track your submitted road hazard reports"}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -171,7 +186,7 @@ export function MyReportsPage() {
 
             {/* Stats ticker (mobile) */}
             <div className="mt-3 lg:hidden">
-              <StatsTicker stats={MOCK_STATS} />
+              <StatsTicker stats={stats} />
             </div>
 
             {/* Filter bar */}
@@ -223,9 +238,9 @@ export function MyReportsPage() {
                       onShare={() => {
                         const url = `${window.location.origin}/report/${report.id}`;
                         if (navigator.share) {
-                          navigator.share({ title: report.title, url });
+                          void navigator.share({ title: report.title, url });
                         } else {
-                          navigator.clipboard.writeText(url);
+                          void navigator.clipboard.writeText(url);
                         }
                       }}
                       onDelete={handleDelete}

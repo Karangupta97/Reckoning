@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Shield, CheckCircle2, Users, Trophy } from "lucide-react";
+import { useAuthStore } from "@/stores/authStore";
+import { shouldUseMock } from "@/lib/useMock";
 
 const BADGES = [
   { key: "firstReport" as const, icon: Shield, color: "var(--color-amber)", earned: true },
@@ -13,6 +15,23 @@ const BADGES = [
 
 export function Achievements() {
   const t = useTranslations("dashboard.achievements");
+  const email = useAuthStore((state) => state.user?.email);
+
+  if (!shouldUseMock(email)) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="neu-card p-5"
+      >
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("title")}</h3>
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)]">Live achievements data is not available yet.</p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

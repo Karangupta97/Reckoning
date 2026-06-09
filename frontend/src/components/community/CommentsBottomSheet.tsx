@@ -6,20 +6,22 @@ import { X, MessageCircle } from "lucide-react";
 import { CommentItemRow } from "./CommentItem";
 import { EmojiReactionBar } from "./EmojiReactionBar";
 import { CommentInput } from "./CommentInput";
-import { MOCK_COMMENTS } from "./mockData";
 import type { ReportFeedItem, CommentItem } from "./types";
 
 interface CommentsBottomSheetProps {
   report: ReportFeedItem;
+  initialComments?: CommentItem[];
   onClose: () => void;
 }
 
-export function CommentsBottomSheet({ report, onClose }: CommentsBottomSheetProps) {
+export function CommentsBottomSheet({ report, initialComments = [], onClose }: CommentsBottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
-  const [comments, setComments] = useState<CommentItem[]>(
-    MOCK_COMMENTS[report.id] || []
-  );
+  const [comments, setComments] = useState<CommentItem[]>(initialComments);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    setComments(initialComments);
+  }, [initialComments, report.id]);
 
   // Detect virtual keyboard via visualViewport resize
   useEffect(() => {

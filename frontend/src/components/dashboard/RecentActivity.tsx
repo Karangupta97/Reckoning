@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Droplets, Trash2, Lightbulb } from "lucide-react";
+import type { RecentActivityItem } from "@/components/my-reports/types";
 
 const listVariants = {
   hidden: {},
@@ -14,39 +15,39 @@ const itemVariants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.4 } },
 };
 
-export function RecentActivity() {
+interface RecentActivityProps {
+  activities: RecentActivityItem[];
+  isLoading?: boolean;
+}
+
+export function RecentActivity({ activities, isLoading = false }: RecentActivityProps) {
   const t = useTranslations("dashboard.recentActivity");
 
-  const ACTIVITIES = [
-    {
-      icon: AlertTriangle,
-      color: "var(--color-amber)",
-      title: t("potholeNH48"),
-      subtitle: t("verifiedByCitizens", { count: 12 }),
-      time: t("hoursAgo", { count: 2 }),
-    },
-    {
-      icon: Droplets,
-      color: "var(--color-info)",
-      title: t("floodingPanvel"),
-      subtitle: t("authorityNotified"),
-      time: t("hoursAgo", { count: 4 }),
-    },
-    {
-      icon: Trash2,
-      color: "var(--color-success)",
-      title: t("debrisCleared"),
-      subtitle: t("resolved"),
-      time: t("yesterday"),
-    },
-    {
-      icon: Lightbulb,
-      color: "var(--color-text-muted)",
-      title: t("brokenStreetLight"),
-      subtitle: t("underReview"),
-      time: t("daysAgo", { count: 2 }),
-    },
-  ];
+  const ACTIVITIES = activities.slice(0, 6).map((item) => {
+    const icon = item.type === "resolved"
+      ? Trash2
+      : item.type === "verified"
+        ? AlertTriangle
+        : item.type === "assigned"
+          ? Droplets
+          : item.type === "rejected"
+            ? Lightbulb
+            : AlertTriangle;
+
+    const color = item.type === "resolved"
+      ? "var(--color-success)"
+      : item.type === "rejected"
+        ? "var(--color-danger)"
+        : "var(--color-info)";
+
+    return {
+      icon,
+      color,
+      title: item.text,
+      subtitle: item.type,
+      time: item.timeAgo,
+    };
+  });
 
   return (
     <div className="neu-card p-5 flex flex-col">
@@ -100,6 +101,9 @@ export function RecentActivity() {
             </motion.li>
           );
         })}
+        {!isLoading && ACTIVITIES.length === 0 && (
+          <li className="text-xs text-[var(--color-text-muted)]">No recent activity yet.</li>
+        )}
       </motion.ul>
     </div>
   );

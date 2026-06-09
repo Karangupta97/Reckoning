@@ -6,11 +6,12 @@ import { X } from "lucide-react";
 import { CommentItemRow } from "./CommentItem";
 import { EmojiReactionBar } from "./EmojiReactionBar";
 import { CommentInput } from "./CommentInput";
-import { MOCK_COMMENTS, SEVERITY_COLORS, SEVERITY_LABELS } from "./mockData";
+import { SEVERITY_COLORS, SEVERITY_LABELS } from "./mockData";
 import type { ReportFeedItem, CommentItem } from "./types";
 
 interface CommentsPanelProps {
   report: ReportFeedItem;
+  initialComments?: CommentItem[];
   reelRef: RefObject<HTMLDivElement | null>;
   onClose: () => void;
 }
@@ -20,13 +21,15 @@ interface CommentsPanelProps {
  * container without participating in the feed's flex/grid layout.
  * Opening/closing this component has ZERO effect on reel position.
  */
-export function CommentsPanel({ report, reelRef, onClose }: CommentsPanelProps) {
-  const [comments, setComments] = useState<CommentItem[]>(
-    MOCK_COMMENTS[report.id] || []
-  );
+export function CommentsPanel({ report, initialComments = [], reelRef, onClose }: CommentsPanelProps) {
+  const [comments, setComments] = useState<CommentItem[]>(initialComments);
   const [position, setPosition] = useState<{ top: number; left: number; height: number } | null>(null);
   const panelWidth = 380;
   const gap = 24;
+
+  useEffect(() => {
+    setComments(initialComments);
+  }, [initialComments, report.id]);
 
   // Calculate position relative to the reel element
   const calcPosition = useCallback(() => {
