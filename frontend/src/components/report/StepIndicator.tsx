@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { useReportStore, type ReportStep } from "@/store/reportStore";
+import type { ReportStep } from "./reportTypes";
 
 const STEPS: Array<{ step: ReportStep; label: string; shortLabel: string }> = [
   { step: 1, label: "Hazard Info", shortLabel: "Info" },
@@ -12,8 +12,12 @@ const STEPS: Array<{ step: ReportStep; label: string; shortLabel: string }> = [
   { step: 5, label: "Review", shortLabel: "Review" },
 ];
 
-export function StepIndicator() {
-  const { currentStep, setStep } = useReportStore();
+interface StepIndicatorProps {
+  currentStep: ReportStep;
+  onJumpToStep: (step: ReportStep) => void;
+}
+
+export function StepIndicator({ currentStep, onJumpToStep }: StepIndicatorProps) {
 
   return (
     <div className="w-full">
@@ -38,10 +42,11 @@ export function StepIndicator() {
           return (
             <button
               key={step}
+              type="button"
               onClick={() => {
-                if (isCompleted) setStep(step);
+                if (isCompleted) onJumpToStep(step);
               }}
-              disabled={!isCompleted && !isActive}
+              disabled={!isCompleted}
               className="relative flex flex-col items-center gap-2 z-10"
               aria-label={`Step ${step}: ${label}`}
               aria-current={isActive ? "step" : undefined}

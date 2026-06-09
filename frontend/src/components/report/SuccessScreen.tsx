@@ -1,20 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle, ArrowRight, FileText } from "lucide-react";
+import { CheckCircle, ArrowRight, Ticket } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useReportStore } from "@/store/reportStore";
 
-export function SuccessScreen() {
+interface SuccessScreenProps {
+  reportId: string;
+  ticketNumber: string;
+  onTrackReport?: () => void;
+}
+
+export function SuccessScreen({ reportId, ticketNumber, onTrackReport }: SuccessScreenProps) {
   const router = useRouter();
-  const { resetForm } = useReportStore();
 
   const handleNewReport = () => {
-    resetForm();
+    router.push("/dashboard/report");
   };
 
   const handleViewReports = () => {
-    resetForm();
     router.push("/dashboard");
   };
 
@@ -51,7 +54,7 @@ export function SuccessScreen() {
         transition={{ delay: 0.5 }}
         className="text-xl font-semibold text-[var(--color-text-primary)] mb-2"
       >
-        Report Submitted Successfully
+        Report submitted successfully
       </motion.h2>
 
       <motion.p
@@ -67,26 +70,37 @@ export function SuccessScreen() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
+        className="text-xs text-[var(--color-text-muted)] mb-2"
+      >
+        Report ID: <span className="font-mono font-medium">{reportId}</span>
+      </motion.p>
+
+      <motion.p
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.75 }}
         className="text-xs text-[var(--color-text-muted)] mb-8"
       >
-        Report ID: <span className="font-mono font-medium">RW-{Date.now().toString().slice(-6)}</span>
+        Ticket number: <span className="font-mono font-medium text-[var(--color-text-primary)]">{ticketNumber}</span>
       </motion.p>
 
       {/* Actions */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
+        transition={{ delay: 0.85 }}
         className="flex flex-col sm:flex-row gap-3 w-full max-w-sm"
       >
         <button
-          onClick={handleViewReports}
+          type="button"
+          onClick={onTrackReport ?? handleViewReports}
           className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--color-amber)] text-[#1c2b3a] font-semibold text-sm hover:brightness-105 transition-all"
         >
-          <FileText size={16} />
-          View My Reports
+          <Ticket size={16} />
+          Track this report
         </button>
         <button
+          type="button"
           onClick={handleNewReport}
           className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text-primary)] font-medium text-sm hover:bg-[var(--color-surface)] transition-all"
         >

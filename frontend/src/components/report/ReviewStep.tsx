@@ -1,45 +1,34 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { CheckCircle2, Edit3, FileImage, MapPin, Sparkles } from "lucide-react";
 import {
-  AlertTriangle,
-  MapPin,
-  FileImage,
-  Clock,
-  Shield,
-  EyeOff,
-  Check,
-} from "lucide-react";
-import { useReportStore } from "@/store/reportStore";
+  BACKEND_CATEGORY_BY_HAZARD,
+  HAZARD_LABEL_BY_VALUE,
+  SEVERITY_OPTIONS,
+  type ReportAiAnalysisResult,
+  type ReportEvidenceFile,
+  type ReportHazardType,
+  type ReportLocationState,
+  type ReportSeverityLevel,
+} from "./reportTypes";
 
-const HAZARD_LABELS: Record<string, string> = {
-  pothole: "Pothole",
-  flooding: "Flooding",
-  fallenTree: "Fallen Tree",
-  roadDebris: "Road Debris",
-  brokenSignal: "Broken Signal",
-  other: "Other",
-};
+interface ReviewStepProps {
+  evidenceFiles: ReportEvidenceFile[];
+  aiResult: ReportAiAnalysisResult | null;
+  hazardType: ReportHazardType | "";
+  severity: ReportSeverityLevel | "";
+  title: string;
+  description: string;
+  location: ReportLocationState;
+  onEditStep: (step: 1 | 2 | 3 | 4) => void;
+}
 
-const SEVERITY_LABELS: Record<string, { label: string; color: string }> = {
-  low: { label: "Low", color: "var(--color-success)" },
-  medium: { label: "Medium", color: "var(--color-amber)" },
-  high: { label: "High", color: "var(--color-danger)" },
-  critical: { label: "Critical", color: "#dc2626" },
-};
-
-const TRAFFIC_LABELS: Record<string, string> = {
-  none: "No Impact",
-  minor: "Minor Disruption",
-  moderate: "Moderate Disruption",
-  severe: "Severe Blockage",
-};
-
-const SAFETY_LABELS: Record<string, string> = {
-  low: "Low Risk",
-  medium: "Medium Risk",
-  high: "High Risk",
-  critical: "Critical Risk",
+const severityColor: Record<ReportSeverityLevel, string> = {
+  low: "var(--color-success)",
+  medium: "var(--color-amber)",
+  high: "#f97316",
+  critical: "var(--color-danger)",
 };
 
 const containerVariants = {
@@ -49,212 +38,189 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28 } },
 };
 
-export function ReviewStep() {
-  const { formData } = useReportStore();
-  const severityInfo = SEVERITY_LABELS[formData.severity] || { label: "—", color: "var(--color-text-muted)" };
+function scoreFromAi(aiResult: ReportAiAnalysisResult | null): number {
+  if (!aiResult?.confidence) {
+    return aiResult?.totalDetected ? Math.min(100, aiResult.totalDetected * 28) : 20;
+  }
+
+  return Math.round(Math.max(10, Math.min(100, aiResult.confidence * 100)));
+}
+
+function MiniGauge({ score }: { score: number }) {
+  const circumference = 2 * Math.PI * 18;
+  const dashOffset = circumference - (score / 100) * circumference;
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-4"
-    >
-      {/* Summary Header */}
-      <motion.div variants={itemVariants} className="text-center mb-2">
-        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-          Review Your Report
-        </h3>
-        <p className="text-xs text-[var(--color-text-muted)] mt-1">
-          Please verify all details before submitting
-        </p>
-      </motion.div>
+    <svg viewBox="0 0 48 48" className="h-16 w-16 -rotate-90">
+      <circle cx="24" cy="24" r="18" fill="none" stroke="var(--color-surface)" strokeWidth="6" />
+      <circle
+        cx="24"
+        cy="24"
+        r="18"
+        fill="none"
+        stroke="var(--color-amber)"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={dashOffset}
+      />
+    </svg>
+  );
+}
 
-      {/* Hazard Info Card */}
-      <motion.div
-        variants={itemVariants}
-        className="p-4 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-3"
-      >
-        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
-          <AlertTriangle size={14} />
-          Hazard Information
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+export function ReviewStep({
+  evidenceFiles,
+  aiResult,
+  hazardType,
+  severity,
+  title,
+  description,
+  location,
+  onEditStep,
+}: ReviewStepProps) {
+  const score = scoreFromAi(aiResult);
+  const selectedSeverity = severity ? SEVERITY_OPTIONS.find((option) => option.value === severity) : null;
+
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
+      <motion.div variants={itemVariants} className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-neu)]">
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <span className="text-[11px] text-[var(--color-text-muted)]">Type</span>
-            <p className="text-sm font-medium text-[var(--color-text-primary)]">
-              {HAZARD_LABELS[formData.hazardType] || "—"}
-            </p>
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Review & Submit</h3>
+            <p className="text-xs text-[var(--color-text-muted)]">Double-check your evidence, hazard details, and location before sending.</p>
           </div>
-          <div>
-            <span className="text-[11px] text-[var(--color-text-muted)]">Severity</span>
-            <div className="flex items-center gap-1.5">
-              <div
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: severityInfo.color }}
-              />
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">
-                {severityInfo.label}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div>
-          <span className="text-[11px] text-[var(--color-text-muted)]">Title</span>
-          <p className="text-sm font-medium text-[var(--color-text-primary)]">
-            {formData.title || "—"}
-          </p>
-        </div>
-        {formData.description && (
-          <div>
-            <span className="text-[11px] text-[var(--color-text-muted)]">Description</span>
-            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-              {formData.description}
-            </p>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Location Card */}
-      <motion.div
-        variants={itemVariants}
-        className="p-4 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-3"
-      >
-        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
-          <MapPin size={14} />
-          Location
-        </div>
-        {formData.latitude && formData.longitude && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-surface)]">
-            <span className="text-xs font-mono text-[var(--color-text-secondary)]">
-              {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-            </span>
-          </div>
-        )}
-        {formData.address && (
-          <div>
-            <span className="text-[11px] text-[var(--color-text-muted)]">Address</span>
-            <p className="text-sm text-[var(--color-text-primary)]">{formData.address}</p>
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          {formData.road && (
-            <div>
-              <span className="text-[11px] text-[var(--color-text-muted)]">Road</span>
-              <p className="text-sm text-[var(--color-text-primary)]">{formData.road}</p>
-            </div>
-          )}
-          {formData.landmark && (
-            <div>
-              <span className="text-[11px] text-[var(--color-text-muted)]">Landmark</span>
-              <p className="text-sm text-[var(--color-text-primary)]">{formData.landmark}</p>
-            </div>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Evidence Card */}
-      {formData.files.length > 0 && (
-        <motion.div
-          variants={itemVariants}
-          className="p-4 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-3"
-        >
-          <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
-            <FileImage size={14} />
-            Evidence ({formData.files.length} file{formData.files.length > 1 ? "s" : ""})
-          </div>
-          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-            {formData.files.map((file) => (
-              <div
-                key={file.id}
-                className="aspect-square rounded-lg overflow-hidden bg-[var(--color-surface)] border border-[var(--color-border)]"
-              >
-                {file.preview ? (
-                  <img
-                    src={file.preview}
-                    alt={file.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FileImage size={16} className="text-[var(--color-text-muted)]" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Additional Details Card */}
-      <motion.div
-        variants={itemVariants}
-        className="p-4 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm space-y-3"
-      >
-        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">
-          <Clock size={14} />
-          Additional Details
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {formData.incidentDate && (
-            <div>
-              <span className="text-[11px] text-[var(--color-text-muted)]">Date</span>
-              <p className="text-sm text-[var(--color-text-primary)]">{formData.incidentDate}</p>
-            </div>
-          )}
-          {formData.incidentTime && (
-            <div>
-              <span className="text-[11px] text-[var(--color-text-muted)]">Time</span>
-              <p className="text-sm text-[var(--color-text-primary)]">{formData.incidentTime}</p>
-            </div>
-          )}
-          {formData.trafficImpact && (
-            <div>
-              <span className="text-[11px] text-[var(--color-text-muted)]">Traffic Impact</span>
-              <p className="text-sm text-[var(--color-text-primary)]">
-                {TRAFFIC_LABELS[formData.trafficImpact]}
-              </p>
-            </div>
-          )}
-          {formData.safetyRisk && (
-            <div>
-              <span className="text-[11px] text-[var(--color-text-muted)]">Safety Risk</span>
-              <p className="text-sm text-[var(--color-text-primary)]">
-                {SAFETY_LABELS[formData.safetyRisk]}
-              </p>
-            </div>
-          )}
-        </div>
-        {formData.isAnonymous && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[color-mix(in_srgb,var(--color-info)_8%,transparent)]">
-            <EyeOff size={14} className="text-[var(--color-info)]" />
-            <span className="text-xs text-[var(--color-info)] font-medium">
-              Submitting anonymously
-            </span>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Confirmation Note */}
-      <motion.div
-        variants={itemVariants}
-        className="flex items-start gap-3 p-4 rounded-xl bg-[color-mix(in_srgb,var(--color-success)_6%,transparent)] border border-[color-mix(in_srgb,var(--color-success)_20%,transparent)]"
-      >
-        <div className="w-8 h-8 rounded-full bg-[color-mix(in_srgb,var(--color-success)_15%,transparent)] flex items-center justify-center shrink-0">
-          <Check size={16} className="text-[var(--color-success)]" />
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-[var(--color-success)]">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--color-success)_18%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_8%,transparent)] px-3 py-1 text-xs font-semibold text-[var(--color-success)]">
+            <CheckCircle2 size={14} />
             Ready to submit
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            Your report will be sent to the relevant authority for verification and action.
-          </p>
+          </span>
         </div>
       </motion.div>
+
+      <motion.section variants={itemVariants} className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            <FileImage size={14} />
+            Evidence
+          </div>
+          <button type="button" onClick={() => onEditStep(1)} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-amber)]">
+            <Edit3 size={12} />
+            Edit
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {evidenceFiles.map((file) => (
+            <div key={file.id} className="aspect-square overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+              {file.previewUrl ? (
+                <img src={file.previewUrl} alt={file.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full items-center justify-center text-[var(--color-text-muted)]">
+                  <FileImage size={16} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </motion.section>
+
+      <motion.section variants={itemVariants} className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            <Sparkles size={14} />
+            AI Analysis
+          </div>
+          <button type="button" onClick={() => onEditStep(2)} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-amber)]">
+            <Edit3 size={12} />
+            Edit
+          </button>
+        </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-4">
+            <MiniGauge score={score} />
+            <div>
+              <p className="text-sm font-semibold text-[var(--color-text-primary)]">{score}% risk signal</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{aiResult?.message ?? "AI suggestions were captured from your evidence."}</p>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[color-mix(in_srgb,var(--color-amber)_18%,transparent)] bg-[color-mix(in_srgb,var(--color-amber)_8%,transparent)] px-4 py-3 text-sm text-[var(--color-text-primary)] sm:ml-auto">
+            Suggested category: <span className="font-semibold text-[var(--color-amber)]">{aiResult?.suggestedCategory ? HAZARD_LABEL_BY_VALUE[aiResult.suggestedCategory] : "Manual review"}</span>
+          </div>
+        </div>
+      </motion.section>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <motion.section variants={itemVariants} className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              Hazard Details
+            </div>
+            <button type="button" onClick={() => onEditStep(3)} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-amber)]">
+              <Edit3 size={12} />
+              Edit
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Hazard type</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--color-text-primary)]">{hazardType ? HAZARD_LABEL_BY_VALUE[hazardType] : "—"}</p>
+              {hazardType && <p className="text-xs text-[var(--color-text-muted)]">Backend category: {BACKEND_CATEGORY_BY_HAZARD[hazardType]}</p>}
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Severity</p>
+              {selectedSeverity ? (
+                <span className="mt-1 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold" style={{ borderColor: severityColor[selectedSeverity.value], color: severityColor[selectedSeverity.value] }}>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: severityColor[selectedSeverity.value] }} />
+                  {selectedSeverity.label}
+                </span>
+              ) : (
+                <p className="mt-1 text-sm font-semibold text-[var(--color-text-primary)]">—</p>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Title</p>
+              <p className="mt-1 text-sm text-[var(--color-text-primary)]">{title || "—"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Description</p>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-secondary)]">{description || "—"}</p>
+            </div>
+          </div>
+        </motion.section>
+
+        <motion.section variants={itemVariants} className="rounded-[1.75rem] border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+              <MapPin size={14} />
+              Location
+            </div>
+            <button type="button" onClick={() => onEditStep(4)} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-amber)]">
+              <Edit3 size={12} />
+              Edit
+            </button>
+          </div>
+          <div className="overflow-hidden rounded-[1.5rem] border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="flex h-44 items-center justify-center bg-[linear-gradient(135deg,color-mix(in_srgb,var(--color-amber)_12%,var(--color-surface))_0%,var(--color-surface)_100%)]">
+              <div className="text-center">
+                <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-white/70 text-[var(--color-amber)] shadow-sm">
+                  <MapPin size={28} />
+                </div>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">{location.address || "Map pin selected"}</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">{location.latitude != null && location.longitude != null ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}` : "Coordinates will appear here"}</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 space-y-2 text-sm text-[var(--color-text-secondary)]">
+            <p>
+              <span className="font-semibold text-[var(--color-text-primary)]">Landmark:</span> {location.landmark || "—"}
+            </p>
+            <p>
+              <span className="font-semibold text-[var(--color-text-primary)]">Source:</span> {location.locationMode.toUpperCase()}
+            </p>
+          </div>
+        </motion.section>
+      </div>
     </motion.div>
   );
 }

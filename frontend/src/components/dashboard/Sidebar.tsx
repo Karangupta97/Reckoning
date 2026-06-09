@@ -50,7 +50,7 @@ const NAV_ITEMS: Array<{
   exactMatch?: boolean;
 }> = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
-    { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
+  { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
     { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
     { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
     { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
@@ -110,7 +110,12 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           // Derive active state purely from pathname
-          const isActive = item.exactMatch
+          const isReportRoute =
+            normalizedPath === "/dashboard/report" ||
+            normalizedPath.startsWith("/dashboard/report/");
+          const isActive = item.id === "reportHazard"
+            ? isReportRoute
+            : item.exactMatch
             ? normalizedPath === item.href
             : normalizedPath === item.href || normalizedPath.startsWith(item.href + "/");
           const Icon = item.icon;

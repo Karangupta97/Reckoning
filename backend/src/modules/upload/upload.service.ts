@@ -114,6 +114,16 @@ const ALLOWED_TYPES: Readonly<Record<string, AllowedType>> = {
     ext: "webp",
     matches: isWebp,
   },
+  "image/heic": {
+    kind: "image",
+    ext: "heic",
+    matches: hasFtypBox,
+  },
+  "image/heif": {
+    kind: "image",
+    ext: "heif",
+    matches: hasFtypBox,
+  },
   "video/mp4": {
     kind: "video",
     ext: "mp4",
@@ -305,7 +315,7 @@ export async function uploadFileToS3(
   const resolved = await resolveAllowedType(file.buffer, fileType);
   if (!resolved) {
     throw new AppError(
-      "Unsupported or corrupted file. Allowed: jpg, png, webp, mp4, mov, webm.",
+      "Unsupported or corrupted file. Allowed: jpg, png, webp, heic, heif, mp4, mov, webm.",
       400,
       { code: "INVALID_FILE_TYPE" },
     );

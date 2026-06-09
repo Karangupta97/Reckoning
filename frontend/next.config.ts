@@ -23,6 +23,7 @@ const withPWA = withPWAInit({
     skipWaiting: true,
     clientsClaim: true,
     cleanupOutdatedCaches: true,
+      exclude: [/\/[^/]+\/_buildManifest\.js$/, /\/[^/]+\/_ssgManifest\.js$/],
     runtimeCaching: [
       // ─── Citizen Dashboard routes (offline shell) ─────────────────────────
       {

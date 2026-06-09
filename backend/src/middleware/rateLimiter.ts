@@ -29,7 +29,10 @@ import { env, isDevelopment } from "../config/env.js";
 const devPassthrough: RateLimitRequestHandler = Object.assign(
   (_req: Request, _res: Response, next: NextFunction) => next(),
   // express-rate-limit attaches `.resetKey` to its handlers; satisfy the type.
-  { resetKey: (_key: string) => undefined },
+  {
+    resetKey: (_key: string) => undefined,
+    getKey: (_key: string) => undefined,
+  },
 );
 
 /** Standard JSON body returned when a client is rate-limited. */

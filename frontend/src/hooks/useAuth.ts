@@ -3,27 +3,19 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore, type AuthUser } from "@/stores/authStore";
-
-type AuthSession = {
-  accessToken: string;
-  refreshToken: string;
-  user: AuthUser;
-};
-
-type ApiErrorShape = {
-  error?: {
-    message?: string;
-  };
-  message?: string;
-  data?: {
-    message?: string;
-  };
-};
-
+import {
+  authUrl,
+  extractMessage,
+  fetchCitizenAuth,
+  isAuthSession,
+  readResponseJson,
+  type CitizenAuthSession,
+  unwrapLoginSession,
+} from "@/lib/auth/citizenSession";
 type LoginResponse = {
   success?: boolean;
-  data?: AuthSession;
-} & Partial<AuthSession>;
+  data?: { accessToken: string; refreshToken: string; user: AuthUser };
+} & Partial<{ accessToken: string; refreshToken: string; user: AuthUser }>;
 
 type RegistrationResponse = {
   message?: string;
@@ -49,63 +41,7 @@ type UpdateProfileInput = {
   country?: AuthUser["country"];
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const DEFAULT_COUNTRY = "INDIA";
-
-function authUrl(path: string): string {
-  return `${API_BASE_URL}/api/auth${path}`;
-}
-
-async function readResponseJson(response: Response): Promise<unknown> {
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (!contentType.includes("application/json")) {
-    return null;
-  }
-
-  return response.json();
-}
-
-function extractMessage(payload: unknown, fallback: string): string {
-  if (!payload || typeof payload !== "object") {
-    return fallback;
-  }
-
-  const data = payload as ApiErrorShape;
-  return data.error?.message ?? data.message ?? data.data?.message ?? fallback;
-}
-
-function isAuthSession(payload: unknown): payload is AuthSession {
-  if (!payload || typeof payload !== "object") {
-    return false;
-  }
-
-  const candidate = payload as Partial<AuthSession>;
-  return (
-    typeof candidate.accessToken === "string" &&
-    typeof candidate.refreshToken === "string" &&
-    typeof candidate.user === "object" &&
-    candidate.user !== null
-  );
-}
-
-function unwrapLoginSession(payload: unknown): AuthSession | null {
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-
-  const data = payload as LoginResponse;
-  if (data.data && isAuthSession(data.data)) {
-    return data.data;
-  }
-
-  if (isAuthSession(data)) {
-    return data;
-  }
-
-  return null;
-}
-
 function unwrapRegistrationResponse(payload: unknown): RegistrationResponse | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -154,7 +90,6 @@ export function useAuth() {
 
   const setSession = useAuthStore((state) => state.setSession);
   const setUser = useAuthStore((state) => state.setUser);
-  const clearSession = useAuthStore((state) => state.clearSession);
   const accessToken = useAuthStore((state) => state.accessToken);
   const refreshToken = useAuthStore((state) => state.refreshToken);
   const user = useAuthStore((state) => state.user);
@@ -239,7 +174,7 @@ export function useAuth() {
   }, [runRequest]);
 
   const verifyOtp = useCallback(async (email: string, otp: string) => {
-    const payload = await runRequest<{ data?: AuthSession } & Partial<AuthSession>>(
+    const payload = await runRequest<{ data?: CitizenAuthSession } & Partial<CitizenAuthSession>>(
       () =>
         fetch(authUrl("/verify-otp"), {
           method: "POST",
@@ -278,54 +213,36 @@ export function useAuth() {
   }, [runRequest]);
 
   const validateCitizenSession = useCallback(async (): Promise<boolean> => {
-    if (!accessToken) {
-      clearSession();
-      return false;
-    }
-
-    setIsLoading(true);
-
     try {
-      const response = await fetch(authUrl("/me"), {
+      const response = await fetchCitizenAuth(authUrl("/me"), {
         method: "GET",
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
       });
 
       const payload = await readResponseJson(response);
 
       if (!response.ok) {
-        clearSession();
         return false;
       }
 
       const currentUser = unwrapCurrentUser(payload);
       if (!currentUser || currentUser.role !== "CITIZEN") {
-        clearSession();
         return false;
       }
 
       setUser(currentUser);
       return true;
     } catch {
-      clearSession();
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [accessToken, clearSession, setUser]);
+  }, [setUser]);
 
   const updateCitizenProfile = useCallback(async (input: UpdateProfileInput): Promise<AuthUser> => {
     const payload = await runRequest<UpdateProfileResponse>(
       () =>
-        fetch(authUrl("/me"), {
+        fetchCitizenAuth(authUrl("/me"), {
           method: "PATCH",
-          credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
           },
           body: JSON.stringify(input),
         }),
@@ -340,7 +257,7 @@ export function useAuth() {
 
     setUser(updatedUser);
     return updatedUser;
-  }, [accessToken, runRequest, setUser]);
+  }, [runRequest, setUser]);
 
   const logout = useCallback(() => {
     // Navigate to the dedicated logout confirmation page.

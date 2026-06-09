@@ -231,7 +231,9 @@ export function MobileBottomNav({ notificationCount }: BottomNavProps = {}) {
 
   const badgeCount = notificationCount ?? storeUnreadCount;
 
-  const isFabActive = pathname === "/dashboard/report" || pathname.startsWith("/dashboard/report/");
+  const isFabActive =
+    pathname === "/dashboard/report" ||
+    pathname.startsWith("/dashboard/report/");
 
   useEffect(() => {
     const isStandalone =

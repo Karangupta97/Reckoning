@@ -1,25 +1,37 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Upload,
   Camera,
+  FolderOpen,
+  Upload,
   X,
   FileImage,
   FileVideo,
-  AlertCircle,
+  TriangleAlert,
+  Sparkles,
 } from "lucide-react";
-import { useReportStore, type UploadFile } from "@/store/reportStore";
+import {
+  MAX_EVIDENCE_FILES,
+  MAX_EVIDENCE_FILE_SIZE_BYTES,
+  SUPPORTED_EVIDENCE_MIME_TYPES,
+  type ReportAnalysisState,
+  type ReportEvidenceFile,
+  type SupportedEvidenceMimeType,
+} from "./reportTypes";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const ACCEPTED_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "video/mp4",
-];
-const ACCEPTED_EXTENSIONS = ".jpg,.jpeg,.png,.webp,.mp4";
+const ACCEPT_ATTRIBUTE = SUPPORTED_EVIDENCE_MIME_TYPES.join(",");
+
+interface EvidenceStepProps {
+  touchDevice: boolean;
+  evidenceFiles: ReportEvidenceFile[];
+  analysisState: ReportAnalysisState;
+  analysisError: string | null;
+  onSelectFiles: (files: File[], source: "camera" | "gallery" | "drop") => void;
+  onRemoveFile: (id: string) => void;
+  onAnalyse: () => void;
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,11 +40,11 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28 } },
 };
 
-function generateId() {
-  return `file-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+function isSupportedMimeType(value: string): value is SupportedEvidenceMimeType {
+  return (SUPPORTED_EVIDENCE_MIME_TYPES as readonly string[]).includes(value);
 }
 
 function formatFileSize(bytes: number): string {
@@ -41,286 +53,289 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function EvidenceStep() {
-  const { formData, addFile, removeFile, updateFileProgress, updateFileStatus } =
-    useReportStore();
+export function EvidenceStep({
+  touchDevice,
+  evidenceFiles,
+  analysisState,
+  analysisError,
+  onSelectFiles,
+  onRemoveFile,
+  onAnalyse,
+}: EvidenceStepProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const liveCaptureRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
-  const simulateUpload = useCallback(
-    (uploadFile: UploadFile) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 20 + 5;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          updateFileProgress(uploadFile.id, 100);
-          updateFileStatus(uploadFile.id, "complete");
-        } else {
-          updateFileProgress(uploadFile.id, Math.floor(progress));
-        }
-      }, 200);
-    },
-    [updateFileProgress, updateFileStatus]
-  );
+  const canAddMore = evidenceFiles.length < MAX_EVIDENCE_FILES;
+  const hasFiles = evidenceFiles.length > 0;
+  const isBusy = analysisState === "uploading" || analysisState === "scanning";
 
-  const processFiles = useCallback(
-    (files: FileList | File[]) => {
-      setError(null);
-      const fileArray = Array.from(files);
-
-      for (const file of fileArray) {
-        if (!ACCEPTED_TYPES.includes(file.type)) {
-          setError(`"${file.name}" is not a supported format. Use JPG, PNG, WEBP, or MP4.`);
-          continue;
-        }
-        if (file.size > MAX_FILE_SIZE) {
-          setError(`"${file.name}" exceeds 10 MB limit.`);
-          continue;
-        }
-
-        const id = generateId();
-        const preview = file.type.startsWith("image/")
-          ? URL.createObjectURL(file)
-          : undefined;
-
-        const uploadFile: UploadFile = {
-          id,
-          file,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          progress: 0,
-          preview,
-          status: "uploading",
-        };
-
-        addFile(uploadFile);
-        simulateUpload(uploadFile);
+  const handleFiles = useCallback(
+    (files: FileList | File[], source: "camera" | "gallery" | "drop") => {
+      onSelectFiles(Array.from(files), source);
+      if (liveCaptureRef.current) {
+        liveCaptureRef.current.value = "";
+      }
+      if (galleryRef.current) {
+        galleryRef.current.value = "";
       }
     },
-    [addFile, simulateUpload]
+    [onSelectFiles],
   );
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      if (e.dataTransfer.files.length) {
-        processFiles(e.dataTransfer.files);
-      }
-    },
-    [processFiles]
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
-
-  const handleFileSelect = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files?.length) {
-        processFiles(e.target.files);
-      }
-      e.target.value = "";
-    },
-    [processFiles]
+  const acceptedCountLabel = useMemo(
+    () => `${evidenceFiles.length}/${MAX_EVIDENCE_FILES} files`,
+    [evidenceFiles.length],
   );
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="space-y-6"
-    >
-      {/* Upload Area */}
-      <motion.div variants={itemVariants}>
-        <label className="block text-sm font-semibold text-[var(--color-text-primary)] mb-3">
-          Upload Evidence
-        </label>
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+      {touchDevice ? (
+        <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => liveCaptureRef.current?.click()}
+            disabled={!canAddMore || isBusy}
+            className={`relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-4 text-left transition-all ${
+              canAddMore && !isBusy
+                ? "border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-amber)_12%,transparent)]"
+                : "border-[var(--color-border)] bg-[var(--color-surface)] opacity-60"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="rounded-2xl bg-[color-mix(in_srgb,var(--color-amber)_14%,transparent)] p-3 text-[var(--color-amber)]">
+                <Camera size={22} />
+              </div>
+              {evidenceFiles.length > 0 && (
+                <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+                  {acceptedCountLabel}
+                </span>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Live Capture</h3>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">Take Photo / Video</p>
+              <p className="mt-2 text-xs text-[var(--color-text-secondary)]">Use your camera to capture the hazard right now.</p>
+            </div>
+            <input
+              ref={liveCaptureRef}
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              multiple
+              className="sr-only"
+              onChange={(event) => {
+                if (event.target.files?.length) {
+                  handleFiles(event.target.files, "camera");
+                }
+              }}
+            />
+          </button>
 
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          className={`relative flex flex-col items-center justify-center gap-4 p-8 sm:p-12 rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer ${
-            isDragging
-              ? "border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] scale-[1.01]"
-              : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-text-muted)]"
-          }`}
-          onClick={() => fileInputRef.current?.click()}
-          role="button"
-          tabIndex={0}
-          aria-label="Upload files by dropping them here or clicking to browse"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }
-          }}
-        >
-          {/* Upload icon */}
-          <div className="w-16 h-16 rounded-2xl bg-[color-mix(in_srgb,var(--color-amber)_12%,transparent)] flex items-center justify-center">
-            <Upload
-              size={28}
-              className="text-[var(--color-amber)]"
-              strokeWidth={1.8}
+          <button
+            type="button"
+            onClick={() => galleryRef.current?.click()}
+            disabled={!canAddMore || isBusy}
+            className={`relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-4 text-left transition-all ${
+              canAddMore && !isBusy
+                ? "border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-amber)]/40 hover:bg-[var(--color-surface)]"
+                : "border-[var(--color-border)] bg-[var(--color-surface)] opacity-60"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="rounded-2xl bg-[color-mix(in_srgb,var(--color-text-muted)_14%,transparent)] p-3 text-[var(--color-text-secondary)]">
+                <FolderOpen size={22} />
+              </div>
+              {evidenceFiles.length > 0 && (
+                <span className="rounded-full bg-white/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-secondary)]">
+                  {acceptedCountLabel}
+                </span>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Upload from Device</h3>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">Choose from Gallery</p>
+              <p className="mt-2 text-xs text-[var(--color-text-secondary)]">Select existing photos or videos from your device.</p>
+            </div>
+            <input
+              ref={galleryRef}
+              type="file"
+              accept={ACCEPT_ATTRIBUTE}
+              multiple
+              className="sr-only"
+              onChange={(event) => {
+                if (event.target.files?.length) {
+                  handleFiles(event.target.files, "gallery");
+                }
+              }}
+            />
+          </button>
+        </motion.div>
+      ) : (
+        <motion.div variants={itemVariants}>
+          <div
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              if (event.dataTransfer.files.length) {
+                handleFiles(event.dataTransfer.files, "drop");
+              }
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (canAddMore) {
+                setIsDragging(true);
+              }
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+            }}
+            onClick={() => galleryRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                galleryRef.current?.click();
+              }
+            }}
+            className={`group relative flex min-h-[250px] flex-col items-center justify-center gap-4 rounded-[1.75rem] border-2 border-dashed px-6 py-10 text-center transition-all ${
+              isDragging
+                ? "border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] shadow-[var(--shadow-neu)]"
+                : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-amber)] hover:bg-[var(--color-card)]"
+            } ${!canAddMore ? "opacity-65" : ""}`}
+          >
+            <div className="flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-[color-mix(in_srgb,var(--color-amber)_12%,transparent)] text-[var(--color-amber)] transition-transform group-hover:scale-105">
+              <Upload size={30} strokeWidth={1.8} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
+                Drag photos or video, or tap to capture
+              </h3>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                Drop files here or choose from your device. Accepts photos and video clips.
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Up to 5 files. Maximum 25 MB per file.
+              </p>
+            </div>
+            <input
+              ref={galleryRef}
+              type="file"
+              accept={ACCEPT_ATTRIBUTE}
+              multiple
+              className="sr-only"
+              onChange={(event) => {
+                if (event.target.files?.length) {
+                  handleFiles(event.target.files, "gallery");
+                }
+              }}
             />
           </div>
-
-          <div className="text-center">
-            <p className="text-sm text-[var(--color-text-secondary)]">
-              Drag and drop or{" "}
-              <span className="font-semibold text-[var(--color-text-primary)] underline underline-offset-2">
-                choose file
-              </span>{" "}
-              to upload.
-            </p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-              Supported: JPG, PNG, WEBP, MP4 &middot; Max 10 MB per file
-            </p>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={ACCEPTED_EXTENSIONS}
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-            aria-hidden="true"
-          />
-        </div>
-
-        {/* Camera Capture (mobile) */}
-        <button
-          type="button"
-          onClick={() => cameraInputRef.current?.click()}
-          className="mt-3 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] transition-colors"
-        >
-          <Camera size={18} strokeWidth={1.8} />
-          <span className="text-sm font-medium">Capture with Camera</span>
-        </button>
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileSelect}
-          className="hidden"
-          aria-hidden="true"
-        />
-
-        <p className="mt-3 text-xs text-[var(--color-text-muted)] leading-relaxed">
-          Upload clear photos or videos to help verify the reported hazard.
-        </p>
-      </motion.div>
-
-      {/* Error */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-2 px-4 py-3 rounded-xl bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] border border-[color-mix(in_srgb,var(--color-danger)_25%,transparent)]"
-        >
-          <AlertCircle size={16} className="text-[var(--color-danger)] mt-0.5 shrink-0" />
-          <p className="text-xs text-[var(--color-danger)]">{error}</p>
         </motion.div>
       )}
 
-      {/* File List */}
+      <motion.p variants={itemVariants} className="text-xs text-[var(--color-text-muted)]">
+        Our AI will auto-detect the hazard type from your evidence.
+      </motion.p>
+
+      {analysisError && (
+        <motion.div
+          variants={itemVariants}
+          className="flex items-start gap-2 rounded-2xl border border-[color-mix(in_srgb,var(--color-danger)_20%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] px-4 py-3"
+        >
+          <TriangleAlert size={16} className="mt-0.5 shrink-0 text-[var(--color-danger)]" />
+          <p className="text-xs text-[var(--color-danger)]">{analysisError}</p>
+        </motion.div>
+      )}
+
       <AnimatePresence mode="popLayout">
-        {formData.files.length > 0 && (
-          <motion.div
-            variants={itemVariants}
-            className="space-y-3"
-          >
-            <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
-              Uploaded Files ({formData.files.length})
-            </span>
-
-            {formData.files.map((file) => (
-              <motion.div
-                key={file.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-card)] border border-[var(--color-border)] shadow-sm"
-              >
-                {/* Preview / Icon */}
-                <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--color-surface)] flex items-center justify-center shrink-0">
-                  {file.preview ? (
-                    <img
-                      src={file.preview}
-                      alt={file.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : file.type.startsWith("video/") ? (
-                    <FileVideo size={20} className="text-[var(--color-info)]" />
-                  ) : (
-                    <FileImage size={20} className="text-[var(--color-amber)]" />
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-[var(--color-text-primary)] truncate">
-                    {file.name}
-                  </p>
-                  <p className="text-[11px] text-[var(--color-text-muted)]">
-                    {formatFileSize(file.size)}
-                  </p>
-
-                  {/* Progress bar */}
-                  {file.status === "uploading" && (
-                    <div className="mt-1.5 flex items-center gap-2">
-                      <div className="flex-1 h-1.5 rounded-full bg-[var(--color-surface)] overflow-hidden">
-                        <motion.div
-                          className="h-full rounded-full bg-[var(--color-amber)]"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${file.progress}%` }}
-                          transition={{ duration: 0.3 }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-[var(--color-text-muted)] tabular-nums">
-                        {file.progress}%
-                      </span>
-                    </div>
-                  )}
-
-                  {file.status === "complete" && (
-                    <span className="text-[11px] text-[var(--color-success)] font-medium">
-                      ✓ Uploaded
-                    </span>
-                  )}
-                </div>
-
-                {/* Remove */}
-                <button
-                  type="button"
-                  onClick={() => removeFile(file.id)}
-                  className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:text-[var(--color-danger)] transition-colors"
-                  aria-label={`Remove ${file.name}`}
+        {evidenceFiles.length > 0 && (
+          <motion.div variants={itemVariants} className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                Uploaded Evidence
+              </p>
+              {!canAddMore && (
+                <span className="rounded-full border border-[color-mix(in_srgb,var(--color-amber)_20%,transparent)] bg-[color-mix(in_srgb,var(--color-amber)_10%,transparent)] px-3 py-1 text-[11px] font-medium text-[var(--color-amber)]">
+                  Maximum 5 files reached
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
+              {evidenceFiles.map((file) => (
+                <motion.div
+                  key={file.id}
+                  layout
+                  className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
                 >
-                  <X size={16} />
-                </button>
-              </motion.div>
-            ))}
+                  <div className="aspect-square bg-[var(--color-surface)]">
+                    {file.previewUrl ? (
+                      <img src={file.previewUrl} alt={file.name} className="h-full w-full object-cover" />
+                    ) : file.mimeType.startsWith("video/") ? (
+                      <div className="flex h-full items-center justify-center">
+                        <FileVideo size={24} className="text-[var(--color-text-muted)]" />
+                      </div>
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <FileImage size={24} className="text-[var(--color-text-muted)]" />
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onRemoveFile(file.id)}
+                      className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur transition hover:bg-black/75"
+                      aria-label={`Remove ${file.name}`}
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="space-y-1 px-3 py-2">
+                    <p className="truncate text-[11px] font-medium text-[var(--color-text-primary)]">{file.name}</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">{formatFileSize(file.size)}</p>
+                    {file.errorMessage ? (
+                      <p className="text-[10px] font-medium text-[var(--color-danger)]">{file.errorMessage}</p>
+                    ) : file.uploadStatus === "uploaded" ? (
+                      <p className="text-[10px] font-medium text-[var(--color-success)]">Uploaded</p>
+                    ) : file.uploadStatus === "uploading" ? (
+                      <p className="text-[10px] font-medium text-[var(--color-amber)]">Uploading…</p>
+                    ) : null}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={onAnalyse}
+          disabled={!hasFiles || isBusy}
+          className={`flex h-12 w-full items-center justify-center gap-2 rounded-2xl font-semibold transition-all ${
+            hasFiles && !isBusy ? "btn-amber" : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)]"
+          }`}
+        >
+          {analysisState === "scanning" || analysisState === "uploading" ? (
+            <>
+              <Sparkles size={16} className="animate-pulse" />
+              Analysing…
+            </>
+          ) : (
+            <>
+              <Sparkles size={16} />
+              Analyse with AI →
+            </>
+          )}
+        </button>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          {canAddMore
+            ? "Your selected media stays in a single upload set."
+            : "Maximum 5 files reached."}
+        </p>
+      </div>
     </motion.div>
   );
 }
