@@ -17,6 +17,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/hooks/useAuth";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -98,6 +99,7 @@ export default function Header({
   subtitle = "National Infrastructure Overview",
 }: HeaderProps) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] =
@@ -303,7 +305,7 @@ export default function Header({
                     type="button"
                     onClick={() => {
                       closeAllDropdowns();
-                      if (item.danger) { router.push("/"); }
+                      if (item.danger) { void logout(); }
                       else if (item.href) { router.push(item.href); }
                     }}
                     className={`dropdown-item ${item.danger ? "dropdown-item-danger" : ""}`}

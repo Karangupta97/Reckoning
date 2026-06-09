@@ -18,8 +18,19 @@ import rateLimit, {
   type Store,
   ipKeyGenerator,
 } from "express-rate-limit";
-import type { Request } from "express";
-import { env } from "../config/env.js";
+import type { Request, Response, NextFunction } from "express";
+import { env, isDevelopment } from "../config/env.js";
+
+/**
+ * No-op middleware used in development so testing is never blocked by rate
+ * limits. Every limiter exported from this file resolves to this passthrough
+ * when `NODE_ENV=development`.
+ */
+const devPassthrough: RateLimitRequestHandler = Object.assign(
+  (_req: Request, _res: Response, next: NextFunction) => next(),
+  // express-rate-limit attaches `.resetKey` to its handlers; satisfy the type.
+  { resetKey: (_key: string) => undefined },
+);
 
 /** Standard JSON body returned when a client is rate-limited. */
 const tooManyRequestsBody = {
@@ -95,6 +106,9 @@ function makeLimiter(
   max: number,
   keyGenerator?: Options["keyGenerator"],
 ): RateLimitRequestHandler {
+  // In development every limiter is a no-op so local testing is never blocked.
+  if (isDevelopment) return devPassthrough;
+
   const options: Partial<Options> = {
     windowMs,
     limit: max,

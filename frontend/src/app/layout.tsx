@@ -50,9 +50,7 @@ export const viewport: Viewport = {
 
 const THEME_INIT = `(function(){
   try {
-    // 1. Check the fast-path raw resolved value written by applyThemeToDOM
     var t = localStorage.getItem('RECKONING_THEME_RESOLVED');
-    // 2. If absent, fall back to parsing Zustand's persisted JSON blob
     if (t !== 'light' && t !== 'dark') {
       try {
         var raw = localStorage.getItem('RECKONING_THEME');
@@ -67,13 +65,11 @@ const THEME_INIT = `(function(){
         }
       } catch (_) {}
     }
-    // 3. Default to light if nothing is stored
     if (t !== 'light' && t !== 'dark') { t = 'light'; }
     document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(t);
     document.documentElement.setAttribute('data-theme', t);
     document.documentElement.style.colorScheme = t;
-    // Prevent FOUC by applying theme colors via inline styles before CSS is fully parsed
     if (t === 'dark') {
       document.documentElement.style.backgroundColor = '#1A1F2E';
       document.documentElement.style.color = '#EDF1F7';

@@ -2,22 +2,52 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+  const { login, error, isAuthenticated, hasHydrated, isLoading, validateCitizenSession } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function maybeRedirect() {
+      if (!hasHydrated || !isAuthenticated) {
+        return;
+      }
+
+      const valid = await validateCitizenSession();
+      if (cancelled || !valid) {
+        return;
+      }
+
+      router.replace('/dashboard');
+    }
+
+    void maybeRedirect();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydrated, isAuthenticated, router, validateCitizenSession]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      console.log('Login submitted');
-    } finally {
-      setLoading(false);
+      await login(email.trim(), password, rememberMe);
+      router.push(redirectTo);
+    } catch {
+      // Error message is exposed from useAuth.
     }
   };
 
@@ -56,6 +86,8 @@ export default function LoginPage() {
                 type="email"
                 required
                 placeholder="you@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 className="w-full h-11 px-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-amber)] transition-shadow"
               />
             </div>
@@ -69,6 +101,8 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="Enter password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   className="w-full h-11 px-4 pr-11 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-amber)] transition-shadow"
                 />
                 <button
@@ -83,7 +117,12 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 text-[var(--color-text-secondary)] cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-amber)]" />
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(event) => setRememberMe(event.target.checked)}
+                  className="w-4 h-4 rounded border-[var(--color-border)] accent-[var(--color-amber)]"
+                />
                 Remember me
               </label>
               <Link href="/forgot-password" className="text-[var(--color-amber)] font-medium hover:underline">
@@ -93,13 +132,17 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="btn-amber w-full h-11 flex items-center justify-center gap-2 text-sm disabled:opacity-60"
             >
-              {loading ? 'Signing in...' : (
+              {isLoading ? (
+                <><Loader2 size={16} className="animate-spin" /> Signing in...</>
+              ) : (
                 <>Sign In <ArrowRight size={16} /></>
               )}
             </button>
+
+            {error ? <p className="text-sm text-red-500">{error}</p> : null}
           </form>
 
           {/* Footer */}

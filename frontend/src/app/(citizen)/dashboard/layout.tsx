@@ -1,5 +1,6 @@
 import { getLocale, getMessages } from "next-intl/server";
 
+import { CitizenRouteGuard } from "@/components/auth/CitizenRouteGuard";
 import { DashboardIntlProvider } from "@/components/dashboard/DashboardIntlProvider";
 import { CitizenShell } from "@/components/dashboard/CitizenShell";
 
@@ -16,7 +17,9 @@ export default async function CitizenLayout({
       initialLocale={locale}
       initialMessages={messages as Record<string, unknown>}
     >
-      <CitizenShell>{children}</CitizenShell>
+      <CitizenRouteGuard>
+        <CitizenShell>{children}</CitizenShell>
+      </CitizenRouteGuard>
     </DashboardIntlProvider>
   );
 }

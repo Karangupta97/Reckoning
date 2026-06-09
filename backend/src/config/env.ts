@@ -70,6 +70,10 @@ const envSchema = z.object({
     .url("APP_BASE_URL must be a valid URL")
     .default("https://roadwatch.ai"),
 
+  // Comma-separated list of allowed browser origins for CORS, for example:
+  // "http://localhost:3000,https://app.roadwatch.ai".
+  CORS_ORIGINS: z.string().optional(),
+
   // JWT signing secrets + lifetimes. Secrets must be long (>=64 chars) so the
   // HS256 HMAC key has adequate entropy. Access and refresh secrets MUST differ.
   JWT_ACCESS_SECRET: z

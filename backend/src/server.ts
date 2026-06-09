@@ -8,6 +8,7 @@
  */
 
 import express, { type Express, type Request, type Response } from "express";
+import cors, { type CorsOptions } from "cors";
 import { env, isProduction } from "./config/env.js";
 import { checkDbConnection, closeDbPool } from "./config/db.js";
 import { disconnectPrisma } from "./config/prisma.js";
@@ -30,12 +31,35 @@ import { logger } from "./utils/logger.js";
 
 const app: Express = express();
 
+const allowedOrigins = (env.CORS_ORIGINS
+  ? env.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean)
+  : ["http://localhost:3000", env.APP_BASE_URL]
+).filter((origin, index, all) => all.indexOf(origin) === index);
+
+const corsOptions: CorsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser requests (no Origin header) and allowlisted browser origins.
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error(`CORS blocked origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 // Trust the first proxy hop (load balancer / reverse proxy) so `req.ip`
 // reflects the real client address — required for correct IP rate limiting.
 app.set("trust proxy", 1);
 
 // Baseline hardening headers on every response (nosniff, frame deny, etc.).
 app.use(securityHeaders);
+
+// Browser-origin protection for frontend -> API requests.
+app.use(cors(corsOptions));
 
 app.use(express.json());
 

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/hooks/useAuth";
 import { districtLabel, districtLocationLabel } from "@/lib/district-config";
 
 interface HeaderProps {
@@ -99,6 +100,7 @@ export default function DistrictAdminHeader({
   subtitle = "Monitoring • Escalations • SLA Compliance",
 }: HeaderProps) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] =
@@ -305,8 +307,7 @@ export default function DistrictAdminHeader({
                     onClick={() => {
                       closeAll();
                       if (item.danger) {
-                        // Logout — redirect to sign-in
-                        router.push("/");
+                        void logout();
                       } else if (item.href) {
                         router.push(item.href);
                       }

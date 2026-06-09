@@ -8,6 +8,7 @@ import {
   User, Menu, LogOut, HelpCircle, Shield, UserCircle,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "@/hooks/useAuth";
 import { subDistrictLabel, subDistrictLocationLabel } from "@/lib/sub-district-config";
 
 interface HeaderProps {
@@ -73,6 +74,7 @@ export default function SubDistrictAdminHeader({
   subtitle = "Field Operations • Complaint Resolution • SLA Management",
 }: HeaderProps) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [isMobile,          setIsMobile]          = useState(false);
   const [searchQuery,       setSearchQuery]        = useState("");
   const [selectedDate,      setSelectedDate]       = useState<typeof DATE_OPTIONS[number]>("This Month");
@@ -212,7 +214,14 @@ export default function SubDistrictAdminHeader({
                 className="dashboard-panel glass-panel absolute right-0 top-[calc(100%+8px)] z-50 w-52 py-1 overflow-hidden">
                 {SETTINGS_ITEMS.map((item) => (
                   <button key={item.label} type="button"
-                    onClick={() => { setShowSettings(false); router.push(item.href); }}
+                    onClick={() => {
+                      setShowSettings(false);
+                      if (item.danger) {
+                        void logout();
+                        return;
+                      }
+                      router.push(item.href);
+                    }}
                     className={`sda-dropdown-item w-full ${item.danger ? "sda-dropdown-item-danger" : ""}`}>
                     <item.icon size={14} aria-hidden />
                     {item.label}
@@ -247,7 +256,7 @@ export default function SubDistrictAdminHeader({
                 <button type="button" onClick={() => { setShowProfile(false); router.push("/sub-district-admin/dashboard/profile?tab=security"); }}
                   className="sda-dropdown-item w-full"><Settings size={14} /> Account Settings</button>
                 <div className="my-1 border-t border-[var(--color-border)]" />
-                <button type="button" onClick={() => { setShowProfile(false); router.push("/"); }}
+                <button type="button" onClick={() => { setShowProfile(false); void logout(); }}
                   className="sda-dropdown-item sda-dropdown-item-danger w-full"><LogOut size={14} /> Logout</button>
               </motion.div>
             )}
