@@ -1,57 +1,7 @@
 // ─── Leaderboard Mock Data ─────────────────────────────────────────────────────
-// 100 citizen entries + 100 admin entries with full metadata
 
-export type LeaderboardView = "citizen" | "sub-district-admin" | "district-admin";
-export type LeaderboardScope = "global" | "district" | "sub-district";
-export type TimeFilter = "all-time" | "this-month" | "this-week";
-
-export interface CitizenEntry {
-  rank: number;
-  prevRank: number;
-  name: string;
-  points: number;
-  reports: number;
-  verified: number;
-  reputation: number;
-  isCurrentUser: boolean;
-  avatarColor: string;
-  initial: string;
-  isVerifiedUser: boolean;
-  district: string;
-  subDistrict: string;
-  badges: string[];
-  // Detail modal fields
-  totalReports: number;
-  validationCount: number;
-  impactScore: number;
-  livesImpacted: number;
-  roadsImproved: number;
-  authoritiesNotified: number;
-  highRiskReports: number;
-  rejections: number;
-  authorityActionsTriggered: number;
-  recentAchievements: { name: string; timeAgo: string; icon: string }[];
-}
-
-export interface AdminEntry {
-  rank: number;
-  prevRank: number;
-  name: string;
-  role: "Sub-District Admin" | "District Admin";
-  issuesResolved: number;
-  avgResolutionTime: string; // e.g. "2.4 days"
-  validationAccuracy: number; // percentage 0-100
-  isCurrentUser: boolean;
-  avatarColor: string;
-  initial: string;
-  district: string;
-  subDistrict?: string;
-  // Detail modal fields
-  totalTickets: number;
-  escalations: number;
-  citizenRating: number; // 0-5
-  responseRate: number; // percentage
-}
+export type { LeaderboardView, LeaderboardScope, TimeFilter, CitizenEntry, AdminEntry, AnyEntry } from "@/types/leaderboard";
+import type { CitizenEntry, AdminEntry, GlobalStats, Challenge, StreakData, RankProgress } from "@/types/leaderboard";
 
 // ─── Helper: avatar color palette ─────────────────────────────────────────────
 
@@ -123,8 +73,6 @@ const CITIZEN_NAMES = [
   "Sadhana Sawant", "Tejashri Udane", "Bhushan Vaze", "Ketki Wadekar", "Amol Yeole",
 ];
 
-// ─── Admin Names Pool ──────────────────────────────────────────────────────────
-
 const ADMIN_NAMES = [
   "Collector Rajiv Mehta", "ACP Sunita Deshpande", "DM Arvind Kumar", "SDM Priya Iyer",
   "Inspector Ramesh Patil", "Coordinator Sneha Shah", "DM Karan Singh", "SDM Monika Rao",
@@ -153,11 +101,10 @@ const ADMIN_NAMES = [
   "Officer Lalita Idrekar", "Lead Maruti Jagtap", "Coord Namita Khemnar", "Head Onkar Lagade",
 ];
 
-// ─── Generate 100 Citizen Entries ─────────────────────────────────────────────
+// ─── Generate Citizens ─────────────────────────────────────────────────────────
 
 function generateCitizens(): CitizenEntry[] {
   const entries: CitizenEntry[] = [];
-
   const pointsTable = [
     8450, 6250, 4930, 4560, 4210, 3980, 3450, 3210, 2980, 2760,
     2540, 2450, 2310, 2100, 1980, 1870, 1760, 1650, 1540, 1120,
@@ -165,33 +112,35 @@ function generateCitizens(): CitizenEntry[] {
 
   for (let i = 0; i < 100; i++) {
     const rank = i + 1;
-    const name = CITIZEN_NAMES[i] || `Citizen ${rank}`;
+    const name = CITIZEN_NAMES[i] ?? `Citizen ${rank}`;
     const basePoints = i < 20 ? pointsTable[i] : Math.max(1080 - (i - 20) * 10, 50 + (100 - i) * 3);
     const reports = Math.floor(basePoints / 33);
-    const verified = Math.floor(reports * (0.7 + Math.random() * 0.25));
+    const verified = Math.floor(reports * (0.7 + (i % 3) * 0.08));
+    const resolved = Math.floor(verified * 0.6);
     const reputation = Math.min(99, 60 + Math.floor((basePoints / 8450) * 38) + (i % 5));
     const prevRank = Math.max(1, rank + (i % 3 === 0 ? -(1 + (i % 4)) : i % 4 === 0 ? 0 : (1 + (i % 3))));
-
-    const isCurrentUser = name === "Rahul Mehta";
+    const deltaWeek = Math.floor(basePoints * 0.04) + (i % 7) * 15;
 
     entries.push({
       rank,
       prevRank,
       name,
       points: basePoints,
+      pointsDeltaWeek: deltaWeek,
       reports,
       verified,
       reputation,
-      isCurrentUser,
+      isCurrentUser: name === "Rahul Mehta",
       avatarColor: getAvatarColor(i),
       initial: getInitial(name),
       isVerifiedUser: reputation >= 85,
       district: DISTRICTS[i % DISTRICTS.length],
       subDistrict: SUB_DISTRICTS[i % SUB_DISTRICTS.length],
       badges: pick(BADGES_POOL, 2 + (i % 3), i),
-      // Detail fields
       totalReports: reports + Math.floor(reports * 0.1),
       validationCount: verified + Math.floor(verified * 0.05),
+      resolvedCount: resolved,
+      streak: 5 + (i % 20),
       impactScore: Math.min(100, Math.floor((reputation + (basePoints / 8450) * 30))),
       livesImpacted: Math.floor(basePoints / 3.5),
       roadsImproved: Math.floor(reports * 0.15),
@@ -203,23 +152,15 @@ function generateCitizens(): CitizenEntry[] {
     });
   }
 
-  // Ensure the seeded "Rahul Mehta" mock stays consistent at rank 12
-  const rahulIdx = entries.findIndex((e) => e.name === "Rahul Mehta");
-  if (rahulIdx !== -1) {
-    entries[rahulIdx].isCurrentUser = true;
-  }
-
   return entries;
 }
-
-// ─── Generate 100 Admin Entries ───────────────────────────────────────────────
 
 function generateAdmins(): AdminEntry[] {
   const entries: AdminEntry[] = [];
 
   for (let i = 0; i < 100; i++) {
     const rank = i + 1;
-    const name = ADMIN_NAMES[i] || `Admin ${rank}`;
+    const name = ADMIN_NAMES[i] ?? `Admin ${rank}`;
     const isDistrictAdmin = i % 3 === 0;
     const issuesResolved = Math.max(10, 320 - i * 3 + (i % 7));
     const avgDays = (1.2 + i * 0.03 + (i % 5) * 0.1).toFixed(1);
@@ -232,6 +173,7 @@ function generateAdmins(): AdminEntry[] {
       name,
       role: isDistrictAdmin ? "District Admin" : "Sub-District Admin",
       issuesResolved,
+      pointsDeltaWeek: Math.floor(issuesResolved * 0.12) + (i % 5) * 3,
       avgResolutionTime: `${avgDays} days`,
       validationAccuracy,
       isCurrentUser: false,
@@ -239,7 +181,6 @@ function generateAdmins(): AdminEntry[] {
       initial: getInitial(name),
       district: DISTRICTS[i % DISTRICTS.length],
       subDistrict: isDistrictAdmin ? undefined : SUB_DISTRICTS[i % SUB_DISTRICTS.length],
-      // Detail fields
       totalTickets: issuesResolved + Math.floor(issuesResolved * 0.2),
       escalations: Math.floor(issuesResolved * 0.05),
       citizenRating: Math.min(5, 3.5 + (validationAccuracy - 70) / 60),
@@ -253,27 +194,43 @@ function generateAdmins(): AdminEntry[] {
 export const CITIZEN_LEADERBOARD: CitizenEntry[] = generateCitizens();
 export const ADMIN_LEADERBOARD: AdminEntry[] = generateAdmins();
 
-// ─── Global Stats ──────────────────────────────────────────────────────────────
-
-export const GLOBAL_STATS = {
+export const GLOBAL_STATS: GlobalStats = {
   citizensActive: "12,430",
   reportsSubmitted: "124,578",
   hazardsResolved: "43,210",
   livesImpacted: "1.2M+",
 };
 
-// ─── Current Challenges ────────────────────────────────────────────────────────
-
-export const LEADERBOARD_CHALLENGES = [
+export const LEADERBOARD_CHALLENGES: Challenge[] = [
   { id: "lc1", title: "Report 5 Verified Hazards", progress: 3, total: 5, reward: 250, endsAt: "12d 06h" },
   { id: "lc2", title: "Help Verify 10 Reports", progress: 7, total: 10, reward: 300, endsAt: "12d 06h" },
-  { id: "lc3", title: "Daily Streak", progress: 18, total: 30, reward: 100, endsAt: "Ongoing" },
+  { id: "lc3", title: "Maintain Daily Streak", progress: 18, total: 30, reward: 100, endsAt: "Ongoing" },
 ];
 
-// ─── Streak Data ───────────────────────────────────────────────────────────────
-
-export const STREAK_DATA = {
+export const STREAK_DATA: StreakData = {
   currentStreak: 18,
   longestStreak: 23,
-  weekActivity: [true, true, true, true, false, true, false], // M T W T F S S
+  weekActivity: [true, true, true, true, false, true, false],
 };
+
+export const RANK_PROGRESS: RankProgress = {
+  currentRank: "Road Guardian",
+  currentXP: 2450,
+  nextRank: "Hazard Hunter",
+  nextRankXP: 3000,
+  badgeColor: "#F59E0B",
+};
+
+// ─── withMockFallback ──────────────────────────────────────────────────────────
+// Wraps an async API call and falls back to mock data on failure.
+
+export async function withMockFallback<T>(
+  apiFn: () => Promise<T>,
+  mockData: T,
+): Promise<T> {
+  try {
+    return await apiFn();
+  } catch {
+    return mockData;
+  }
+}
