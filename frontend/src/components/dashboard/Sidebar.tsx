@@ -23,6 +23,23 @@ import { LogoMark } from "@/components/ui/Logo";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/stores/authStore";
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function formatCountry(country?: string): string {
+  if (!country) return "Citizen";
+  return country
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 const NAV_ITEMS: Array<{
   id: string;
@@ -48,6 +65,7 @@ export function Sidebar() {
   const { expanded, toggle } = useSidebarStore();
   const { notificationCount } = useDashboardStore();
   const { logout, isLoading: isLoggingOut } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -63,7 +81,13 @@ export function Sidebar() {
     >
       {/* Logo + Brand */}
       <div className="flex items-center gap-3 px-5 pt-6 pb-4">
-        <LogoMark size={36} />
+        {expanded ? (
+          <div className="shrink-0 w-9 h-9 rounded-2xl bg-gradient-to-br from-[var(--color-amber)] to-orange-500 flex items-center justify-center text-white text-[11px] font-bold">
+            {getInitials(user?.fullName ?? "Citizen")}
+          </div>
+        ) : (
+          <LogoMark size={36} />
+        )}
         {expanded && (
           <motion.div
             initial={{ opacity: 0, x: -8 }}
@@ -131,6 +155,24 @@ export function Sidebar() {
 
       {/* Bottom Section */}
       <div className="px-3 pb-4 space-y-1">
+        {expanded && user && (
+          <div className="mb-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-amber)] to-orange-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                {getInitials(user.fullName)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                  {user.fullName}
+                </p>
+                <p className="text-[10px] text-[var(--color-text-muted)] truncate">
+                  {formatCountry(user.country)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="border-t border-[var(--color-border)] mb-3" />
 
         <button

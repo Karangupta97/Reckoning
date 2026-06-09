@@ -139,6 +139,19 @@ export const logoutSchema = z
   })
   .strict();
 
+/** `PATCH /api/auth/me` body schema. */
+export const updateProfileSchema = z
+  .object({
+    fullName: fullNameSchema.optional(),
+    country: z.enum(COUNTRY_VALUES, {
+      message: "Country must be a valid BIMSTEC member state.",
+    }).optional(),
+  })
+  .strict()
+  .refine((value) => value.fullName !== undefined || value.country !== undefined, {
+    message: "At least one profile field is required.",
+  });
+
 /** Inferred type for the register body. */
 export type RegisterBody = z.infer<typeof registerSchema>;
 /** Inferred type for the verify-otp body. */
@@ -151,3 +164,5 @@ export type LoginBody = z.infer<typeof loginSchema>;
 export type RefreshBody = z.infer<typeof refreshSchema>;
 /** Inferred type for the logout body. */
 export type LogoutBody = z.infer<typeof logoutSchema>;
+/** Inferred type for the profile update body. */
+export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;

@@ -21,6 +21,23 @@ import { LogoMark } from "@/components/ui/Logo";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useDashboardStore } from "@/store/dashboardStore";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/stores/authStore";
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function formatCountry(country?: string): string {
+  if (!country) return "Citizen";
+  return country
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 const NAV_ITEMS: Array<{
   id: string;
@@ -44,6 +61,7 @@ export function MobileSidebar() {
   const { mobileOpen, setMobileOpen } = useSidebarStore();
   const { notificationCount } = useDashboardStore();
   const { logout, isLoading: isLoggingOut } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -92,6 +110,24 @@ export function MobileSidebar() {
                 <X size={18} />
               </button>
             </div>
+
+            {user && (
+              <div className="px-5 pb-3">
+                <div className="flex items-center gap-3 p-3 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-amber)] to-orange-400 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    {getInitials(user.fullName)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
+                      {user.fullName}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted)] truncate">
+                      {formatCountry(user.country)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Nav */}
             <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">

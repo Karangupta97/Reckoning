@@ -13,6 +13,7 @@ import {
   refreshSchema,
   registerSchema,
   resendOtpSchema,
+  updateProfileSchema,
   verifyOtpSchema,
 } from "./auth.validation.js";
 import { validate } from "../../middleware/validate.js";
@@ -87,3 +88,10 @@ authRouter.post(
 );
 
 authRouter.get("/me", requireAuth, authController.me);
+
+authRouter.patch(
+  "/me",
+  requireAuth,
+  validate({ body: updateProfileSchema }),
+  authController.updateMe,
+);

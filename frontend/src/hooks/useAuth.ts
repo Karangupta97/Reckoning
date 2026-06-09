@@ -42,6 +42,13 @@ type CurrentUserResponse = {
   user?: AuthUser;
 };
 
+type UpdateProfileResponse = CurrentUserResponse;
+
+type UpdateProfileInput = {
+  fullName?: string;
+  country?: AuthUser["country"];
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const DEFAULT_COUNTRY = "INDIA";
 
@@ -310,6 +317,31 @@ export function useAuth() {
     }
   }, [accessToken, clearSession, setUser]);
 
+  const updateCitizenProfile = useCallback(async (input: UpdateProfileInput): Promise<AuthUser> => {
+    const payload = await runRequest<UpdateProfileResponse>(
+      () =>
+        fetch(authUrl("/me"), {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify(input),
+        }),
+      "Unable to update your profile. Please try again.",
+    );
+
+    const updatedUser = unwrapCurrentUser(payload);
+
+    if (!updatedUser) {
+      throw new Error("Unable to update your profile. Please try again.");
+    }
+
+    setUser(updatedUser);
+    return updatedUser;
+  }, [accessToken, runRequest, setUser]);
+
   const logout = useCallback(() => {
     // Navigate to the dedicated logout confirmation page.
     // The page handles the API call, session clearing, and redirect.
@@ -326,6 +358,7 @@ export function useAuth() {
     hasHydrated,
     user,
     validateCitizenSession,
+    updateCitizenProfile,
     isLoading,
     error,
     clearError: () => setError(null),

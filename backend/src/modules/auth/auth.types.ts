@@ -108,3 +108,9 @@ export interface LogoutInput {
   refreshToken?: string;
   allDevices?: boolean;
 }
+
+/** `PATCH /api/auth/me` input. */
+export interface UpdateProfileInput {
+  fullName?: string;
+  country?: CountryEnum;
+}

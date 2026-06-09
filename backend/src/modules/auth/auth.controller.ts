@@ -16,6 +16,7 @@ import type {
   RefreshBody,
   RegisterBody,
   ResendOtpBody,
+  UpdateProfileBody,
   VerifyOtpBody,
 } from "./auth.validation.js";
 import type { RequestContext } from "./auth.types.js";
@@ -175,6 +176,29 @@ export async function me(
       throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
     }
     const user = await authService.getMe(req.user.id);
+    res.status(200).json({ success: true, data: { user } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `PATCH /api/auth/me` — update the authenticated user's profile.
+ *
+ * Requires authentication (`requireAuth` populates `req.user`).
+ *
+ * @returns 200 with `{ success: true, data: { user } }`.
+ */
+export async function updateMe(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
+    }
+    const user = await authService.updateMe(req.user.id, req.body as UpdateProfileBody);
     res.status(200).json({ success: true, data: { user } });
   } catch (error) {
     next(error);

@@ -19,6 +19,23 @@ import {
 } from "lucide-react";
 import { SettingsSearch } from "./SettingsSearch";
 import type { SettingsCategory, SettingsCategoryItem } from "./types";
+import { useAuthStore } from "@/stores/authStore";
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function formatCountry(country?: string): string {
+  if (!country) return "Citizen";
+  return country
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 export const CATEGORIES: SettingsCategoryItem[] = [
   { id: "account", label: "Account", description: "Profile & personal info", icon: User },
@@ -42,6 +59,7 @@ interface SettingsSidebarProps {
 export function SettingsSidebar({ activeCategory, onSelectCategory }: SettingsSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isOnline, setIsOnline] = useState(true);
+  const user = useAuthStore((state) => state.user);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -71,7 +89,7 @@ export function SettingsSidebar({ activeCategory, onSelectCategory }: SettingsSi
           {/* Avatar */}
           <div className="relative shrink-0">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-amber)] to-orange-400 flex items-center justify-center text-white font-bold text-sm">
-              KS
+              {getInitials(user?.fullName ?? "Citizen")}
             </div>
             {/* Online indicator */}
             <span
@@ -82,7 +100,7 @@ export function SettingsSidebar({ activeCategory, onSelectCategory }: SettingsSi
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">
-              Karan Sharma
+              {user?.fullName ?? "Citizen"}
             </p>
             <div className="flex items-center gap-1.5">
               {isOnline ? (
@@ -91,7 +109,7 @@ export function SettingsSidebar({ activeCategory, onSelectCategory }: SettingsSi
                 <WifiOff size={10} className="text-[var(--color-text-muted)]" />
               )}
               <span className="text-[10px] text-[var(--color-text-muted)]">
-                {isOnline ? "Online" : "Offline"}
+                {user ? `${formatCountry(user.country)} • ${isOnline ? "Online" : "Offline"}` : isOnline ? "Online" : "Offline"}
               </span>
             </div>
           </div>

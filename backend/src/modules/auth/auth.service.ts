@@ -50,6 +50,7 @@ import type {
   RegisterInput,
   RequestContext,
   ResendOtpInput,
+  UpdateProfileInput,
   VerifyOtpInput,
 } from "./auth.types.js";
 
@@ -789,4 +790,47 @@ export async function getMe(userId: string): Promise<AuthUser> {
     throw new AppError("User not found.", 404, { code: "USER_NOT_FOUND" });
   }
   return user as AuthUser;
+}
+
+/**
+ * Update the authenticated user's profile.
+ *
+ * Only citizen-owned profile fields live in the DB today, so the editable
+ * surface stays intentionally small and always re-selects the canonical user.
+ *
+ * @param userId Authenticated user id (from `req.user`).
+ * @param input Partial profile changes.
+ * @returns The updated user projection.
+ */
+export async function updateMe(userId: string, input: UpdateProfileInput): Promise<AuthUser> {
+  const existing = await dbGuard(
+    () => prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+    "updateMe:findUser",
+  );
+
+  if (!existing) {
+    throw new AppError("User not found.", 404, { code: "USER_NOT_FOUND" });
+  }
+
+  const data: Prisma.UserUpdateInput = {};
+
+  if (input.fullName !== undefined) {
+    data.fullName = input.fullName;
+  }
+
+  if (input.country !== undefined) {
+    data.country = input.country;
+  }
+
+  const updated = await dbGuard(
+    () =>
+      prisma.user.update({
+        where: { id: userId },
+        data,
+        select: AUTH_USER_SELECT,
+      }),
+    "updateMe:updateUser",
+  );
+
+  return updated as AuthUser;
 }

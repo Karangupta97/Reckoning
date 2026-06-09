@@ -11,11 +11,31 @@ import { NotificationDropdown } from "@/components/dashboard/NotificationDropdow
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
 import { DashboardRefreshButton } from "@/components/dashboard/CitizenShell";
 import { useSidebarStore } from "@/store/sidebarStore";
+import { useAuthStore } from "@/stores/authStore";
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function formatCountry(country?: string): string {
+  if (!country) return "Citizen";
+  return country
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 export function TopHeader() {
   const { toggleMobile } = useSidebarStore();
   const t = useTranslations("dashboard");
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
+  const displayName = user?.fullName ?? "Citizen";
+  const displayMeta = user ? formatCountry(user.country) : "Signed in";
 
   return (
     <header className="sticky top-0 z-20 bg-[var(--color-card)] border-b border-[var(--color-border)] px-4 sm:px-6 lg:px-8">
@@ -72,14 +92,14 @@ export function TopHeader() {
           {/* Profile */}
           <button className="hidden sm:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-amber)] to-orange-500 flex items-center justify-center text-white text-xs font-bold">
-              KP
+              {getInitials(displayName)}
             </div>
             <div className="hidden md:flex flex-col">
               <span className="text-xs font-semibold text-[var(--color-text-primary)] leading-tight">
-                Karan Patel
+                {displayName}
               </span>
               <span className="text-[10px] text-[var(--color-text-muted)] leading-tight">
-                Mumbai, India
+                {displayMeta}
               </span>
             </div>
           </button>
