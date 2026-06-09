@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   ResponsiveContainer,
   XAxis,
@@ -13,6 +14,7 @@ import type { TooltipProps } from "recharts";
 import type { TooltipContentProps } from "recharts/types/component/Tooltip";
 import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { month: "Jan", complaints: 210, resolved: 180 },
@@ -25,7 +27,8 @@ const data = [
   { month: "Aug", complaints: 510, resolved: 460 },
 ];
 
-const chartMarginCompact = { top: 8, right: 4, bottom: 0, left: -16 };
+const chartMargin = { top: 8, right: 8, bottom: 4, left: 4 };
+const chartMarginCompact = { top: 8, right: 8, bottom: 0, left: 0 };
 
 /* Custom tooltip — proper light-mode text, red for complaints */
 function CustomTooltip({ active, payload, label }: TooltipContentProps<ValueType, NameType>) {
@@ -56,13 +59,14 @@ function CustomTooltip({ active, payload, label }: TooltipContentProps<ValueType
   );
 }
 
-export default function ComplaintTrendChart({
+function ComplaintTrendChart({
   compact = false,
   tall = false,
 }: {
   compact?: boolean;
   tall?: boolean;
 }) {
+  const isClient = useIsClient();
   const tickSize = compact ? 10 : 12;
 
   return (
@@ -106,7 +110,7 @@ export default function ComplaintTrendChart({
             : "h-[280px] w-full sm:h-[300px]"
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
             margin={compact ? chartMarginCompact : { top: 8, right: 8, bottom: 4, left: 4 }}
@@ -162,8 +166,10 @@ export default function ComplaintTrendChart({
               activeDot={{ r: compact ? 5 : 6, fill: "#10b981" }}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </DashboardCard>
   );
 }
+
+export default React.memo(ComplaintTrendChart);

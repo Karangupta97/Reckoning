@@ -1,10 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { Route, AlertTriangle, Clock, ShieldAlert } from "lucide-react";
 
 import StatCard from "@/components/super-admin-dashboard/stat-card";
-import IndiaMap from "@/components/map/IndiaMap";
+import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
 import RiskAlerts from "@/components/super-admin-dashboard/risk-alerts";
 
 import ActivityFeed from "@/components/super-admin-dashboard/activity-feed";
@@ -15,6 +17,11 @@ import OnboardingRequests from "@/components/super-admin-dashboard/onboarding-re
 import ComplaintChart from "@/components/super-admin-dashboard/complaint-chart";
 import ExpenditureChart from "@/components/super-admin-dashboard/expenditure-chart";
 import DelayedProjectsChart from "@/components/super-admin-dashboard/delayed-projects-chart";
+
+// Lazy load the map component with no server-side rendering
+const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
+  ssr: false,
+});
 
 const kpiData = [
   {
@@ -81,7 +88,9 @@ export default function SuperAdminDashboard() {
       </section>
 
       <section className="min-w-0">
-        <IndiaMap adminRole="super_admin" height="560px" />
+        <Suspense fallback={<MapLoadingSkeleton />}>
+          <IndiaMap adminRole="super_admin" height="560px" />
+        </Suspense>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-stretch">

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   PieChart,
   Pie,
@@ -9,6 +10,7 @@ import {
   Legend,
 } from "recharts";
 import { DashboardCard } from "./dashboard-card";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { name: "On Schedule", value: 62 },
@@ -26,11 +28,12 @@ const legendLabels: Record<string, string> = {
   "Critical Delay": "Critical",
 };
 
-export default function DelayedProjectsChart({
+function DelayedProjectsChart({
   compact = false,
 }: {
   compact?: boolean;
 }) {
+  const isClient = useIsClient();
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -82,7 +85,7 @@ export default function DelayedProjectsChart({
       )}
 
       <div className={compact ? "h-[240px] w-full" : "h-[260px] w-full sm:h-[280px]"}>
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
             <Pie
               data={data}
@@ -135,8 +138,10 @@ export default function DelayedProjectsChart({
               }}
             />
           </PieChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </DashboardCard>
   );
 }
+
+export default React.memo(DelayedProjectsChart);

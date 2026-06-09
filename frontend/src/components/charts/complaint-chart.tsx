@@ -10,6 +10,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { month: "Jan", complaints: 320 },
@@ -23,6 +24,7 @@ const data = [
 ];
 
 export default function ComplaintChart() {
+  const isClient = useIsClient();
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -46,7 +48,7 @@ export default function ComplaintChart() {
       </div>
 
       <div className="h-[320px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid
               stroke="var(--color-border)"
@@ -95,7 +97,7 @@ export default function ComplaintChart() {
               }}
             />
           </LineChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </motion.div>
   );

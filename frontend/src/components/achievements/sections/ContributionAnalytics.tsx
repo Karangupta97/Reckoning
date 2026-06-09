@@ -11,9 +11,11 @@ import {
   CartesianGrid,
 } from "recharts";
 import { CONTRIBUTION_DATA } from "../mockData";
+import { useIsClient } from "@/hooks/useIsClient";
 
 export function ContributionAnalytics() {
   const [period, setPeriod] = useState<"month" | "year">("month");
+  const isClient = useIsClient();
 
   return (
     <div className="neu-card p-5 sm:p-6">
@@ -41,7 +43,7 @@ export function ContributionAnalytics() {
 
       {/* Chart */}
       <div className="w-full h-44 sm:h-52">
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={CONTRIBUTION_DATA} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
               <linearGradient id="gradSubmitted" x1="0" y1="0" x2="0" y2="1">
@@ -112,7 +114,7 @@ export function ContributionAnalytics() {
               activeDot={{ r: 4, stroke: "#F59E0B", strokeWidth: 2, fill: "var(--color-card)" }}
             />
           </AreaChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </div>
   );

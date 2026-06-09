@@ -6,7 +6,7 @@ import { persist } from "zustand/middleware";
 export type ThemeMode = "light" | "dark" | "system";
 
 function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
@@ -21,11 +21,21 @@ export function applyThemeToDOM(resolved: "light" | "dark") {
   root.classList.remove("light", "dark");
   root.classList.add(resolved);
   root.setAttribute("data-theme", resolved);
+  root.style.colorScheme = resolved;
+  // Update CSS variables on root element for immediate effect
+  if (resolved === "dark") {
+    root.style.setProperty("--color-page", "#1A1F2E");
+    root.style.setProperty("--color-text-primary", "#EDF1F7");
+  } else {
+    root.style.setProperty("--color-page", "#EFF2F9");
+    root.style.setProperty("--color-text-primary", "#1C2B3A");
+  }
   try {
-    // Key must match root layout's THEME_INIT script which reads 'RECKONING_THEME'
-    window.localStorage.setItem("RECKONING_THEME", resolved);
+    // Fast-path key: raw string read directly by the inline THEME_INIT script
+    // to avoid re-parsing Zustand's JSON blob on every page load.
+    window.localStorage.setItem("RECKONING_THEME_RESOLVED", resolved);
   } catch {
-    // ignore
+    // ignore — private browsing / storage quota
   }
 }
 
@@ -41,8 +51,8 @@ interface ThemeStore {
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
-      mode: "dark",
-      resolved: "dark",
+      mode: "light",
+      resolved: "light",
 
       setMode: (mode) => {
         const resolved = resolveTheme(mode);
@@ -86,7 +96,16 @@ export const useThemeStore = create<ThemeStore>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const resolved = resolveTheme(state.mode);
-        applyThemeToDOM(resolved);
+        // Check if DOM already has the correct theme class to avoid unnecessary repaints
+        const currentClass = document.documentElement.classList.contains("dark")
+          ? "dark"
+          : document.documentElement.classList.contains("light")
+          ? "light"
+          : null;
+        // Only apply if different from what's currently in DOM
+        if (currentClass !== resolved) {
+          applyThemeToDOM(resolved);
+        }
         state.resolved = resolved;
       },
     }

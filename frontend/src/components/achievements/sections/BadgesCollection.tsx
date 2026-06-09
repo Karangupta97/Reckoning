@@ -7,86 +7,124 @@ import { Icon } from "../icons";
 import type { Badge } from "../types";
 
 const RARITY_COLORS: Record<Badge["rarity"], string> = {
-  common: "#22C55E",
-  rare: "#3B82F6",
-  epic: "#8B5CF6",
+  common:    "#22C55E",
+  rare:      "#3B82F6",
+  epic:      "#8B5CF6",
   legendary: "#F59E0B",
+};
+
+// Short subtitle shown below the badge name
+const RARITY_LABELS: Record<Badge["rarity"], string> = {
+  common:    "Common",
+  rare:      "Rare",
+  epic:      "Epic",
+  legendary: "Legendary",
 };
 
 export function BadgesCollection() {
   const unlockedCount = BADGES.filter((b) => b.unlocked).length;
 
   return (
-    <div className="neu-card p-5 sm:p-6 h-full">
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-sm sm:text-base font-semibold text-[var(--color-text-primary)]">
+    <div className="neu-card p-4">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between mb-3.5">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
           Badges Collection
         </h3>
-        <span className="text-xs text-[var(--color-text-muted)]">
+        <span
+          className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          style={{
+            background: "color-mix(in srgb, #22C55E 12%, transparent)",
+            color: "#22C55E",
+            border: "1px solid color-mix(in srgb, #22C55E 25%, transparent)",
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-[#22C55E]"
+            style={{ boxShadow: "0 0 4px #22C55E" }}
+          />
           {unlockedCount}/{BADGES.length} unlocked
         </span>
       </div>
 
-      <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
-        {BADGES.map((badge, i) => (
-          <motion.div
-            key={badge.id}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: i * 0.05 }}
-            className="group relative flex flex-col items-center text-center"
-          >
-            {/* Badge circle */}
-            <div
-              className="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-all duration-300 border-2"
+      {/* ── 4-column badge grid ── */}
+      <div className="grid grid-cols-4 gap-2">
+        {BADGES.map((badge, i) => {
+          const color = RARITY_COLORS[badge.rarity];
+          const isLegendary = badge.rarity === "legendary";
+
+          return (
+            <motion.div
+              key={badge.id}
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.28, delay: i * 0.04 }}
+              className="relative flex flex-col items-center text-center rounded-xl px-1.5 py-2.5 transition-all duration-200 hover:scale-[1.03]"
               style={{
-                borderColor: badge.unlocked ? RARITY_COLORS[badge.rarity] : "var(--color-border)",
                 background: badge.unlocked
-                  ? `color-mix(in srgb, ${RARITY_COLORS[badge.rarity]} 12%, transparent)`
+                  ? `color-mix(in srgb, ${color} 8%, transparent)`
                   : "var(--color-surface)",
-                opacity: badge.unlocked ? 1 : 0.5,
-                boxShadow: badge.unlocked
-                  ? `0 0 12px color-mix(in srgb, ${RARITY_COLORS[badge.rarity]} 25%, transparent)`
-                  : "none",
-                color: badge.unlocked ? RARITY_COLORS[badge.rarity] : "var(--color-text-muted)",
+                border: badge.unlocked
+                  ? `1px solid color-mix(in srgb, ${color} 22%, transparent)`
+                  : "1px solid var(--color-border)",
+                opacity: badge.unlocked ? 1 : 0.55,
               }}
             >
-              <Icon name={badge.icon} size={22} strokeWidth={1.8} />
-
-              {/* Lock overlay for locked badges */}
-              {!badge.unlocked && (
-                <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/30">
-                  <Lock size={14} className="text-white/70" strokeWidth={2.2} />
-                </div>
-              )}
-            </div>
-
-            {/* Badge name */}
-            <span
-              className="mt-2 text-[10px] sm:text-xs font-medium leading-tight"
-              style={{
-                color: badge.unlocked ? "var(--color-text-primary)" : "var(--color-text-muted)",
-              }}
-            >
-              {badge.name}
-            </span>
-
-            {/* Progress or description */}
-            <span className="text-[9px] sm:text-[10px] text-[var(--color-text-muted)] mt-0.5 leading-tight">
-              {badge.unlocked ? badge.description : `${badge.progress}/${badge.total}`}
-            </span>
-
-            {/* Progress bar for locked badges */}
-            {!badge.unlocked && badge.progress !== undefined && badge.total !== undefined && (
-              <div className="w-full mt-1.5 h-1 rounded-full bg-[var(--color-surface)] overflow-hidden border border-[var(--color-border)]">
-                <div
-                  className="h-full rounded-full bg-[var(--color-text-muted)]"
-                  style={{ width: `${(badge.progress / badge.total) * 100}%` }}
+              {/* Unlocked green dot indicator */}
+              {badge.unlocked && (
+                <span
+                  className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
+                  style={{
+                    background: isLegendary ? color : "#22C55E",
+                    boxShadow: `0 0 5px ${isLegendary ? color : "#22C55E"}`,
+                  }}
                 />
+              )}
+
+              {/* Icon circle */}
+              <div
+                className="relative w-10 h-10 rounded-full flex items-center justify-center mb-1.5"
+                style={{
+                  background: badge.unlocked
+                    ? `color-mix(in srgb, ${color} 15%, transparent)`
+                    : "var(--color-border)",
+                  color: badge.unlocked ? color : "var(--color-text-muted)",
+                  boxShadow: badge.unlocked
+                    ? `0 0 10px color-mix(in srgb, ${color} 30%, transparent)`
+                    : "none",
+                }}
+              >
+                {badge.unlocked ? (
+                  <Icon name={badge.icon} size={18} strokeWidth={2} />
+                ) : (
+                  <Lock size={14} strokeWidth={2.2} className="text-[var(--color-text-muted)]" />
+                )}
               </div>
-            )}
-          </motion.div>
-        ))}
+
+              {/* Name */}
+              <span
+                className="text-[10px] font-semibold leading-tight line-clamp-2"
+                style={{
+                  color: badge.unlocked
+                    ? "var(--color-text-primary)"
+                    : "var(--color-text-muted)",
+                }}
+              >
+                {badge.name}
+              </span>
+
+              {/* Subtitle — rarity label */}
+              <span
+                className="mt-0.5 text-[9px] font-medium"
+                style={{
+                  color: badge.unlocked ? color : "var(--color-text-muted)",
+                }}
+              >
+                {RARITY_LABELS[badge.rarity]}
+              </span>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

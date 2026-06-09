@@ -10,6 +10,7 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { month: "Jan", expenditure: 82 },
@@ -23,6 +24,7 @@ const data = [
 ];
 
 export default function ExpenditureChart() {
+  const isClient = useIsClient();
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -87,7 +89,7 @@ export default function ExpenditureChart() {
 
       {/* Chart */}
       <div className="h-[320px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid
               stroke="var(--color-border)"
@@ -129,7 +131,7 @@ export default function ExpenditureChart() {
               radius={[8, 8, 0, 0]}
             />
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </motion.div>
   );

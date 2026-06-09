@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { DashboardLanguageSwitcher } from "@/components/dashboard/DashboardLanguageSwitcher";
 import { NotificationDropdown } from "@/components/dashboard/NotificationDropdown";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
+import { DashboardRefreshButton } from "@/components/dashboard/CitizenShell";
 import { useSidebarStore } from "@/store/sidebarStore";
 
 export function TopHeader() {
@@ -51,6 +52,9 @@ export function TopHeader() {
           <div className="hidden md:block">
             <InstallPWAButton variant="compact" />
           </div>
+
+          {/* Refresh content */}
+          <DashboardRefreshButton />
 
           {/* Language */}
           <div className="hidden sm:block">

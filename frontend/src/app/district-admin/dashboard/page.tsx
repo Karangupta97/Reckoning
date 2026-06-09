@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -18,7 +20,12 @@ import {
   SubDistrictPerformance,
   DistrictActivityFeed,
 } from "@/components/district-admin-dashboard";
-import IndiaMap from "@/components/map/IndiaMap";
+import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
+
+// Lazy load the map component with no server-side rendering
+const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
+  ssr: false,
+});
 
 const kpiData = [
   {
@@ -105,15 +112,17 @@ export default function DistrictAdminDashboard() {
 
       {/* District Heatmap */}
       <section className="min-w-0">
-        <IndiaMap
-          adminRole="district_admin"
-          height="520px"
-          showBreadcrumb
-          showControls
-          showLegend
-          showSidebar
-          isDark
-        />
+        <Suspense fallback={<MapLoadingSkeleton />}>
+          <IndiaMap
+            adminRole="district_admin"
+            height="520px"
+            showBreadcrumb
+            showControls
+            showLegend
+            showSidebar
+            isDark
+          />
+        </Suspense>
       </section>
 
       {/* Tables row — both cards stretch to match each other's height */}

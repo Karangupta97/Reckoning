@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   PieChart,
   Pie,
@@ -9,6 +10,7 @@ import {
   Legend,
 } from "recharts";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { name: "Resolved", value: 58 },
@@ -20,11 +22,12 @@ const data = [
 // Teal / Emerald / Amber / Red palette
 const COLORS = ["#14b8a6", "#10b981", "#f59e0b", "#ef4444"];
 
-export default function ResolutionRateChart({
+function ResolutionRateChart({
   compact = false,
 }: {
   compact?: boolean;
 }) {
+  const isClient = useIsClient();
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -74,7 +77,7 @@ export default function ResolutionRateChart({
       )}
 
       <div className={compact ? "h-[240px] w-full" : "h-[260px] w-full sm:h-[280px]"}>
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
             <Pie
               data={data}
@@ -112,8 +115,10 @@ export default function ResolutionRateChart({
               }}
             />
           </PieChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </DashboardCard>
   );
 }
+
+export default React.memo(ResolutionRateChart);

@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   AlertTriangle, ClipboardList, Clock3, CheckCircle2,
@@ -8,8 +10,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
-import IndiaMap from "@/components/map/IndiaMap";
+import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
 import { ComplaintTrendChart, ResolutionRateChart } from "@/components/district-admin-dashboard";
+
+// Lazy load the map component with no server-side rendering
+const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
+  ssr: false,
+});
 
 /* ─── Breadcrumb ─────────────────────────────────────────────── */
 function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
@@ -460,15 +467,17 @@ function HeatmapPreview() {
         <span className="text-[10px] text-[var(--color-text-muted)] border border-[var(--color-border)] rounded px-1.5 py-0.5">Zone A</span>
       </div>
       <div className="flex-1 rounded-lg overflow-hidden" style={{ minHeight: "160px" }}>
-        <IndiaMap
-          adminRole="sub_district_admin"
-          height="160px"
-          showBreadcrumb={false}
-          showControls={false}
-          showLegend={false}
-          showSidebar={false}
-          isDark
-        />
+        <Suspense fallback={<MapLoadingSkeleton />}>
+          <IndiaMap
+            adminRole="sub_district_admin"
+            height="160px"
+            showBreadcrumb={false}
+            showControls={false}
+            showLegend={false}
+            showSidebar={false}
+            isDark
+          />
+        </Suspense>
       </div>
       <div className="mt-2 flex items-center justify-between">
         <span className="text-[10px] text-[var(--color-text-muted)]">84 open complaints</span>
@@ -634,15 +643,17 @@ function HeatmapPanel() {
       </div>
 
       {/* Real interactive map */}
-      <IndiaMap
-        adminRole="sub_district_admin"
-        height="380px"
-        showBreadcrumb
-        showControls
-        showLegend
-        showSidebar
-        isDark
-      />
+      <Suspense fallback={<MapLoadingSkeleton />}>
+        <IndiaMap
+          adminRole="sub_district_admin"
+          height="380px"
+          showBreadcrumb
+          showControls
+          showLegend
+          showSidebar
+          isDark
+        />
+      </Suspense>
 
       {/* Stats bar */}
       <div className="flex flex-wrap items-center gap-4 px-4 py-2.5 border-t border-[var(--color-border)]">

@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   {
@@ -37,6 +38,7 @@ const COLORS = [
 ];
 
 export default function DelayedProjectsChart() {
+  const isClient = useIsClient();
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -85,7 +87,7 @@ export default function DelayedProjectsChart() {
 
       {/* Chart */}
       <div className="h-[320px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
@@ -120,7 +122,7 @@ export default function DelayedProjectsChart() {
               }}
             />
           </PieChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </motion.div>
   );

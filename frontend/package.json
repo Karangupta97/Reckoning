@@ -11,11 +11,15 @@
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@hookform/resolvers": "^5.4.0",
+    "@types/js-cookie": "3.0.6",
     "@types/leaflet": "^1.9.21",
     "agentation": "^3.0.2",
+    "axios": "1.7.9",
     "dotenv": "^17.4.2",
     "framer-motion": "^12.40.0",
     "idb": "^8.0.3",
+    "js-cookie": "3.0.5",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.17.0",
     "mapbox-gl": "^3.24.0",
@@ -23,8 +27,10 @@
     "next-intl": "^4.13.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hook-form": "^7.78.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.1",
+    "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -35,6 +41,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "fast-check": "^4.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

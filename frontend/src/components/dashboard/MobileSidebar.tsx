@@ -20,6 +20,7 @@ import {
 import { LogoMark } from "@/components/ui/Logo";
 import { useSidebarStore } from "@/store/sidebarStore";
 import { useDashboardStore } from "@/store/dashboardStore";
+import { useAuth } from "@/hooks/useAuth";
 
 const NAV_ITEMS: Array<{
   id: string;
@@ -42,6 +43,7 @@ const NAV_ITEMS: Array<{
 export function MobileSidebar() {
   const { mobileOpen, setMobileOpen } = useSidebarStore();
   const { notificationCount } = useDashboardStore();
+  const { logout, isLoading: isLoggingOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -131,9 +133,15 @@ export function MobileSidebar() {
             {/* Logout */}
             <div className="px-3 pb-6">
               <div className="border-t border-[var(--color-border)] mb-3" />
-              <button className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-danger)] transition-all duration-200">
-                <LogOut size={20} strokeWidth={1.8} />
-                <span className="text-sm font-medium">Logout</span>
+              <button
+                onClick={() => { setMobileOpen(false); logout(); }}
+                disabled={isLoggingOut}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[var(--color-text-muted)] hover:bg-[var(--color-surface)] hover:text-[var(--color-danger)] transition-all duration-200 disabled:opacity-50"
+              >
+                <LogOut size={20} strokeWidth={1.8} className={isLoggingOut ? "animate-pulse" : ""} />
+                <span className="text-sm font-medium">
+                  {isLoggingOut ? "Signing out…" : "Logout"}
+                </span>
               </button>
             </div>
           </motion.aside>

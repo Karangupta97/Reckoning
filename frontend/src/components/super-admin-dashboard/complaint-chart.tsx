@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   LineChart,
   Line,
@@ -10,6 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { DashboardCard } from "./dashboard-card";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { month: "Jan", complaints: 320 },
@@ -23,15 +25,16 @@ const data = [
 ];
 
 const chartMargin = { top: 8, right: 8, bottom: 4, left: 4 };
-const chartMarginCompact = { top: 8, right: 4, bottom: 0, left: -16 };
+const chartMarginCompact = { top: 8, right: 8, bottom: 0, left: 0 };
 
-export default function ComplaintChart({
+function ComplaintChart({
   compact = false,
   tall = false,
 }: {
   compact?: boolean;
   tall?: boolean;
 }) {
+  const isClient = useIsClient();
   const tickSize = compact ? 10 : 12;
 
   return (
@@ -67,7 +70,7 @@ export default function ComplaintChart({
             : "h-[280px] w-full sm:h-[300px]"
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
             margin={compact ? chartMarginCompact : chartMargin}
@@ -107,8 +110,10 @@ export default function ComplaintChart({
               activeDot={{ r: compact ? 5 : 6 }}
             />
           </LineChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </DashboardCard>
   );
 }
+
+export default React.memo(ComplaintChart);

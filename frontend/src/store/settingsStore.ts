@@ -108,7 +108,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   language: "en",
 
   // Appearance
-  theme: "system",
+  theme: "light",
   compactMode: false,
   reducedMotion: false,
   highContrast: false,

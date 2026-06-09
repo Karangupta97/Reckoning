@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import {
   BarChart,
   Bar,
@@ -11,6 +12,7 @@ import {
   Cell,
 } from "recharts";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
+import { useIsClient } from "@/hooks/useIsClient";
 
 const data = [
   { sub: "Mehrauli", score: 88 },
@@ -28,13 +30,14 @@ function getBarColor(score: number) {
   return "#ef4444";                  // red
 }
 
-export default function DistrictPerformanceChart({
+function DistrictPerformanceChart({
   compact = false,
   tall = false,
 }: {
   compact?: boolean;
   tall?: boolean;
 }) {
+  const isClient = useIsClient();
   const tickSize = compact ? 10 : 12;
 
   return (
@@ -83,10 +86,10 @@ export default function DistrictPerformanceChart({
             : "h-[280px] w-full sm:h-[300px]"
         }
       >
-        <ResponsiveContainer width="100%" height="100%">
+        {isClient ? <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={compact ? { top: 8, right: 4, bottom: 0, left: -16 } : { top: 8, right: 8, bottom: 4, left: 4 }}
+            margin={compact ? { top: 8, right: 8, bottom: 0, left: 0 } : { top: 8, right: 8, bottom: 4, left: 4 }}
           >
             <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
             <XAxis
@@ -118,8 +121,10 @@ export default function DistrictPerformanceChart({
               ))}
             </Bar>
           </BarChart>
-        </ResponsiveContainer>
+        </ResponsiveContainer> : null}
       </div>
     </DashboardCard>
   );
 }
+
+export default React.memo(DistrictPerformanceChart);

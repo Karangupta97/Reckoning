@@ -48,7 +48,46 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const THEME_INIT = `(function(){try{var t=localStorage.getItem('RECKONING_THEME');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.remove('light','dark');document.documentElement.classList.add(t);document.documentElement.style.colorScheme=t;}catch(e){}})();`;
+const THEME_INIT = `(function(){
+  try {
+    // 1. Check the fast-path raw resolved value written by applyThemeToDOM
+    var t = localStorage.getItem('RECKONING_THEME_RESOLVED');
+    // 2. If absent, fall back to parsing Zustand's persisted JSON blob
+    if (t !== 'light' && t !== 'dark') {
+      try {
+        var raw = localStorage.getItem('RECKONING_THEME');
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          var mode = parsed && parsed.state && parsed.state.mode;
+          if (mode === 'light' || mode === 'dark') {
+            t = mode;
+          } else if (mode === 'system') {
+            t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+        }
+      } catch (_) {}
+    }
+    // 3. Default to light if nothing is stored
+    if (t !== 'light' && t !== 'dark') { t = 'light'; }
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(t);
+    document.documentElement.setAttribute('data-theme', t);
+    document.documentElement.style.colorScheme = t;
+    // Prevent FOUC by applying theme colors via inline styles before CSS is fully parsed
+    if (t === 'dark') {
+      document.documentElement.style.backgroundColor = '#1A1F2E';
+      document.documentElement.style.color = '#EDF1F7';
+    } else {
+      document.documentElement.style.backgroundColor = '#EFF2F9';
+      document.documentElement.style.color = '#1C2B3A';
+    }
+  } catch(e) {
+    document.documentElement.classList.add('light');
+    document.documentElement.style.colorScheme = 'light';
+    document.documentElement.style.backgroundColor = '#EFF2F9';
+    document.documentElement.style.color = '#1C2B3A';
+  }
+})();`.replace(/\n\s*/g, '');
 
 const EXTENSION_ATTR_CLEANUP = `(function(){try{function strip(el){if(!el||!el.attributes)return;for(var i=el.attributes.length-1;i>=0;i--){var n=el.attributes[i].name;if(n.indexOf('bis_')===0||n.indexOf('__processed')===0||n==='bis_register'){el.removeAttribute(n);}}}new MutationObserver(function(muts){for(var i=0;i<muts.length;i++){var m=muts[i];if(m.type==='attributes'){var n=m.attributeName||'';if(n.indexOf('bis_')===0||n.indexOf('__processed')===0){if(m.target&&m.target.removeAttribute)m.target.removeAttribute(n);}}else{for(var j=0;j<m.addedNodes.length;j++){strip(m.addedNodes[j]);}}}}).observe(document.documentElement,{attributes:true,childList:true,subtree:true});}catch(e){}})();`;
 
@@ -67,6 +106,14 @@ export default async function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        {/* Critical CSS to prevent theme FOUC: set body colors based on detected theme */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            html.dark { --color-page: #1A1F2E; --color-text-primary: #EDF1F7; }
+            html.light { --color-page: #EFF2F9; --color-text-primary: #1C2B3A; }
+            body { background-color: var(--color-page, #EFF2F9); color: var(--color-text-primary, #1C2B3A); }
+          `.replace(/\n\s*/g, '')
+        }} />
         <script dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }} />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>

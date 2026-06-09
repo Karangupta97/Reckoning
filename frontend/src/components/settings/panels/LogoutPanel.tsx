@@ -1,9 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { LogOut, AlertTriangle } from "lucide-react";
 import { SettingsSection } from "../SettingsSection";
+import { useAuth } from "@/hooks/useAuth";
 
 export function LogoutPanel() {
+  const { logout, isLoading: isLoggingOut } = useAuth();
+  const [confirmed, setConfirmed] = useState(false);
+
+  const handleLogout = async () => {
+    setConfirmed(true);
+    await logout();
+  };
+
   return (
     <div>
       <SettingsSection title="Sign Out" description="Log out of your Reckoning account.">
@@ -26,15 +36,25 @@ export function LogoutPanel() {
           </div>
 
           <div className="flex gap-3">
-            <button className="px-5 py-2.5 text-[13px] font-medium text-[var(--color-text-secondary)]
-              border border-[var(--color-border)] rounded-xl
-              hover:bg-[var(--color-surface)] active:scale-95 transition-all duration-200">
+            <button
+              onClick={() => setConfirmed(false)}
+              disabled={isLoggingOut}
+              className="px-5 py-2.5 text-[13px] font-medium text-[var(--color-text-secondary)]
+                border border-[var(--color-border)] rounded-xl
+                hover:bg-[var(--color-surface)] active:scale-95 transition-all duration-200
+                disabled:opacity-50"
+            >
               Cancel
             </button>
-            <button className="px-5 py-2.5 text-[13px] font-semibold text-white
-              bg-[var(--color-danger)] rounded-xl
-              hover:brightness-110 active:scale-95 transition-all duration-200 shadow-sm">
-              Sign Out
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="px-5 py-2.5 text-[13px] font-semibold text-white
+                bg-[var(--color-danger)] rounded-xl
+                hover:brightness-110 active:scale-95 transition-all duration-200 shadow-sm
+                disabled:opacity-60"
+            >
+              {isLoggingOut ? "Signing out…" : "Sign Out"}
             </button>
           </div>
         </div>
