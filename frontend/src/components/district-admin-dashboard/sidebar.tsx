@@ -17,6 +17,7 @@ import {
   Users,
   UserCircle,
   ShieldAlert,
+  Shield,
   Bell,
   Zap,
   MapPin,
@@ -48,6 +49,24 @@ const navItems: NavItem[] = [
     label: "Escalations",
     icon: <ShieldAlert size={18} />,
     href: "/district-admin/dashboard/escalation",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Budget Requests",
+    icon: <BarChart3 size={18} />,
+    href: "/district-admin/budget",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Evidence",
+    icon: <FileText size={18} />,
+    href: "/district-admin/evidence",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Governance",
+    icon: <Shield size={18} />,
+    href: "/district-admin/governance",
     color: "text-[var(--color-text-muted)]",
   },
   {

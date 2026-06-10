@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { DISTRICT_CONFIG } from "@/lib/district-config";
-
+import { filterByDistrictScope } from "@/lib/district-scope";
 import { useEscalationStore } from "@/store/escalationStore";
 import type { EscalationPriority, EscalationStatus, EscalationCategory, EscalationSLAStatus, Escalation } from "@/store/escalationStore";
 
@@ -48,7 +48,7 @@ const SLA_CONFIG: Record<SLAStatus, { text: string; bg: string; bar: string }> =
 const PRIORITIES: (Priority | "All")[] = ["All","Critical","High","Medium","Low"];
 const STATUSES:   (Status   | "All")[] = ["All","Pending Review","Assigned","Investigating","Resolved","Closed"];
 const CATEGORIES: (Category | "All")[] = ["All","Sanitation","Infrastructure","Flooding","Road Damage","Utilities","Civic","Safety"];
-const SUB_DISTRICTS = ["All","Mehrauli","Dwarka","Rohini","Vasant Kunj","Shahdara","Najafgarh"];
+const SUB_DISTRICTS = ["All", "Alibag", "Panvel", "Karjat", "Mahad", "Mangaon", "Murud"];
 const SLA_STATUSES: (SLAStatus | "All")[] = ["All","On Track","At Risk","Breached"];
 
 /* ─── Animation presets ──────────────────────────────────────── */
@@ -68,7 +68,11 @@ const stagger = (i: number) => ({
    PAGE COMPONENT
 ═══════════════════════════════════════════════════════════════ */
 export default function EscalationsPage() {
-  const ALL = useEscalationStore((s) => s.escalations);
+  const ALL = filterByDistrictScope(
+    useEscalationStore((s) => s.escalations),
+    (e) => e.district,
+    (e) => e.state
+  );
   const [search,      setSearch]      = useState("");
   const [priority,    setPriority]    = useState<Priority | "All">("All");
   const [status,      setStatus]      = useState<Status | "All">("All");
@@ -646,7 +650,11 @@ function EmptyState() {
 
 /* ── Right Sidebar Panel ── */
 function SidebarPanel() {
-  const ALL = useEscalationStore((s) => s.escalations);
+  const ALL = filterByDistrictScope(
+    useEscalationStore((s) => s.escalations),
+    (e) => e.district,
+    (e) => e.state
+  );
   const critical = ALL.filter(e => e.priority === "Critical" && e.status !== "Resolved" && e.status !== "Closed");
   const slaRisk  = ALL.filter(e => e.slaStatus === "At Risk").length;
   const breached = ALL.filter(e => e.slaStatus === "Breached").length;

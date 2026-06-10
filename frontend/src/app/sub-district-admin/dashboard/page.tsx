@@ -12,6 +12,9 @@ import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
 import { ComplaintTrendChart, ResolutionRateChart } from "@/components/district-admin-dashboard";
+import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
+import { formatSlaLabel } from "@/lib/dashboard-metrics";
+import type { ComplaintRecord } from "@/store/complaintStore";
 
 // Lazy load the map component with no server-side rendering
 const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
@@ -36,8 +39,13 @@ function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
   );
 }
 
+type SubDistrictMetrics = ReturnType<typeof useSubDistrictDashboardMetrics>;
+
 /* ─── Hero — compact ─────────────────────────────────────────── */
-function HeroBanner() {
+function HeroBanner({ m }: { m: SubDistrictMetrics }) {
+  const zoneLabel = m.zoneHealth >= 85 ? "Excellent" : m.zoneHealth >= 70 ? "Good" : "At Risk";
+  const zoneColor = m.zoneHealth >= 85 ? "text-green-400" : m.zoneHealth >= 70 ? "text-amber-400" : "text-red-400";
+  const barColor = m.zoneHealth >= 85 ? "bg-green-400" : m.zoneHealth >= 70 ? "bg-amber-400" : "bg-red-400";
   return (
     <div
       className="relative overflow-hidden rounded-2xl border py-4 px-5"
@@ -69,7 +77,7 @@ function HeroBanner() {
             <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Manage complaints, inspections, tickets and field resolution workflows.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/sub-district-admin/dashboard/tickets">
+            <Link href="/sub-district-admin/dashboard/tickets?create=1">
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium transition-all"
                 style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 12%, transparent)", color: "var(--sda-amber)" }}>
@@ -92,14 +100,14 @@ function HeroBanner() {
           <div className="flex items-center gap-3 rounded-xl border px-4 py-2.5"
             style={{ borderColor: "var(--sda-border-amber)", background: "var(--sda-amber-glow)" }}>
             <div className="text-center">
-              <div className="text-2xl font-black tabular-nums" style={{ color: "var(--sda-amber)" }}>87</div>
+              <div className="text-2xl font-black tabular-nums" style={{ color: "var(--sda-amber)" }}>{m.zoneHealth}</div>
               <div className="text-[9px] text-[var(--color-text-muted)]">/100</div>
             </div>
             <div>
               <div className="text-[11px] font-semibold text-[var(--color-text-primary)]">Zone Health</div>
-              <div className="text-[10px] font-medium text-green-400">Excellent</div>
+              <div className={`text-[10px] font-medium ${zoneColor}`}>{zoneLabel}</div>
               <div className="mt-1 h-1 w-16 rounded-full bg-[var(--color-surface)] overflow-hidden">
-                <div className="h-full rounded-full bg-green-400" style={{ width: "87%" }} />
+                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${m.zoneHealth}%` }} />
               </div>
             </div>
           </div>
@@ -107,10 +115,10 @@ function HeroBanner() {
           {/* Metric pills */}
           <div className="grid grid-cols-2 gap-1.5">
             {[
-              { label: "Open",      value: "84", color: "var(--color-danger)" },
-              { label: "Tickets",   value: "23", color: "var(--color-info)"   },
-              { label: "SLA Today", value: "7",  color: "var(--sda-amber)"    },
-              { label: "Resolved",  value: "12", color: "var(--color-success)" },
+              { label: "Open",      value: String(m.open), color: "var(--color-danger)" },
+              { label: "Tickets",   value: String(m.activeTickets), color: "var(--color-info)"   },
+              { label: "SLA Today", value: String(m.slaWarning),  color: "var(--sda-amber)"    },
+              { label: "Resolved",  value: String(m.resolved), color: "var(--color-success)" },
             ].map((p) => (
               <div key={p.label} className="rounded-lg border px-2.5 py-1.5 text-center min-w-[54px]"
                 style={{ borderColor: `color-mix(in srgb, ${p.color} 25%, transparent)`, background: `color-mix(in srgb, ${p.color} 8%, transparent)` }}>
@@ -125,15 +133,27 @@ function HeroBanner() {
   );
 }
 
-/* ─── KPI Cards ──────────────────────────────────────────────── */
-const kpiCards = [
-  { title: "Open Complaints",  value: "84", change: "+12 today",    trend: "up"      as const, icon: AlertTriangle, iconColor: "var(--color-danger)",  borderColor: "rgba(239,68,68,0.3)",  href: "/sub-district-admin/dashboard/complaints" },
-  { title: "Assigned Tickets", value: "23", change: "8 active",     trend: "neutral" as const, icon: ClipboardList, iconColor: "var(--color-info)",    borderColor: "rgba(59,130,246,0.3)", href: "/sub-district-admin/dashboard/tickets"    },
-  { title: "SLA Due Today",    value: "7",  change: "3 critical",   trend: "up"      as const, icon: Clock3,        iconColor: "var(--sda-amber)",      borderColor: "rgba(245,158,11,0.3)", href: "/sub-district-admin/dashboard/complaints" },
-  { title: "Resolved Today",   value: "12", change: "+4 yesterday", trend: "down"    as const, icon: CheckCircle2,  iconColor: "var(--color-success)",  borderColor: "rgba(34,197,94,0.3)",  href: "/sub-district-admin/dashboard/complaints" },
-];
+type KpiCardData = {
+  title: string;
+  value: string;
+  change: string;
+  trend: "up" | "down" | "neutral";
+  icon: typeof AlertTriangle;
+  iconColor: string;
+  borderColor: string;
+  href: string;
+};
 
-function KpiCard({ card, index }: { card: typeof kpiCards[0]; index: number }) {
+function buildKpiCards(m: SubDistrictMetrics): KpiCardData[] {
+  return [
+    { title: "Open Complaints", value: String(m.open), change: `${m.escalated} escalated`, trend: "up", icon: AlertTriangle, iconColor: "var(--color-danger)", borderColor: "rgba(239,68,68,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+    { title: "Assigned Tickets", value: String(m.activeTickets), change: `${m.openTickets} open`, trend: "neutral", icon: ClipboardList, iconColor: "var(--color-info)", borderColor: "rgba(59,130,246,0.3)", href: "/sub-district-admin/dashboard/tickets" },
+    { title: "SLA Due Today", value: String(m.slaWarning), change: `${m.sla.critical} critical`, trend: m.slaWarning > 0 ? "up" : "down", icon: Clock3, iconColor: "var(--sda-amber)", borderColor: "rgba(245,158,11,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+    { title: "Resolved Today", value: String(m.resolved), change: `${m.pendingResolutions} pending`, trend: "down", icon: CheckCircle2, iconColor: "var(--color-success)", borderColor: "rgba(34,197,94,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+  ];
+}
+
+function KpiCard({ card, index }: { card: KpiCardData; index: number }) {
   const TrendIcon = card.trend === "up" ? TrendingUp : card.trend === "down" ? TrendingDown : Minus;
   const trendColor = card.trend === "down" ? "var(--color-success)" : card.trend === "up" ? "var(--color-danger)" : "var(--color-text-muted)";
   return (
@@ -164,8 +184,13 @@ function KpiCard({ card, index }: { card: typeof kpiCards[0]; index: number }) {
 }
 
 /* ─── SLA Command Center ─────────────────────────────────────── */
-function SlaCommandCenter() {
-  const total = 64;
+function SlaCommandCenter({ m }: { m: SubDistrictMetrics }) {
+  const total = Math.max(m.sla.total, 1);
+  const segments = [
+    { label: "Critical", count: m.sla.critical, color: "var(--color-danger)", pulse: true },
+    { label: "Warning", count: m.sla.warning, color: "var(--sda-amber)", pulse: false },
+    { label: "Healthy", count: m.sla.healthy, color: "var(--color-success)", pulse: false },
+  ];
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="px-4 py-3.5">
       <div className="flex items-center justify-between mb-3">
@@ -176,11 +201,7 @@ function SlaCommandCenter() {
         <Activity size={16} className="text-[var(--color-text-muted)]" />
       </div>
       <div className="flex flex-col sm:flex-row gap-2">
-        {[
-          { label: "Critical", count: 5,  color: "var(--color-danger)",  pulse: true  },
-          { label: "Warning",  count: 12, color: "var(--sda-amber)",     pulse: false },
-          { label: "Healthy",  count: 47, color: "var(--color-success)", pulse: false },
-        ].map((s) => (
+        {segments.map((s) => (
           <div key={s.label} className="flex-1 flex items-center justify-between rounded-lg border px-3 py-2"
             style={{ borderColor: `color-mix(in srgb, ${s.color} 25%, transparent)`, background: `color-mix(in srgb, ${s.color} 7%, transparent)` }}>
             <div className="flex items-center gap-2">
@@ -196,30 +217,32 @@ function SlaCommandCenter() {
       </div>
       <div className="mt-3">
         <div className="flex h-1.5 w-full overflow-hidden rounded-full">
-          <div className="h-full bg-red-500"   style={{ width: `${(5  / total) * 100}%` }} />
-          <div className="h-full"              style={{ width: `${(12 / total) * 100}%`, background: "var(--sda-amber)" }} />
-          <div className="h-full bg-green-500" style={{ width: `${(47 / total) * 100}%` }} />
+          <div className="h-full bg-red-500" style={{ width: `${(m.sla.critical / total) * 100}%` }} />
+          <div className="h-full" style={{ width: `${(m.sla.warning / total) * 100}%`, background: "var(--sda-amber)" }} />
+          <div className="h-full bg-green-500" style={{ width: `${(m.sla.healthy / total) * 100}%` }} />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-red-400">5 critical</span>
-          <span className="text-[10px] text-[var(--color-text-muted)]">64 total</span>
-          <span className="text-[10px] text-green-400">47 healthy</span>
+          <span className="text-[10px] text-red-400">{m.sla.critical} critical</span>
+          <span className="text-[10px] text-[var(--color-text-muted)]">{m.sla.total} total</span>
+          <span className="text-[10px] text-green-400">{m.sla.healthy} healthy</span>
         </div>
       </div>
     </DashboardCard>
   );
 }
 
-/* ─── Urgent Actions Table ───────────────────────────────────── */
-const urgentRows = [
-  { id: "CMP-1024", priority: "Critical", sla: "BREACHED",  officer: "R. Sharma",  status: "Open"        },
-  { id: "CMP-1011", priority: "Critical", sla: "1h 22m",    officer: "P. Nair",    status: "Assigned"    },
-  { id: "CMP-0987", priority: "High",     sla: "3h 05m",    officer: "A. Kulkarni",status: "In Progress" },
-  { id: "CMP-0974", priority: "High",     sla: "5h 40m",    officer: "M. Patil",   status: "Assigned"    },
-  { id: "CMP-0961", priority: "High",     sla: "7h 15m",    officer: "S. Desai",   status: "Open"        },
-];
+function complaintRow(c: ComplaintRecord) {
+  return {
+    id: c.id,
+    priority: c.priority,
+    sla: formatSlaLabel(c),
+    officer: c.officer,
+    status: c.status,
+  };
+}
 
-function UrgentActionsTable() {
+/* ─── Urgent Actions Table ───────────────────────────────────── */
+function UrgentActionsTable({ rows }: { rows: ReturnType<typeof complaintRow>[] }) {
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex flex-col">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
@@ -236,7 +259,7 @@ function UrgentActionsTable() {
             ))}</tr>
           </thead>
           <tbody>
-            {urgentRows.map((row) => (
+            {rows.map((row) => (
               <tr key={row.id} className="dashboard-table-row sda-table-row">
                 <td className="dashboard-table-td dashboard-table-td-primary font-mono text-xs">{row.id}</td>
                 <td className="dashboard-table-td">
@@ -277,9 +300,9 @@ function UrgentActionsTable() {
 /* ─── Quick Actions ──────────────────────────────────────────── */
 function QuickActionsPanel() {
   const actions = [
-    { label: "Create Ticket",     desc: "Open a new work order",   icon: Ticket,       href: "/sub-district-admin/dashboard/tickets",    color: "var(--sda-amber)"        },
-    { label: "Resolve Complaint", desc: "Close a complaint case",  icon: CheckCircle2, href: "/sub-district-admin/dashboard/complaints", color: "var(--color-success)"    },
-    { label: "Upload Evidence",   desc: "Add photos or documents", icon: Upload,       href: "/sub-district-admin/dashboard/complaints", color: "var(--color-info)"       },
+    { label: "Create Ticket",     desc: "Open a new work order",   icon: Ticket,       href: "/sub-district-admin/dashboard/tickets?create=1", color: "var(--sda-amber)"        },
+    { label: "Resolve Complaint", desc: "Close a complaint case",  icon: CheckCircle2, href: "/sub-district-admin/dashboard/complaints/CMP-1024/resolve", color: "var(--color-success)"    },
+    { label: "Upload Evidence",   desc: "Add photos or documents", icon: Upload,       href: "/sub-district-admin/dashboard/complaints/CMP-1024/resolve", color: "var(--color-info)"       },
     { label: "Open Zone Map",     desc: "View complaint heatmap",  icon: Map,          href: "/sub-district-admin/dashboard/map",        color: "var(--color-text-muted)" },
   ];
   return (
@@ -322,15 +345,7 @@ function QuickActionsPanel() {
 }
 
 /* ─── Officer Workload ───────────────────────────────────────── */
-const officers = [
-  { name: "R. Sharma",   cases: 12, slaRisk: 75, status: "Overloaded" },
-  { name: "P. Nair",     cases: 8,  slaRisk: 50, status: "Active"     },
-  { name: "A. Kulkarni", cases: 6,  slaRisk: 30, status: "Active"     },
-  { name: "M. Patil",    cases: 9,  slaRisk: 60, status: "Active"     },
-  { name: "S. Desai",    cases: 4,  slaRisk: 15, status: "On Leave"   },
-];
-
-function OfficerWorkload() {
+function OfficerWorkload({ officers }: { officers: SubDistrictMetrics["officers"] }) {
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
@@ -390,12 +405,12 @@ function OfficerWorkload() {
 }
 
 /* ─── Workload Overview ──────────────────────────────────────── */
-function WorkloadOverview() {
+function WorkloadOverview({ workload }: { workload: SubDistrictMetrics["workload"] }) {
   const stats = [
-    { label: "Pending",     value: "18", color: "var(--sda-amber)",     href: "/sub-district-admin/dashboard/complaints" },
-    { label: "In Progress", value: "31", color: "var(--color-info)",    href: "/sub-district-admin/dashboard/complaints" },
-    { label: "Awaiting",    value: "9",  color: "#a78bfa",              href: "/sub-district-admin/dashboard/complaints" },
-    { label: "Done Today",  value: "12", color: "var(--color-success)", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Pending", value: String(workload.pending), color: "var(--sda-amber)", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "In Progress", value: String(workload.inProgress), color: "var(--color-info)", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Awaiting", value: String(workload.awaiting), color: "#a78bfa", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Done Today", value: String(workload.doneToday), color: "var(--color-success)", href: "/sub-district-admin/dashboard/complaints" },
   ];
   return (
     <DashboardCard
@@ -459,7 +474,7 @@ function CitizenImpact() {
 }
 
 /* ─── Heatmap Preview ────────────────────────────────────────── */
-function HeatmapPreview() {
+function HeatmapPreview({ openCount }: { openCount: number }) {
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="px-4 py-3.5 flex flex-col">
       <div className="flex items-center justify-between mb-2">
@@ -480,7 +495,7 @@ function HeatmapPreview() {
         </Suspense>
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-[10px] text-[var(--color-text-muted)]">84 open complaints</span>
+        <span className="text-[10px] text-[var(--color-text-muted)]">{openCount} open complaints</span>
         <Link href="/sub-district-admin/dashboard/map" className="text-[10px] font-medium" style={{ color: "var(--sda-amber)" }}>Open Zone Map →</Link>
       </div>
     </DashboardCard>
@@ -534,15 +549,7 @@ function ActivityFeed() {
 }
 
 /* ─── Upcoming SLA Breaches (Section F) ─────────────────────── */
-const upcomingSLA = [
-  { id: "CMP-1011", title: "Waterlogging — Ward 3",      sla: "1h 22m",  priority: "Critical", officer: "P. Nair"     },
-  { id: "CMP-0987", title: "Road Damage — NH-48",         sla: "3h 05m",  priority: "High",     officer: "A. Kulkarni" },
-  { id: "CMP-0974", title: "Sewage Overflow — Sector 12", sla: "5h 40m",  priority: "High",     officer: "M. Patil"    },
-  { id: "CMP-1008", title: "Streetlight — Sector 9",      sla: "6h 10m",  priority: "Medium",   officer: "S. Desai"    },
-  { id: "CMP-0961", title: "Pothole — Old Panvel Road",   sla: "7h 15m",  priority: "High",     officer: "R. Sharma"   },
-];
-
-function UpcomingSLABreaches() {
+function UpcomingSLABreaches({ items }: { items: ComplaintRecord[] }) {
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="flex flex-col">
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
@@ -555,11 +562,11 @@ function UpcomingSLABreaches() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-400" />
           </span>
-          {upcomingSLA.length} at risk
+          {items.length} at risk
         </span>
       </div>
       <div className="flex flex-col divide-y divide-[var(--color-border)] px-4 pb-2">
-        {upcomingSLA.map((item) => (
+        {items.map((item) => (
           <Link key={item.id} href={`/sub-district-admin/dashboard/complaints/${item.id}`}>
             <motion.div whileHover={{ x: 2 }} className="flex items-center justify-between gap-3 py-2 cursor-pointer group">
               <div className="flex items-center gap-2 min-w-0">
@@ -570,7 +577,7 @@ function UpcomingSLABreaches() {
                 </div>
               </div>
               <span className="text-[11px] font-bold tabular-nums shrink-0" style={{ color: item.priority === "Critical" ? "var(--color-danger)" : "var(--sda-amber)" }}>
-                {item.sla}
+                {formatSlaLabel(item)}
               </span>
             </motion.div>
           </Link>
@@ -581,26 +588,18 @@ function UpcomingSLABreaches() {
 }
 
 /* ─── Recent Resolutions (Section F) ────────────────────────── */
-const recentResolutions = [
-  { id: "CMP-0924", title: "Garbage Dump — Market Road",    resolvedBy: "S. Desai",    time: "13:15", category: "Garbage",     rating: 5 },
-  { id: "CMP-0912", title: "Tree Fallen — Near Station",    resolvedBy: "A. Kulkarni", time: "11:42", category: "Tree Fallen", rating: 4 },
-  { id: "CMP-0901", title: "Pothole — Sector 5",            resolvedBy: "P. Nair",     time: "10:18", category: "Road Damage", rating: 5 },
-  { id: "CMP-0895", title: "Streetlight — NH-48 Junction",  resolvedBy: "M. Patil",    time: "09:05", category: "Utilities",   rating: 4 },
-  { id: "CMP-0882", title: "Water Leakage — Ward 9",        resolvedBy: "R. Sharma",   time: "08:30", category: "Water",       rating: 5 },
-];
-
-function RecentResolutions() {
+function RecentResolutions({ items }: { items: ComplaintRecord[] }) {
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="flex flex-col">
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div>
           <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Recent Resolutions</h3>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Completed today · {recentResolutions.length} cases</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Completed today · {items.length} cases</p>
         </div>
         <span className="text-[10px] font-medium text-green-400">All within SLA ✓</span>
       </div>
       <div className="flex flex-col divide-y divide-[var(--color-border)] px-4 pb-2">
-        {recentResolutions.map((item) => (
+        {items.map((item) => (
           <Link key={item.id} href={`/sub-district-admin/dashboard/complaints/${item.id}`}>
             <motion.div whileHover={{ x: 2 }} className="flex items-center justify-between gap-3 py-2 cursor-pointer group">
               <div className="flex items-center gap-2 min-w-0">
@@ -610,12 +609,12 @@ function RecentResolutions() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-[var(--color-text-primary)] truncate group-hover:text-green-400 transition-colors">{item.title}</p>
-                  <p className="text-[10px] text-[var(--color-text-muted)]">{item.id} · {item.resolvedBy}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)]">{item.id} · {item.officer}</p>
                 </div>
               </div>
               <div className="flex flex-col items-end shrink-0 gap-0.5">
-                <span className="text-[10px] text-[var(--color-text-muted)] tabular-nums">{item.time}</span>
-                <span className="text-[9px] text-green-400">{"★".repeat(item.rating)}</span>
+                <span className="text-[10px] text-[var(--color-text-muted)] tabular-nums">{item.updatedDate.split(",")[0]}</span>
+                <span className="text-[9px] text-green-400">{item.category}</span>
               </div>
             </motion.div>
           </Link>
@@ -626,14 +625,14 @@ function RecentResolutions() {
 }
 
 /* ─── Full-width Heatmap Panel (Section D) ───────────────────── */
-function HeatmapPanel() {
+function HeatmapPanel({ m }: { m: SubDistrictMetrics }) {
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-3 pb-2.5 border-b border-[var(--color-border)]">
         <div>
           <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Complaint Heatmap — Zone A</h3>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Panvel Taluka · 84 active complaints · Last updated 2m ago</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Panvel Taluka · {m.open} active complaints · Live data</p>
         </div>
         <Link href="/sub-district-admin/dashboard/map"
           className="flex items-center gap-1 text-[11px] font-medium transition-colors hover:underline"
@@ -658,11 +657,11 @@ function HeatmapPanel() {
       {/* Stats bar */}
       <div className="flex flex-wrap items-center gap-4 px-4 py-2.5 border-t border-[var(--color-border)]">
         {[
-          { label: "Open Complaints", value: "84",   color: "var(--color-danger)"  },
-          { label: "Critical Zones",  value: "3",    color: "var(--color-danger)"  },
-          { label: "Active Tickets",  value: "7",    color: "var(--color-info)"    },
-          { label: "Resolved Today",  value: "12",   color: "var(--color-success)" },
-          { label: "Zone Coverage",   value: "100%", color: "var(--sda-amber)"     },
+          { label: "Open Complaints", value: String(m.open), color: "var(--color-danger)" },
+          { label: "Critical Zones", value: String(m.sla.critical), color: "var(--color-danger)" },
+          { label: "Active Tickets", value: String(m.activeTickets), color: "var(--color-info)" },
+          { label: "Resolved Today", value: String(m.resolved), color: "var(--color-success)" },
+          { label: "Zone Health", value: `${m.zoneHealth}%`, color: "var(--sda-amber)" },
         ].map((s) => (
           <div key={s.label} className="flex items-center gap-1.5">
             <span className="text-sm font-black tabular-nums" style={{ color: s.color }}>{s.value}</span>
@@ -676,34 +675,33 @@ function HeatmapPanel() {
 
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function SubDistrictAdminDashboard() {
+  const m = useSubDistrictDashboardMetrics();
+  const kpiCards = buildKpiCards(m);
+  const urgentRows = m.urgent.map(complaintRow);
+
   return (
     <div className="flex flex-col gap-4">
       <Breadcrumb items={[{ label: "Dashboard" }]} />
 
-      {/* Hero — untouched */}
       <section className="min-w-0">
-        <HeroBanner />
+        <HeroBanner m={m} />
       </section>
 
-      {/* KPI row — untouched */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpiCards.map((card, i) => <KpiCard key={card.title} card={card} index={i} />)}
       </section>
 
-      {/* SLA Command Center — untouched */}
       <section className="min-w-0">
-        <SlaCommandCenter />
+        <SlaCommandCenter m={m} />
       </section>
 
-      {/* SECTION A — Urgent Actions full width */}
       <section className="min-w-0">
-        <UrgentActionsTable />
+        <UrgentActionsTable rows={urgentRows} />
       </section>
 
-      {/* SECTION B — Officer Workload 65% | Quick Actions 35% */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-[65fr_35fr] lg:items-stretch">
         <div className="min-w-0 flex flex-col">
-          <OfficerWorkload />
+          <OfficerWorkload officers={m.officers} />
         </div>
         <div className="min-w-0">
           <QuickActionsPanel />
@@ -716,7 +714,7 @@ export default function SubDistrictAdminDashboard() {
           <CitizenImpact />
         </div>
         <div className="min-w-0">
-          <WorkloadOverview />
+          <WorkloadOverview workload={m.workload} />
         </div>
         <div className="min-w-0 flex flex-col">
           <ActivityFeed />
@@ -725,7 +723,7 @@ export default function SubDistrictAdminDashboard() {
 
       {/* SECTION D — Complaint Heatmap full width */}
       <section className="min-w-0">
-        <HeatmapPanel />
+        <HeatmapPanel m={m} />
       </section>
 
       {/* SECTION E — Resolution Trends 50% | Complaint Trends 50% */}
@@ -741,10 +739,10 @@ export default function SubDistrictAdminDashboard() {
       {/* SECTION F — Upcoming SLA Breaches 50% | Recent Resolutions 50% */}
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
         <div className="min-w-0 flex flex-col">
-          <UpcomingSLABreaches />
+          <UpcomingSLABreaches items={m.upcomingSla} />
         </div>
         <div className="min-w-0 flex flex-col">
-          <RecentResolutions />
+          <RecentResolutions items={m.recentResolved} />
         </div>
       </section>
     </div>

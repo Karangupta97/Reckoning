@@ -12,57 +12,17 @@ import {
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import IndiaMap from "@/components/map/IndiaMap";
+import { useEscalationStore } from "@/store/escalationStore";
+import { useEvidenceStore, type EvidenceFile } from "@/store/evidenceStore";
+import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
+import { EvidenceFilePicker } from "@/components/evidence/EvidenceFilePicker";
+import { currentDistrictFields } from "@/lib/district-scope";
+import { buildEscalationDetail, fallbackEscalationDetail } from "@/lib/escalation-detail";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 type Priority  = "Critical" | "High" | "Medium" | "Low";
 type Status    = "Pending Review" | "Assigned" | "Investigating" | "Resolved" | "Closed";
 type SLAStatus = "Breached" | "At Risk" | "On Track";
-
-/* ─── Mock lookup ────────────────────────────────────────────── */
-const MOCK: Record<string, {
-  id: string;
-  title: string; description: string; category: string;
-  priority: Priority; status: Status; slaStatus: SLAStatus; slaLabel: string; slaHours: number;
-  subDistrict: string; location: string; coordinates: string; zone: string;
-  assignedTo: string; assignedDate: string; expectedResolution: string; supervisor: string;
-  escalatedOn: string; daysOpen: number;
-  timeline: { label: string; date: string; done: boolean; note: string }[];
-  activityLog: { time: string; actor: string; action: string }[];
-}> = {
-  "ESC-4021": {
-    id: "ESC-4021",
-    title: "Sewage overflow — Main Road",
-    description: "Severe sewage overflow on Main Road near junction. Raw sewage has been accumulating for 3 days causing health hazard and traffic disruption. Residents have complained multiple times. Requires immediate drain clearing and sanitation treatment.",
-    category: "Sanitation", priority: "Critical", status: "Pending Review",
-    slaStatus: "Breached", slaLabel: "BREACHED", slaHours: -18,
-    subDistrict: "Mehrauli", location: "Main Road Junction, Mehrauli",
-    coordinates: "28.5244° N, 77.1855° E", zone: "South Zone",
-    assignedTo: "R. Sharma", assignedDate: "28 May 2026", expectedResolution: "31 May 2026",
-    supervisor: "District Officer K. Patil", escalatedOn: "28 May 2026", daysOpen: 7,
-    timeline: [
-      { label: "Complaint Received",    date: "28 May, 07:12 AM", done: true,  note: "Citizen complaint via mobile app" },
-      { label: "Escalated to District", date: "28 May, 09:30 AM", done: true,  note: "Escalated by sub-district officer" },
-      { label: "Assigned to Officer",   date: "28 May, 11:00 AM", done: true,  note: "Assigned to R. Sharma" },
-      { label: "Pending Review",        date: "Overdue",           done: false, note: "" },
-    ],
-    activityLog: [
-      { time: "28 May 11:00", actor: "System",       action: "Assigned to R. Sharma for investigation" },
-      { time: "28 May 09:30", actor: "Sub-District", action: "Escalated — SLA breach imminent" },
-      { time: "28 May 07:12", actor: "System",       action: "Complaint received and registered" },
-    ],
-  },
-};
-
-function getEscalation(id: string) {
-  return MOCK[id] ?? {
-    id, title: `Escalation ${id}`, description: "No description available.",
-    category: "General", priority: "High" as Priority, status: "Pending Review" as Status,
-    slaStatus: "At Risk" as SLAStatus, slaLabel: "Unknown", slaHours: 0,
-    subDistrict: "Unknown", location: "Unknown", coordinates: "N/A", zone: "N/A",
-    assignedTo: "Unassigned", assignedDate: "N/A", expectedResolution: "N/A", supervisor: "N/A",
-    escalatedOn: "N/A", daysOpen: 0, timeline: [], activityLog: [],
-  };
-}
 
 /* ─── Badge helpers ──────────────────────────────────────────── */
 const PRIORITY_CLS: Record<Priority, string> = {
@@ -119,7 +79,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="admin-modal-overlay fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
@@ -289,6 +249,34 @@ const REJECT_REASONS = [
   "Invalid complaint category",
   "Other",
 ];
+
+function ClarifyDialog({ escId, onClose, onSubmit }: {
+  escId: string; onClose: () => void; onSubmit: (message: string) => void;
+}) {
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const submit = () => {
+    if (!message.trim()) return;
+    setSubmitting(true);
+    setTimeout(() => { setDone(true); setSubmitting(false); setTimeout(() => onSubmit(message.trim()), 900); }, 500);
+  };
+  return (
+    <Modal onClose={onClose}>
+      <ModalHeader icon={<MessageSquare size={15} />} iconBg="rgba(6,182,212,0.1)" iconBorder="rgba(6,182,212,0.3)"
+        iconColor="#06b6d4" title="Request Clarification" subtitle={escId} onClose={onClose} />
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4}
+          placeholder="What additional information does the sub-district need to provide?"
+          className="w-full rounded-lg border px-3 py-2 text-xs resize-none focus:outline-none"
+          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }} />
+      </div>
+      <ModalFooter onClose={onClose} onSubmit={submit} submitting={submitting} done={done}
+        doneLabel="Sent!" submitLabel="Send Request"
+        submitColor={{ border: "rgba(6,182,212,0.4)", bg: "rgba(6,182,212,0.1)", color: "#06b6d4" }} />
+    </Modal>
+  );
+}
 
 function RejectDialog({ escId, onClose, onSubmit }: {
   escId: string; onClose: () => void; onSubmit: (reason: string, note: string) => void;
@@ -521,32 +509,22 @@ function MarkInProgressDialog({ escId, onClose, onSubmit }: {
 
 /* ─── Upload Evidence Dialog ─────────────────────────────────── */
 function UploadEvidenceDialog({ escId, onClose, onSubmit }: {
-  escId: string; onClose: () => void; onSubmit: (note: string) => void;
+  escId: string; onClose: () => void; onSubmit: (note: string, files: EvidenceFile[]) => void;
 }) {
   const [note, setNote] = useState("");
-  const [fileLabel, setFileLabel] = useState<string | null>(null);
+  const [files, setFiles] = useState<EvidenceFile[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const submit = () => {
     setSubmitting(true);
-    setTimeout(() => { setDone(true); setSubmitting(false); setTimeout(() => onSubmit(note.trim() || "Evidence uploaded"), 900); }, 500);
+    setTimeout(() => { setDone(true); setSubmitting(false); setTimeout(() => onSubmit(note.trim() || "Evidence uploaded", files), 900); }, 500);
   };
   return (
     <Modal onClose={onClose}>
       <ModalHeader icon={<Camera size={15} />} iconBg="rgba(167,139,250,0.1)" iconBorder="rgba(167,139,250,0.3)"
         iconColor="#a78bfa" title="Upload Evidence" subtitle={escId} onClose={onClose} />
       <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-        {/* Drop zone */}
-        <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed cursor-pointer transition-colors py-8 gap-2"
-          style={{ borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.04)" }}>
-          <Camera size={24} className="text-purple-400 opacity-60" />
-          <span className="text-xs text-[var(--color-text-muted)]">
-            {fileLabel ?? "Click to select photos or documents"}
-          </span>
-          <span className="text-[10px] text-[var(--color-text-muted)] opacity-60">JPG, PNG, PDF — max 10 MB</span>
-          <input type="file" className="hidden" accept="image/*,.pdf"
-            onChange={(e) => setFileLabel(e.target.files?.[0]?.name ?? null)} />
-        </label>
+        <EvidenceFilePicker files={files} onChange={setFiles} maxFiles={6} />
         <div>
           <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1.5">
             Evidence Note <span className="font-normal text-[var(--color-text-muted)]">(optional)</span>
@@ -568,15 +546,16 @@ function UploadEvidenceDialog({ escId, onClose, onSubmit }: {
 function StickyActions({
   id, status, priority, title,
   onAssign, onMarkInProgress, onUploadEvidence,
-  onResolve, onEscalateFurther, onReject,
+  onResolve, onEscalateFurther, onReject, onRequestClarification,
 }: {
   id: string; status: Status; priority: Priority; title: string;
   onAssign: (o: string) => void;
   onMarkInProgress: (note: string) => void;
-  onUploadEvidence: (note: string) => void;
+  onUploadEvidence: (note: string, files: EvidenceFile[]) => void;
   onResolve: (note: string) => void;
   onEscalateFurther: (p: Priority, r: string, d: string) => void;
   onReject: (reason: string, note: string) => void;
+  onRequestClarification: (message: string) => void;
 }) {
   const [assignOpen,    setAssignOpen]    = useState(false);
   const [progressOpen,  setProgressOpen]  = useState(false);
@@ -584,6 +563,7 @@ function StickyActions({
   const [resolveOpen,   setResolveOpen]   = useState(false);
   const [escalateOpen,  setEscalateOpen]  = useState(false);
   const [rejectOpen,    setRejectOpen]    = useState(false);
+  const [clarifyOpen,   setClarifyOpen]   = useState(false);
 
   const isResolved   = status === "Resolved" || status === "Closed";
   const isEscalated  = status === "Closed";
@@ -617,6 +597,13 @@ function StickyActions({
           <Camera size={14} /> Upload Evidence
         </motion.button>
 
+        <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
+          disabled={isResolved} onClick={() => setClarifyOpen(true)}
+          className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ borderColor: "rgba(6,182,212,0.3)", background: "rgba(6,182,212,0.08)", color: "#06b6d4" }}>
+          <MessageSquare size={14} /> Request Clarification
+        </motion.button>
+
         <div className="my-1 border-t border-[var(--color-border)]" />
 
         <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
@@ -645,12 +632,13 @@ function StickyActions({
       <AnimatePresence>
         {assignOpen   && <AssignModal          escId={id} current="" onClose={() => setAssignOpen(false)}   onAssign={(o) => { onAssign(o); setAssignOpen(false); }} />}
         {progressOpen && <MarkInProgressDialog escId={id} onClose={() => setProgressOpen(false)}  onSubmit={(n) => { onMarkInProgress(n); setProgressOpen(false); }} />}
-        {evidenceOpen && <UploadEvidenceDialog escId={id} onClose={() => setEvidenceOpen(false)}  onSubmit={(n) => { onUploadEvidence(n); setEvidenceOpen(false); }} />}
+        {evidenceOpen && <UploadEvidenceDialog escId={id} onClose={() => setEvidenceOpen(false)}  onSubmit={(n, f) => { onUploadEvidence(n, f); setEvidenceOpen(false); }} />}
         {resolveOpen  && <ResolveDialog        escId={id} onClose={() => setResolveOpen(false)}   onSubmit={(n) => { onResolve(n); setResolveOpen(false); }} />}
         {escalateOpen && <EscalateFurtherDialog escId={id} title={title} priority={priority}
           onClose={() => setEscalateOpen(false)}
           onSubmit={(p, r, d) => { onEscalateFurther(p, r, d); setEscalateOpen(false); }} />}
         {rejectOpen   && <RejectDialog         escId={id} onClose={() => setRejectOpen(false)}    onSubmit={(r, n) => { onReject(r, n); setRejectOpen(false); }} />}
+        {clarifyOpen  && <ClarifyDialog        escId={id} onClose={() => setClarifyOpen(false)}  onSubmit={(m) => { onRequestClarification(m); setClarifyOpen(false); }} />}
       </AnimatePresence>
     </div>
   );
@@ -659,73 +647,106 @@ function StickyActions({
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function EscalationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const base = getEscalation(id);
+  const storeEsc = useEscalationStore((s) => s.escalations.find((e) => e.id === id));
+  const sourceComplaintId = storeEsc?.sourceComplaintId;
+  const districtFields = currentDistrictFields();
+  const assignOfficer = useEscalationStore((s) => s.assignOfficer);
+  const setEscStatus = useEscalationStore((s) => s.setStatus);
+  const escalateToSuper = useEscalationStore((s) => s.escalateToSuperAdmin);
+  const resolveEscalation = useEscalationStore((s) => s.resolveEscalation);
+  const rejectEscalation = useEscalationStore((s) => s.rejectEscalation);
+  const appendActivity = useEscalationStore((s) => s.appendActivity);
+  const requestClarification = useEscalationStore((s) => s.requestClarification);
+  const submitEvidence = useEvidenceStore((s) => s.submitEvidence);
+  const pendingResolution = useComplaintWorkflowStore((s) =>
+    s.resolutions.find((r) => r.escalationId === id || (sourceComplaintId ? r.complaintId === sourceComplaintId : false))
+  );
+  const approveResolution = useComplaintWorkflowStore((s) => s.approveResolution);
+  const rejectResolution = useComplaintWorkflowStore((s) => s.rejectResolution);
+  const requestResolutionClarification = useComplaintWorkflowStore((s) => s.requestResolutionClarification);
 
-  /* ── Local state ── */
-  const [status,      setStatus]      = useState<Status>(base.status);
-  const [assignedTo,  setAssignedTo]  = useState(base.assignedTo);
-  const [escalatedUp, setEscalatedUp] = useState(false);
-  const [superEscId,  setSuperEscId]  = useState<string | null>(null);
-  const [activityLog, setActivityLog] = useState(base.activityLog);
-  const [noteText,    setNoteText]    = useState("");
-  const [toast,       setToast]       = useState<string | null>(null);
+  const base = storeEsc ? buildEscalationDetail(storeEsc) : fallbackEscalationDetail(id);
 
-  function log(actor: string, action: string) {
-    setActivityLog((prev) => [{ time: now(), actor, action }, ...prev]);
-  }
+  const [superEscId, setSuperEscId] = useState<string | null>(
+    storeEsc?.parentEscalationId ? null : null
+  );
+  const [escalatedUp, setEscalatedUp] = useState(storeEsc?.status === "Closed" && !!storeEsc?.tier);
+  const [noteText, setNoteText] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
   }
 
-  /* ── Handlers ── */
   const handleAssign = (officer: string) => {
-    setAssignedTo(officer);
-    if (status === "Pending Review") setStatus("Assigned");
-    log("System", `Escalation assigned to ${officer}`);
+    assignOfficer(id, officer, "District Admin");
     showToast(`Assigned to ${officer}`);
   };
 
   const handleMarkInProgress = (note: string) => {
-    setStatus("Investigating");
-    log("District Officer", `Marked as Investigating${note ? ` — ${note}` : ""}`);
+    setEscStatus(id, "Investigating", "District Officer", `Marked as Investigating${note ? ` — ${note}` : ""}`);
     showToast("Status updated to Investigating");
   };
 
-  const handleUploadEvidence = (note: string) => {
-    log("District Officer", `Evidence uploaded — ${note}`);
-    showToast("Evidence uploaded and logged");
+  const handleUploadEvidence = (note: string, files: EvidenceFile[]) => {
+    const evId = submitEvidence({
+      relatedEntityId: id,
+      relatedEntityType: "Escalation",
+      title: `Evidence for ${base.title}`,
+      district: districtFields.district,
+      state: districtFields.state,
+      uploadedBy: "District Officer",
+      notes: note,
+      files: files.length > 0 ? files : [{ id: "f-up", label: "District upload", type: "image", size: "1.8 MB" }],
+    });
+    appendActivity(id, "District Officer", `Evidence submitted as ${evId}`);
+    showToast(`Evidence ${evId} sent to Super Admin review`);
   };
 
   const handleResolve = (note: string) => {
-    setStatus("Resolved");
-    log("District Officer", `Escalation resolved — ${note}`);
+    resolveEscalation(id, note, "District Officer");
     showToast("Escalation marked as Resolved");
   };
 
   const handleEscalateFurther = (p: Priority, reason: string, description: string) => {
-    const newId = `SESC-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newId = escalateToSuper(id, {
+      priority: p,
+      reason,
+      description,
+      district: districtFields.district,
+      state: districtFields.state,
+      submittedBy: "District Admin",
+    });
     setSuperEscId(newId);
     setEscalatedUp(true);
-    setStatus("Closed");
-    log("District Admin", `Escalated to Super Admin as ${newId} — ${reason} (${p})${description ? ` | ${description.substring(0, 80)}…` : ""}`);
     showToast(`Escalated to Super Admin as ${newId}`);
   };
 
   const handleReject = (reason: string, note: string) => {
-    setStatus("Closed");
-    log("District Officer", `Escalation rejected — ${reason}${note ? ` | ${note}` : ""}`);
+    rejectEscalation(id, reason, note, "District Officer");
     showToast("Escalation rejected and returned to sub-district");
   };
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
-    log("District Officer", noteText.trim());
+    appendActivity(id, "District Officer", noteText.trim());
     setNoteText("");
     showToast("Note added to activity log");
   };
 
-  const e = { ...base, status, assignedTo, activityLog };
+  const handleRequestClarification = (message: string) => {
+    requestClarification(id, message, "District Officer");
+    if (pendingResolution) requestResolutionClarification(pendingResolution.id, message);
+    showToast("Clarification request sent to sub-district");
+  };
+
+  const e = {
+    ...base,
+    status: (storeEsc?.status ?? base.status) as Status,
+    assignedTo: storeEsc?.assignedTo ?? base.assignedTo,
+    activityLog: storeEsc?.activityLog ?? base.activityLog,
+  };
 
   return (
     <div className="flex flex-col gap-3 pb-6">
@@ -786,7 +807,7 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
                 <span className="font-mono text-sm font-bold" style={{ color: "var(--da-teal)" }}>{e.id}</span>
               </div>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${PRIORITY_CLS[e.priority]}`}>{e.priority}</span>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_CLS[status]}`}>{status}</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_CLS[e.status]}`}>{e.status}</span>
               <span className="text-[11px] text-[var(--color-text-muted)]">{e.daysOpen} days open · {e.subDistrict}</span>
             </div>
             <h1 className="text-base font-bold text-[var(--color-text-primary)] leading-snug max-w-2xl">{e.title}</h1>
@@ -837,6 +858,48 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
               </div>
             </DashboardCard>
           </motion.div>
+
+          {storeEsc?.sourceComplaintId && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+              <DashboardCard className="p-4 flex items-center justify-between gap-3">
+                <div className="text-xs text-[var(--color-text-secondary)]">
+                  Source complaint{" "}
+                  <Link
+                    href={`/sub-district-admin/dashboard/complaints/${storeEsc.sourceComplaintId}`}
+                    className="font-mono font-bold text-teal-400 hover:underline"
+                  >
+                    {storeEsc.sourceComplaintId}
+                  </Link>
+                  {" "}from {storeEsc.subDistrict}
+                </div>
+              </DashboardCard>
+            </motion.div>
+          )}
+
+          {pendingResolution && pendingResolution.status === "Pending District Review" && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+              <DashboardCard className="p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <ClipboardCheck size={14} className="text-cyan-400" />
+                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Closure Request — {pendingResolution.id}</h3>
+                </div>
+                <p className="text-xs text-[var(--color-text-secondary)]">{pendingResolution.resolutionNotes}</p>
+                {pendingResolution.workPerformed && (
+                  <p className="text-[11px] text-[var(--color-text-muted)]">Work: {pendingResolution.workPerformed}</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => { approveResolution(pendingResolution.id); showToast("Closure approved — sub-district notified"); }}
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#10b981" }}>
+                    Approve Closure
+                  </button>
+                  <button type="button" onClick={() => { rejectResolution(pendingResolution.id, "Insufficient evidence"); showToast("Closure rejected"); }}
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold border text-red-400" style={{ borderColor: "rgba(239,68,68,0.4)" }}>
+                    Reject
+                  </button>
+                </div>
+              </DashboardCard>
+            </motion.div>
+          )}
 
           {/* Location */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
@@ -929,13 +992,14 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
           {/* Sticky Actions */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <StickyActions
-              id={e.id} status={status} priority={e.priority} title={e.title}
+              id={e.id} status={e.status} priority={e.priority} title={e.title}
               onAssign={handleAssign}
               onMarkInProgress={handleMarkInProgress}
               onUploadEvidence={handleUploadEvidence}
               onResolve={handleResolve}
               onEscalateFurther={handleEscalateFurther}
               onReject={handleReject}
+              onRequestClarification={handleRequestClarification}
             />
           </motion.div>
 
@@ -948,7 +1012,7 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
               </div>
               <div className="flex flex-col divide-y divide-[var(--color-border)]">
                 {[
-                  { label: "Officer",    value: assignedTo,          highlight: true  },
+                  { label: "Officer",    value: e.assignedTo,          highlight: true  },
                   { label: "Assigned",   value: e.assignedDate,      highlight: false },
                   { label: "Resolution", value: e.expectedResolution, highlight: false },
                   { label: "Supervisor", value: e.supervisor,        highlight: false },

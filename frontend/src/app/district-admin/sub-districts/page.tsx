@@ -32,12 +32,12 @@ interface SubDistrictAdmin {
 }
 
 const DATA: SubDistrictAdmin[] = [
-  { id: "SDA-001", name: "Rajesh Sharma", subDistrict: "Mehrauli", email: "r.sharma@district.gov.in", phone: "+91 98765 43210", status: "Active", joinDate: "12 Jan 2025", complaints: 142, resolved: 118, sla: 83 },
-  { id: "SDA-002", name: "Priya Iyer", subDistrict: "Vasant Kunj", email: "p.iyer@district.gov.in", phone: "+91 98765 43211", status: "Active", joinDate: "03 Mar 2025", complaints: 96, resolved: 79, sla: 82 },
-  { id: "SDA-003", name: "Amit Singh", subDistrict: "Dwarka", email: "a.singh@district.gov.in", phone: "+91 98765 43212", status: "Active", joinDate: "20 Jun 2024", complaints: 201, resolved: 185, sla: 92 },
-  { id: "SDA-004", name: "Sunita Gupta", subDistrict: "Rohini", email: "s.gupta@district.gov.in", phone: "+91 98765 43213", status: "Suspended", joinDate: "08 Sep 2024", complaints: 178, resolved: 132, sla: 74 },
-  { id: "SDA-005", name: "Mohammed Khan", subDistrict: "Shahdara", email: "m.khan@district.gov.in", phone: "+91 98765 43214", status: "Active", joinDate: "15 Nov 2024", complaints: 115, resolved: 94, sla: 82 },
-  { id: "SDA-006", name: "Tanvi Verma", subDistrict: "Najafgarh", email: "t.verma@district.gov.in", phone: "+91 98765 43215", status: "Pending", joinDate: "02 Jun 2026", complaints: 87, resolved: 55, sla: 63 },
+  { id: "SDA-001", name: "Rajesh Sharma", subDistrict: "Panvel Taluka", email: "r.sharma@raigad.gov.in", phone: "+91 98765 43210", status: "Active", joinDate: "12 Jan 2025", complaints: 142, resolved: 118, sla: 83 },
+  { id: "SDA-002", name: "Priya Iyer", subDistrict: "Alibag", email: "p.iyer@raigad.gov.in", phone: "+91 98765 43211", status: "Active", joinDate: "03 Mar 2025", complaints: 96, resolved: 79, sla: 82 },
+  { id: "SDA-003", name: "Amit Singh", subDistrict: "Karjat", email: "a.singh@raigad.gov.in", phone: "+91 98765 43212", status: "Active", joinDate: "20 Jun 2024", complaints: 201, resolved: 185, sla: 92 },
+  { id: "SDA-004", name: "Sunita Gupta", subDistrict: "Mahad", email: "s.gupta@raigad.gov.in", phone: "+91 98765 43213", status: "Suspended", joinDate: "08 Sep 2024", complaints: 178, resolved: 132, sla: 74 },
+  { id: "SDA-005", name: "Mohammed Khan", subDistrict: "Mangaon", email: "m.khan@raigad.gov.in", phone: "+91 98765 43214", status: "Active", joinDate: "15 Nov 2024", complaints: 115, resolved: 94, sla: 82 },
+  { id: "SDA-006", name: "Tanvi Verma", subDistrict: "Murud", email: "t.verma@raigad.gov.in", phone: "+91 98765 43215", status: "Pending", joinDate: "02 Jun 2026", complaints: 87, resolved: 55, sla: 63 },
 ];
 
 const statusConfig: Record<OfficerStatus, { badge: string; icon: typeof CheckCircle2 }> = {
@@ -245,7 +245,9 @@ export default function SubDistrictsPage() {
                       <td className="dashboard-table-td whitespace-nowrap text-xs">{d.joinDate}</td>
                       <td className="dashboard-table-td">
                         <div className="flex items-center gap-1.5">
-                          <ActionButton label="View" icon={Eye} />
+                          <Link href={`/district-admin/sub-districts/${d.id}`} title="View">
+                            <ActionButton label="View" icon={Eye} />
+                          </Link>
                           <ActionButton label="Edit" icon={Edit2} color="emerald" />
                           <ActionButton label="Suspend" icon={ShieldOff} color="amber" />
                         </div>

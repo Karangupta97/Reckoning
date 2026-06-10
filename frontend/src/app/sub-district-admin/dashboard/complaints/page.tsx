@@ -8,26 +8,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
+import { useComplaintStore, type ComplaintRecord } from "@/store/complaintStore";
 
-/* ─── Mock data ──────────────────────────────────────────────── */
 const OFFICERS = ["R. Sharma", "P. Nair", "A. Kulkarni", "M. Patil", "S. Desai"];
-
-const INITIAL_COMPLAINTS = [
-  { id:"CMP-1024", category:"Road Damage",    priority:"Critical", location:"Sector 7, Panvel",      officer:"R. Sharma",  date:"2025-01-14", status:"Open"        },
-  { id:"CMP-1023", category:"Waterlogging",   priority:"High",     location:"Ward 3, Panvel",        officer:"P. Nair",    date:"2025-01-14", status:"Assigned"    },
-  { id:"CMP-1022", category:"Streetlight",    priority:"Medium",   location:"NH-48 Junction",        officer:"A. Kulkarni",date:"2025-01-13", status:"In Progress" },
-  { id:"CMP-1021", category:"Sewage",         priority:"High",     location:"Sector 12, Panvel",     officer:"M. Patil",   date:"2025-01-13", status:"Open"        },
-  { id:"CMP-1020", category:"Garbage",        priority:"Medium",   location:"Market Road, Panvel",   officer:"S. Desai",   date:"2025-01-12", status:"Resolved"    },
-  { id:"CMP-1019", category:"Road Damage",    priority:"Critical", location:"Old Panvel Road",       officer:"R. Sharma",  date:"2025-01-12", status:"Assigned"    },
-  { id:"CMP-1018", category:"Water Supply",   priority:"High",     location:"Sector 5, Panvel",      officer:"P. Nair",    date:"2025-01-11", status:"In Progress" },
-  { id:"CMP-1017", category:"Tree Fallen",    priority:"Medium",   location:"Near Station",          officer:"A. Kulkarni",date:"2025-01-11", status:"Resolved"    },
-  { id:"CMP-1016", category:"Noise Pollution",priority:"Low",      location:"Sector 9, Panvel",      officer:"",           date:"2025-01-10", status:"Open"        },
-  { id:"CMP-1015", category:"Sewage",         priority:"High",     location:"Ward 6, Panvel",        officer:"M. Patil",   date:"2025-01-10", status:"Rejected"    },
-  { id:"CMP-1014", category:"Road Damage",    priority:"Critical", location:"Highway 17",            officer:"R. Sharma",  date:"2025-01-09", status:"Resolved"    },
-  { id:"CMP-1013", category:"Waterlogging",   priority:"Medium",   location:"Taluka Office Road",    officer:"S. Desai",   date:"2025-01-09", status:"Open"        },
-];
-
-type Complaint = typeof INITIAL_COMPLAINTS[0];
 
 const TABS = ["All", "Open", "Assigned", "Resolved", "Rejected"] as const;
 type Tab  = typeof TABS[number];
@@ -63,7 +46,7 @@ function AssignModal({
   onClose,
   onAssign,
 }: {
-  complaint: Complaint;
+  complaint: ComplaintRecord;
   onClose: () => void;
   onAssign: (id: string, officer: string) => void;
 }) {
@@ -181,11 +164,12 @@ function Toast({ message, onDone }: { message: string; onDone: () => void }) {
 
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function ComplaintsPage() {
-  const [complaints,   setComplaints]   = useState(INITIAL_COMPLAINTS);
+  const complaints = useComplaintStore((s) => s.complaints);
+  const assignOfficer = useComplaintStore((s) => s.assignOfficer);
   const [activeTab,    setActiveTab]    = useState<Tab>("All");
   const [search,       setSearch]       = useState("");
   const [priorityF,    setPriorityF]    = useState("");
-  const [assignTarget, setAssignTarget] = useState<Complaint | null>(null);
+  const [assignTarget, setAssignTarget] = useState<ComplaintRecord | null>(null);
   const [toast,        setToast]        = useState<string | null>(null);
 
   const filtered = useMemo(() => complaints.filter((c) => {
@@ -199,9 +183,7 @@ export default function ComplaintsPage() {
   }), [complaints, activeTab, search, priorityF]);
 
   const handleAssign = (id: string, officer: string) => {
-    setComplaints((prev) => prev.map((c) =>
-      c.id === id ? { ...c, officer, status: "Assigned" } : c
-    ));
+    assignOfficer(id, officer);
     setAssignTarget(null);
     setToast(`${id} assigned to ${officer}`);
   };

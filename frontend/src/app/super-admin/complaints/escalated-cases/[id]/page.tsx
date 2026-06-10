@@ -265,6 +265,11 @@ function ClosureDialog({ id, onClose, onSubmit }: { id: string; onClose: () => v
 export default function EscalationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const escalations = useEscalationStore(s => s.escalations);
+  const setEscStatus = useEscalationStore(s => s.setStatus);
+  const assignOfficer = useEscalationStore(s => s.assignOfficer);
+  const appendActivity = useEscalationStore(s => s.appendActivity);
+  const resolveEscalation = useEscalationStore(s => s.resolveEscalation);
+  const rejectEscalation = useEscalationStore(s => s.rejectEscalation);
   const base = escalations.find(e => e.id === id) ?? {
     id, title: `Escalation ${id}`, subDistrict: "Unknown", category: "General",
     priority: "High" as EscalationPriority, status: "Pending Review" as EscalationStatus,
@@ -273,11 +278,12 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
     reason: undefined, notes: undefined,
   };
 
-  const [status,      setStatus]      = useState<EscalationStatus>(base.status);
-  const [assignedTo,  setAssignedTo]  = useState(base.assignedTo);
-  const [activityLog, setActivityLog] = useState<{ time: string; actor: string; action: string }[]>([
-    { time: base.escalatedOn, actor: "System",       action: `Escalation received from ${base.subDistrict}` },
-  ]);
+  const live = escalations.find(e => e.id === id);
+  const [status,      setStatus]      = useState<EscalationStatus>(live?.status ?? base.status);
+  const [assignedTo,  setAssignedTo]  = useState(live?.assignedTo ?? base.assignedTo);
+  const [activityLog, setActivityLog] = useState<{ time: string; actor: string; action: string }[]>(
+    live?.activityLog ?? [{ time: base.escalatedOn, actor: "System", action: `Escalation received from ${base.subDistrict}` }]
+  );
   const [noteText,    setNoteText]    = useState("");
   const [toast,       setToast]       = useState<string | null>(null);
 
@@ -297,45 +303,55 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
     setTimeout(() => setToast(null), 3000);
   }
 
+  const syncFromStore = () => {
+    const e = useEscalationStore.getState().escalations.find(x => x.id === id);
+    if (!e) return;
+    setStatus(e.status);
+    setAssignedTo(e.assignedTo);
+    if (e.activityLog?.length) setActivityLog(e.activityLog);
+  };
+
   const handleApprove = (note: string) => {
-    setStatus("Investigating");
+    setEscStatus(id, "Investigating", "Super Admin", `Escalation approved${note ? ` — ${note}` : ""}`);
     setApproveOpen(false);
-    log("Super Admin", `Escalation approved${note ? ` — ${note}` : ""}`);
+    syncFromStore();
     showToast("Escalation approved");
   };
   const handleReject = (reason: string, note: string) => {
-    setStatus("Closed");
+    rejectEscalation(id, reason, note, "Super Admin");
     setRejectOpen(false);
-    log("Super Admin", `Escalation rejected — ${reason}${note ? ` | ${note}` : ""}`);
+    syncFromStore();
     showToast("Escalation rejected");
   };
   const handleReview = (note: string) => {
-    setStatus("Investigating");
+    setEscStatus(id, "Investigating", "Super Admin", `Marked as Investigating${note ? ` — ${note}` : ""}`);
     setReviewOpen(false);
-    log("Super Admin", `Marked as Investigating${note ? ` — ${note}` : ""}`);
+    syncFromStore();
     showToast("Status updated to Investigating");
   };
   const handleClarify = (msg: string) => {
+    appendActivity(id, "Super Admin", `Clarification requested: ${msg.substring(0, 80)}…`);
     setClarifyOpen(false);
-    log("Super Admin", `Clarification requested: ${msg.substring(0,80)}…`);
+    syncFromStore();
     showToast("Clarification request sent");
   };
   const handleReassign = (officer: string) => {
-    setAssignedTo(officer);
+    assignOfficer(id, officer, "Super Admin");
     setReassignOpen(false);
-    log("Super Admin", `Reassigned to ${officer}`);
+    syncFromStore();
     showToast(`Reassigned to ${officer}`);
   };
   const handleClosure = (note: string) => {
-    setStatus("Resolved");
+    resolveEscalation(id, note, "Super Admin");
     setClosureOpen(false);
-    log("Super Admin", `Closure approved — ${note.substring(0,80)}${note.length > 80 ? "…" : ""}`);
+    syncFromStore();
     showToast("Escalation closed");
   };
 
   const handleAddNote = () => {
     if (!noteText.trim()) return;
-    log("Super Admin", noteText.trim());
+    appendActivity(id, "Super Admin", noteText.trim());
+    syncFromStore();
     setNoteText("");
     showToast("Note added");
   };

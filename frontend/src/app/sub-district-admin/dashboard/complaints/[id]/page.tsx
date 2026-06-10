@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -16,223 +16,19 @@ import {
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useEscalationStore } from "@/store/escalationStore";
 import type { EscalationPriority, EscalationCategory } from "@/store/escalationStore";
+import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
+import {
+  useComplaintStore,
+  toComplaintDetailView,
+  type ComplaintDetailView,
+  type ComplaintSLAStatus,
+  type ComplaintStatus,
+} from "@/store/complaintStore";
 import { SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
 import IndiaMap from "@/components/map/IndiaMap";
 
-/* ─── Shared mock data — single source of truth ──────────────── */
-// Each complaint keyed by its ID so clicking CMP-1020 always shows CMP-1020 data.
-// The list page (complaints/page.tsx) references these same IDs.
-type SLAStatus = "Breached" | "At Risk" | "On Track";
-type EvidenceFile = { label: string; by: string; time: string; coords: string };
-
-interface ComplaintDetail {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  priority: string;
-  status: string;
-  createdDate: string;
-  updatedDate: string;
-  location: string;
-  coordinates: string;
-  subDistrict: string;
-  zone: string;
-  slaStatus: SLAStatus;
-  slaLabel: string;
-  slaHours: number;
-  slaTargetHours: number;
-  resolutionTarget: string;
-  reportCount: number;
-  nearbyCount: number;
-  officer: { name: string; assignedDate: string; expectedVisit: string; slaRisk: string; supervisor: string };
-  timeline: { label: string; date: string; done: boolean; note: string }[];
-  activityLog: { time: string; actor: string; action: string }[];
-  evidence: { citizen: EvidenceFile[]; inspection: EvidenceFile[]; resolution: EvidenceFile[] };
-}
-
-const MOCK_COMPLAINTS: Record<string, ComplaintDetail> = {
-  "CMP-1024": {
-    id: "CMP-1024",
-    title: "Severe Road Damage — Sector 7 Junction",
-    description: "Large pothole spanning ~2m×1.5m at the main Sector 7 junction. Causes vehicle damage and safety hazard. Three accidents reported in the past week. Requires urgent patching and road resurfacing.",
-    category: "Road Damage", priority: "Critical", status: "Assigned",
-    createdDate: "14 Jan 2025, 08:14 AM", updatedDate: "15 Jan 2025, 11:22 AM",
-    location: "Sector 7 Junction, Panvel", coordinates: "18.9894° N, 73.1175° E",
-    subDistrict: "Panvel Taluka", zone: "Zone A",
-    slaStatus: "At Risk", slaLabel: "2h 14m Left", slaHours: 2.2, slaTargetHours: 48,
-    resolutionTarget: "18 Jan 2025", reportCount: 3, nearbyCount: 2,
-    officer: { name: "R. Sharma", assignedDate: "14 Jan 2025", expectedVisit: "16 Jan 2025", slaRisk: "High", supervisor: "District Officer K. Patil" },
-    timeline: [
-      { label: "Complaint Created",   date: "14 Jan, 08:14 AM", done: true,  note: "Received via mobile app" },
-      { label: "Assigned to Officer", date: "14 Jan, 09:30 AM", done: true,  note: "Assigned to R. Sharma"   },
-      { label: "Site Inspection",     date: "15 Jan, 10:00 AM", done: true,  note: "Inspection completed"     },
-      { label: "Evidence Uploaded",   date: "15 Jan, 11:22 AM", done: true,  note: "3 photos added"           },
-      { label: "Awaiting Approval",   date: "Pending",          done: false, note: ""                         },
-    ],
-    activityLog: [
-      { time: "15 Jan 11:45", actor: "R. Sharma", action: "Evidence uploaded — 3 site photos attached"     },
-      { time: "15 Jan 10:00", actor: "R. Sharma", action: "Site inspection completed. Pothole depth ~12cm." },
-      { time: "14 Jan 09:30", actor: "System",     action: "Complaint assigned to R. Sharma"               },
-      { time: "14 Jan 08:14", actor: "System",     action: "Complaint received and registered"              },
-    ],
-    evidence: {
-      citizen:    [{ label: "Front view",   by: "Citizen Report", time: "14 Jan, 08:12 AM", coords: "18.9894° N" }],
-      inspection: [{ label: "Site overview",by: "R. Sharma",      time: "15 Jan, 10:05 AM", coords: "18.9894° N" },
-                   { label: "Depth measure",by: "R. Sharma",      time: "15 Jan, 10:12 AM", coords: "18.9894° N" }],
-      resolution: [],
-    },
-  },
-  "CMP-1023": {
-    id: "CMP-1023",
-    title: "Waterlogging — Ward 3, Panvel",
-    description: "Persistent waterlogging in Ward 3 near the market area. Water level reaches 8–10 inches during rain. Multiple vehicles have been damaged. Drain clearance and pump deployment needed.",
-    category: "Waterlogging", priority: "High", status: "Assigned",
-    createdDate: "14 Jan 2025, 09:45 AM", updatedDate: "14 Jan 2025, 02:10 PM",
-    location: "Ward 3, Panvel", coordinates: "18.9921° N, 73.1143° E",
-    subDistrict: "Panvel Taluka", zone: "Zone B",
-    slaStatus: "At Risk", slaLabel: "6h Left", slaHours: 6, slaTargetHours: 48,
-    resolutionTarget: "17 Jan 2025", reportCount: 5, nearbyCount: 1,
-    officer: { name: "P. Nair", assignedDate: "14 Jan 2025", expectedVisit: "15 Jan 2025", slaRisk: "Medium", supervisor: "District Officer K. Patil" },
-    timeline: [
-      { label: "Complaint Created",   date: "14 Jan, 09:45 AM", done: true,  note: "Received via mobile app" },
-      { label: "Assigned to Officer", date: "14 Jan, 11:00 AM", done: true,  note: "Assigned to P. Nair"     },
-      { label: "Site Inspection",     date: "Scheduled",        done: false, note: ""                         },
-      { label: "Awaiting Approval",   date: "Pending",          done: false, note: ""                         },
-    ],
-    activityLog: [
-      { time: "14 Jan 11:00", actor: "System",  action: "Complaint assigned to P. Nair" },
-      { time: "14 Jan 09:45", actor: "System",  action: "Complaint received and registered" },
-    ],
-    evidence: { citizen: [{ label: "Street view", by: "Citizen Report", time: "14 Jan, 09:40 AM", coords: "18.9921° N" }], inspection: [], resolution: [] },
-  },
-  "CMP-1022": {
-    id: "CMP-1022",
-    title: "Streetlight Outage — NH-48 Junction",
-    description: "Three consecutive streetlights are non-functional at the NH-48 junction. The area is a known accident-prone zone. Electrical fault suspected. Night-time visibility is critically low.",
-    category: "Streetlight", priority: "Medium", status: "In Progress",
-    createdDate: "13 Jan 2025, 07:30 PM", updatedDate: "14 Jan 2025, 10:15 AM",
-    location: "NH-48 Junction", coordinates: "18.9876° N, 73.1200° E",
-    subDistrict: "Panvel Taluka", zone: "Zone C",
-    slaStatus: "On Track", slaLabel: "20h Left", slaHours: 20, slaTargetHours: 48,
-    resolutionTarget: "19 Jan 2025", reportCount: 2, nearbyCount: 0,
-    officer: { name: "A. Kulkarni", assignedDate: "13 Jan 2025", expectedVisit: "14 Jan 2025", slaRisk: "Low", supervisor: "District Officer K. Patil" },
-    timeline: [
-      { label: "Complaint Created",   date: "13 Jan, 07:30 PM", done: true, note: "Received via mobile app" },
-      { label: "Assigned to Officer", date: "13 Jan, 08:00 PM", done: true, note: "Assigned to A. Kulkarni" },
-      { label: "Site Inspection",     date: "14 Jan, 10:00 AM", done: true, note: "Fault identified"        },
-      { label: "Work In Progress",    date: "14 Jan, 10:15 AM", done: true, note: "Repair crew dispatched"  },
-      { label: "Awaiting Approval",   date: "Pending",          done: false, note: ""                        },
-    ],
-    activityLog: [
-      { time: "14 Jan 10:15", actor: "A. Kulkarni", action: "Repair crew dispatched to site" },
-      { time: "14 Jan 10:00", actor: "A. Kulkarni", action: "Electrical fault confirmed — 3 units affected" },
-      { time: "13 Jan 08:00", actor: "System",       action: "Complaint assigned to A. Kulkarni" },
-      { time: "13 Jan 19:30", actor: "System",       action: "Complaint received and registered" },
-    ],
-    evidence: {
-      citizen:    [{ label: "Dark junction", by: "Citizen Report", time: "13 Jan, 07:28 PM", coords: "18.9876° N" }],
-      inspection: [{ label: "Faulty unit",   by: "A. Kulkarni",   time: "14 Jan, 10:08 AM", coords: "18.9876° N" }],
-      resolution: [],
-    },
-  },
-  "CMP-1021": {
-    id: "CMP-1021",
-    title: "Sewage Overflow — Sector 12",
-    description: "Sewage overflow at the main drain junction in Sector 12. Raw sewage on the street poses serious health hazard. Residents in three buildings affected. Immediate drain clearance required.",
-    category: "Sewage", priority: "High", status: "Open",
-    createdDate: "13 Jan 2025, 11:20 AM", updatedDate: "13 Jan 2025, 11:20 AM",
-    location: "Sector 12, Panvel", coordinates: "18.9903° N, 73.1162° E",
-    subDistrict: "Panvel Taluka", zone: "Zone A",
-    slaStatus: "At Risk", slaLabel: "4h Left", slaHours: 4, slaTargetHours: 48,
-    resolutionTarget: "16 Jan 2025", reportCount: 4, nearbyCount: 2,
-    officer: { name: "M. Patil", assignedDate: "13 Jan 2025", expectedVisit: "14 Jan 2025", slaRisk: "High", supervisor: "District Officer K. Patil" },
-    timeline: [
-      { label: "Complaint Created",   date: "13 Jan, 11:20 AM", done: true,  note: "Received via mobile app" },
-      { label: "Assigned to Officer", date: "13 Jan, 12:00 PM", done: true,  note: "Assigned to M. Patil"    },
-      { label: "Site Inspection",     date: "Pending",          done: false, note: ""                         },
-    ],
-    activityLog: [
-      { time: "13 Jan 12:00", actor: "System", action: "Complaint assigned to M. Patil" },
-      { time: "13 Jan 11:20", actor: "System", action: "Complaint received and registered" },
-    ],
-    evidence: { citizen: [{ label: "Overflow view", by: "Citizen Report", time: "13 Jan, 11:15 AM", coords: "18.9903° N" }], inspection: [], resolution: [] },
-  },
-  "CMP-1020": {
-    id: "CMP-1020",
-    title: "Garbage Dump — Market Road",
-    description: "Illegal garbage dump formed near Market Road bus stop. Waste has been accumulating for 5 days. Flies and rodents visible. Health hazard for nearby vendors and pedestrians.",
-    category: "Garbage", priority: "Medium", status: "Resolved",
-    createdDate: "12 Jan 2025, 03:10 PM", updatedDate: "14 Jan 2025, 05:00 PM",
-    location: "Market Road, Panvel", coordinates: "18.9887° N, 73.1190° E",
-    subDistrict: "Panvel Taluka", zone: "Zone B",
-    slaStatus: "On Track", slaLabel: "Resolved", slaHours: 99, slaTargetHours: 48,
-    resolutionTarget: "15 Jan 2025", reportCount: 2, nearbyCount: 0,
-    officer: { name: "S. Desai", assignedDate: "12 Jan 2025", expectedVisit: "13 Jan 2025", slaRisk: "Low", supervisor: "District Officer K. Patil" },
-    timeline: [
-      { label: "Complaint Created",   date: "12 Jan, 03:10 PM", done: true, note: "Received via mobile app" },
-      { label: "Assigned to Officer", date: "12 Jan, 04:00 PM", done: true, note: "Assigned to S. Desai"    },
-      { label: "Site Inspection",     date: "13 Jan, 09:30 AM", done: true, note: "Site assessed"           },
-      { label: "Work In Progress",    date: "13 Jan, 02:00 PM", done: true, note: "Clearance crew on-site"  },
-      { label: "Resolved",            date: "14 Jan, 05:00 PM", done: true, note: "Area fully cleared"      },
-    ],
-    activityLog: [
-      { time: "14 Jan 17:00", actor: "S. Desai", action: "Garbage cleared — area sanitised and verified" },
-      { time: "13 Jan 14:00", actor: "S. Desai", action: "Clearance crew dispatched to Market Road" },
-      { time: "13 Jan 09:30", actor: "S. Desai", action: "Site inspection completed" },
-      { time: "12 Jan 16:00", actor: "System",   action: "Complaint assigned to S. Desai" },
-      { time: "12 Jan 15:10", actor: "System",   action: "Complaint received and registered" },
-    ],
-    evidence: {
-      citizen:    [{ label: "Dump site", by: "Citizen Report", time: "12 Jan, 03:05 PM", coords: "18.9887° N" }],
-      inspection: [{ label: "Assessment", by: "S. Desai",      time: "13 Jan, 09:35 AM", coords: "18.9887° N" }],
-      resolution: [{ label: "Post-clear", by: "S. Desai",      time: "14 Jan, 05:05 PM", coords: "18.9887° N" }],
-    },
-  },
-  "CMP-1019": {
-    id: "CMP-1019",
-    title: "Road Damage — Old Panvel Road",
-    description: "Multiple large potholes and a collapsed road edge on Old Panvel Road near the railway bridge. Heavy vehicles frequently use this route. Two accidents reported this week.",
-    category: "Road Damage", priority: "Critical", status: "Assigned",
-    createdDate: "12 Jan 2025, 10:00 AM", updatedDate: "12 Jan 2025, 01:30 PM",
-    location: "Old Panvel Road", coordinates: "18.9932° N, 73.1130° E",
-    subDistrict: "Panvel Taluka", zone: "Zone C",
-    slaStatus: "Breached", slaLabel: "BREACHED", slaHours: -12, slaTargetHours: 48,
-    resolutionTarget: "15 Jan 2025", reportCount: 4, nearbyCount: 3,
-    officer: { name: "R. Sharma", assignedDate: "12 Jan 2025", expectedVisit: "13 Jan 2025", slaRisk: "Critical", supervisor: "District Officer K. Patil" },
-    timeline: [
-      { label: "Complaint Created",   date: "12 Jan, 10:00 AM", done: true,  note: "Received via mobile app" },
-      { label: "Assigned to Officer", date: "12 Jan, 01:30 PM", done: true,  note: "Assigned to R. Sharma"   },
-      { label: "Site Inspection",     date: "Overdue",          done: false, note: ""                         },
-    ],
-    activityLog: [
-      { time: "12 Jan 13:30", actor: "System", action: "Complaint assigned to R. Sharma" },
-      { time: "12 Jan 10:00", actor: "System", action: "Complaint received and registered" },
-    ],
-    evidence: { citizen: [{ label: "Road collapse", by: "Citizen Report", time: "12 Jan, 09:55 AM", coords: "18.9932° N" }], inspection: [], resolution: [] },
-  },
-};
-
-// Fallback for any ID not in the lookup
-function getMock(id: string): ComplaintDetail {
-  if (MOCK_COMPLAINTS[id]) return MOCK_COMPLAINTS[id];
-  // Generic fallback so unknown IDs don't crash
-  return {
-    id,
-    title: `Complaint ${id}`,
-    description: "No additional details available for this complaint.",
-    category: "General", priority: "Medium", status: "Open",
-    createdDate: "—", updatedDate: "—",
-    location: "Unknown location", coordinates: "N/A",
-    subDistrict: "Panvel Taluka", zone: "N/A",
-    slaStatus: "On Track", slaLabel: "48h Left", slaHours: 48, slaTargetHours: 48,
-    resolutionTarget: "—", reportCount: 1, nearbyCount: 0,
-    officer: { name: "Unassigned", assignedDate: "—", expectedVisit: "—", slaRisk: "Low", supervisor: "—" },
-    timeline: [{ label: "Complaint Created", date: "—", done: true, note: "Received" }],
-    activityLog: [{ time: "—", actor: "System", action: "Complaint received and registered" }],
-    evidence: { citizen: [], inspection: [], resolution: [] },
-  };
-}
+type SLAStatus = ComplaintSLAStatus;
+type ComplaintDetail = ComplaintDetailView;
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 const PRIORITY_CLS: Record<string, string> = {
@@ -613,6 +409,10 @@ function EscalateDialog({
         sourceComplaintId: complaint.id,
         title: complaint.title,
         subDistrict: SUB_DISTRICT_CONFIG.name,
+        district: `${SUB_DISTRICT_CONFIG.district} District`,
+        state: SUB_DISTRICT_CONFIG.state,
+        submittedBy: "Sub-District Officer",
+        tier: "district",
         category: mapCategory(complaint.category),
         priority,
         reason,
@@ -1023,85 +823,68 @@ function StickyActions({
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function ComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const base = getMock(id ?? "CMP-1024");
+  const complaintId = id ?? "CMP-1024";
+  const record = useComplaintStore((s) => s.complaints.find((x) => x.id === complaintId) ?? s.getById(complaintId));
+  const assignOfficer = useComplaintStore((s) => s.assignOfficer);
+  const setComplaintStatus = useComplaintStore((s) => s.setStatus);
+  const linkEscalation = useComplaintStore((s) => s.linkEscalation);
+  const appendActivity = useComplaintStore((s) => s.appendActivity);
+  const syncFromEscalation = useComplaintStore((s) => s.syncFromEscalation);
 
-  // Local state — frontend-only, mirrors what the list page does
-  const [status,       setStatus]       = useState(base.status);
-  const [officerName,  setOfficerName]  = useState(base.officer.name);
-  const [escalated,    setEscalated]    = useState(false);
-  const [escId,        setEscId]        = useState<string | null>(null);
-  const [toast,        setToast]        = useState<string | null>(null);
+  const linkedEsc = useEscalationStore((s) => s.escalations.find((e) => e.sourceComplaintId === complaintId));
+  const resolution = useComplaintWorkflowStore((s) => s.resolutions.find((r) => r.complaintId === complaintId));
+
+  const [toast, setToast] = useState<string | null>(null);
   const [updateStatusOpen, setUpdateStatusOpen] = useState(false);
-  const [escalateOpen2,    setEscalateOpen2]    = useState(false);
+  const [escalateOpen2, setEscalateOpen2] = useState(false);
 
-  // Activity log and timeline are local state so escalation events appear inline
-  const [activityLog, setActivityLog] = useState(base.activityLog);
+  const c = useMemo(() => toComplaintDetailView(record), [record]);
+  const escId = record.escalationId ?? linkedEsc?.id ?? null;
+  const escalated = !!escId;
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Merge local overrides back into the complaint object so every
-  // downstream consumer (timeline, SLA card, header badge) stays in sync
-  const c = {
-    ...base,
-    status,
-    officer: { ...base.officer, name: officerName },
-    activityLog,
-  };
+  useEffect(() => {
+    if (linkedEsc) syncFromEscalation(linkedEsc);
+  }, [linkedEsc, syncFromEscalation]);
 
   const handleAssign = (officer: string) => {
-    setOfficerName(officer);
-    if (status === "Open") setStatus("Assigned");
-    const now = new Date();
-    const timeStr = `${now.getDate()} ${now.toLocaleString("en",{month:"short"})} ${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")}`;
-    setActivityLog(prev => [{ time: timeStr, actor: "System", action: `Complaint assigned to ${officer}` }, ...prev]);
+    assignOfficer(complaintId, officer);
     showToast(`Assigned to ${officer}`);
   };
 
   const handleMarkInProgress = () => {
-    if (status !== "Resolved" && status !== "Rejected" && status !== "In Progress") {
-      setStatus("In Progress");
-      const now = new Date();
-      const timeStr = `${now.getDate()} ${now.toLocaleString("en",{month:"short"})} ${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")}`;
-      setActivityLog(prev => [{ time: timeStr, actor: "System", action: "Status updated to In Progress" }, ...prev]);
+    if (c.status !== "Resolved" && c.status !== "Rejected" && c.status !== "In Progress") {
+      setComplaintStatus(complaintId, "In Progress");
       showToast("Status updated to In Progress");
     }
   };
 
   const handleReject = () => {
-    if (status !== "Resolved" && status !== "Rejected") {
-      setStatus("Rejected");
-      const now = new Date();
-      const timeStr = `${now.getDate()} ${now.toLocaleString("en",{month:"short"})} ${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")}`;
-      setActivityLog(prev => [{ time: timeStr, actor: "System", action: "Complaint rejected by officer" }, ...prev]);
+    if (c.status !== "Resolved" && c.status !== "Rejected") {
+      setComplaintStatus(complaintId, "Rejected", "Officer", "Complaint rejected by officer");
       showToast("Complaint marked as Rejected");
     }
   };
 
   const handleUpdateStatus = (newStatus: UpdatableStatus, note: string) => {
     setUpdateStatusOpen(false);
-    if (newStatus === status) return;
-    setStatus(newStatus);
-    const now = new Date();
-    const timeStr = `${now.getDate()} ${now.toLocaleString("en", { month: "short" })} ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-    setActivityLog(prev => [
-      { time: timeStr, actor: "Officer", action: `Status updated to ${newStatus}${note ? ` — ${note}` : ""}` },
-      ...prev,
-    ]);
+    if (newStatus === c.status) return;
+    setComplaintStatus(
+      complaintId,
+      newStatus as ComplaintStatus,
+      "Officer",
+      `Status updated to ${newStatus}${note ? ` — ${note}` : ""}`
+    );
     showToast(`Status updated to ${newStatus}`);
   };
 
-  const handleEscalate = (newEscId: string, priority: EscalationPriority, reason: string) => {    setEscalated(true);
-    setEscId(newEscId);
-    setStatus("Escalated");
-    const now = new Date();
-    const timeStr = `${now.getDate()} ${now.toLocaleString("en",{month:"short"})} ${now.getHours().toString().padStart(2,"0")}:${now.getMinutes().toString().padStart(2,"0")}`;
-    setActivityLog(prev => [
-      { time: timeStr, actor: "Sub-District", action: `Escalated to district as ${newEscId} — ${reason} (${priority})` },
-      ...prev,
-    ]);
+  const handleEscalate = (newEscId: string, priority: EscalationPriority, reason: string) => {
+    linkEscalation(complaintId, newEscId);
+    appendActivity(complaintId, "Sub-District", `Escalated to district as ${newEscId} — ${reason} (${priority})`);
     showToast(`Escalated as ${newEscId} — visible in District Admin`);
   };
 
@@ -1109,9 +892,9 @@ export default function ComplaintDetailPage() {
     <div className="flex flex-col gap-3 pb-6">
       <Breadcrumb id={c.id} />
 
-      {/* Escalation success banner */}
+      {/* District escalation status */}
       <AnimatePresence>
-        {escalated && escId && (
+        {escalated && escId && linkedEsc && (
           <motion.div
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
@@ -1120,25 +903,40 @@ export default function ComplaintDetailPage() {
             <div className="flex items-center gap-2.5 min-w-0">
               <ShieldAlert size={14} className="text-orange-400 shrink-0" />
               <span className="text-xs text-[var(--color-text-secondary)]">
-                Escalated to District Admin as{" "}
-                <Link
-                  href={`/district-admin/dashboard/escalation/${escId}`}
-                  className="font-mono font-bold text-orange-400 hover:underline"
-                >
-                  {escId}
-                </Link>
-                {" "}— status: <span className="font-semibold text-orange-400">Pending Review</span>
+                District escalation <span className="font-mono font-bold text-orange-400">{escId}</span>
+                {" "}— <span className="font-semibold text-orange-400">{linkedEsc.status}</span>
+                {linkedEsc.assignedTo !== "Unassigned" && (
+                  <> · assigned to <span className="font-medium">{linkedEsc.assignedTo}</span></>
+                )}
               </span>
             </div>
-            <Link
-              href={`/district-admin/dashboard/escalation/${escId}`}
-              className="shrink-0 flex items-center gap-1 text-[11px] font-semibold text-orange-400 hover:underline"
-            >
-              View <ArrowUpRight size={11} />
-            </Link>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {(resolution || record.resolutionStatus !== "None") && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-xl border px-4 py-3 text-xs"
+          style={{
+            borderColor: record.resolutionStatus === "Approved" ? "rgba(34,197,94,0.35)" : record.resolutionStatus === "Rejected" ? "rgba(239,68,68,0.35)" : "rgba(6,182,212,0.35)",
+            background: record.resolutionStatus === "Approved" ? "rgba(34,197,94,0.08)" : record.resolutionStatus === "Rejected" ? "rgba(239,68,68,0.08)" : "rgba(6,182,212,0.08)",
+          }}
+        >
+          <span className="font-semibold text-[var(--color-text-primary)]">
+            Resolution {record.resolutionRequestId ?? resolution?.id ?? "—"}
+          </span>
+          {" "}— <span className="text-[var(--color-text-secondary)]">{record.resolutionStatus}</span>
+          {resolution?.clarificationMessage && (
+            <p className="mt-1 text-[var(--color-text-muted)]">District: {resolution.clarificationMessage}</p>
+          )}
+          {record.resolutionStatus === "Clarification Requested" && (
+            <Link href={`/sub-district-admin/dashboard/complaints/${complaintId}/resolve`} className="ml-2 text-amber-400 hover:underline">
+              Respond →
+            </Link>
+          )}
+        </motion.div>
+      )}
 
       {/* Success toast */}
       <AnimatePresence>

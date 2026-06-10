@@ -13,6 +13,7 @@ import ActivityFeed from "@/components/super-admin-dashboard/activity-feed";
 import ComplaintsTable from "@/components/super-admin-dashboard/complaints-table";
 import ContractorRiskTable from "@/components/super-admin-dashboard/contractor-risk-table";
 import OnboardingRequests from "@/components/super-admin-dashboard/onboarding-requests";
+import IncomingWorkflowsPanel from "@/components/super-admin-dashboard/incoming-workflows-panel";
 
 import ComplaintChart from "@/components/super-admin-dashboard/complaint-chart";
 import ExpenditureChart from "@/components/super-admin-dashboard/expenditure-chart";
@@ -81,6 +82,8 @@ function CardSlot({ children }: { children: ReactNode }) {
 export default function SuperAdminDashboard() {
   return (
     <div className="flex flex-col gap-4">
+      <IncomingWorkflowsPanel />
+
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {kpiData.map((item) => (
           <StatCard key={item.title} {...item} />

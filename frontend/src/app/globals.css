@@ -1247,3 +1247,13 @@ body {
   font-weight: 500;
   color: var(--color-success);
 }
+
+/* Admin portal modals — above sidebars (z-50) and notification dropdowns */
+.admin-modal-overlay {
+  z-index: 9000;
+}
+
+.admin-modal-panel {
+  max-height: min(92vh, 720px);
+  overflow-y: auto;
+}

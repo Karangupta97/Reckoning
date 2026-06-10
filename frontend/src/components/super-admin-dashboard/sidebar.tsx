@@ -68,6 +68,12 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    label: "Evidence Review",
+    icon: <FileText size={18} />,
+    href: "/super-admin/evidence",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
     label: "Expenditure Analytics",
     icon: <BarChart3 size={18} />,
     href: "/super-admin/expenditure",
@@ -116,6 +122,8 @@ const navItems: NavItem[] = [
     hasDropdown: true,
     color: "text-[var(--color-text-muted)]",
     children: [
+      { label: "Approval Queue",    href: "/super-admin/governance/approvals"        },
+      { label: "District Requests", href: "/super-admin/governance/district-requests"  },
       { label: "User Roles",        href: "/super-admin/governance/user-roles"       },
       { label: "Access Control",    href: "/super-admin/governance/access-control"   },
       { label: "Compliance Review", href: "/super-admin/governance/compliance-review"},

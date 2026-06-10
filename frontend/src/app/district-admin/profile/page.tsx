@@ -141,7 +141,7 @@ function ProfileContent() {
                 { label: "Employee ID", placeholder: "DA-2026-DCO", value: "DA-2026-DCO" },
                 { label: "Official Email", placeholder: "admin@district.gov.in", value: "admin@district.gov.in", type: "email" },
                 { label: "Phone", placeholder: "+91 98765 00000", value: "+91 98765 00000", type: "tel" },
-                { label: "District", placeholder: "New Delhi District", value: "New Delhi District" },
+                { label: "District", placeholder: "Raigad District", value: "Raigad District" },
                 { label: "Designation", placeholder: "District Collector", value: "District Collector" },
               ].map((f) => (
                 <div key={f.label} className="flex flex-col gap-1.5">

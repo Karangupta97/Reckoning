@@ -16,6 +16,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
+import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
+import { useComplaintStore } from "@/store/complaintStore";
+import { useEscalationStore } from "@/store/escalationStore";
+import { useEvidenceStore } from "@/store/evidenceStore";
+import { SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
+import { districtLabel } from "@/lib/district-config";
 
 interface FormData {
   resolutionNotes: string;
@@ -152,6 +158,12 @@ function SuccessState({ id }: { id: string }) {
 
 export default function ResolvePage() {
   const { id } = useParams<{ id: string }>();
+  const complaintId = id ?? "CMP-1024";
+  const complaint = useComplaintStore((s) => s.getById(complaintId));
+  const addEvidence = useComplaintStore((s) => s.addEvidence);
+  const submitResolution = useComplaintWorkflowStore((s) => s.submitResolutionRequest);
+  const linkedEsc = useEscalationStore((s) => s.escalations.find((e) => e.sourceComplaintId === complaintId));
+  const submitEvidence = useEvidenceStore((s) => s.submitEvidence);
   const [form, setForm] = useState<FormData>({
     resolutionNotes: "",
     workPerformed: "",
@@ -173,7 +185,34 @@ export default function ResolvePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) setSubmitted(true);
+    if (!validate()) return;
+    const evId = submitEvidence({
+      relatedEntityId: complaintId,
+      relatedEntityType: "Complaint",
+      title: `Closure evidence — ${complaintId}`,
+      district: districtLabel,
+      state: SUB_DISTRICT_CONFIG.state,
+      uploadedBy: "Sub-District Officer",
+      notes: form.resolutionNotes,
+      files: [{ id: "f-close", label: "After images", type: "image", size: "2.4 MB" }],
+    });
+    addEvidence(complaintId, "resolution", {
+      label: "Closure after images",
+      by: "Sub-District Officer",
+      time: form.completionDate,
+      coords: complaint.coordinates,
+    });
+    submitResolution({
+      complaintId,
+      escalationId: linkedEsc?.id ?? complaint.escalationId,
+      resolutionNotes: form.resolutionNotes,
+      workPerformed: form.workPerformed,
+      costIncurred: form.costIncurred,
+      completionDate: form.completionDate,
+      evidenceId: evId,
+      submittedBy: "Sub-District Officer",
+    });
+    setSubmitted(true);
   };
 
   if (submitted) return <SuccessState id={id ?? "CMP-1024"} />;
@@ -189,7 +228,9 @@ export default function ResolvePage() {
         </Link>
         <div>
           <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Case Closure Workflow</h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Complaint {id ?? "CMP-1024"}</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+            {complaint.title} · {complaint.id}
+          </p>
         </div>
       </motion.div>
 

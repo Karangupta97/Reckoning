@@ -8,15 +8,17 @@ import {
   districtOpsCenter,
   districtLocationLabel,
 } from "@/lib/district-config";
+import { useDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 
 export default function DistrictHeroBanner() {
   const { subDistrictCount, activeOfficers } = DISTRICT_CONFIG;
+  const d = useDistrictDashboardMetrics();
 
   const metrics = [
-    { label: "Critical Escalations", value: "24",              color: "text-red-400",     border: "border-red-400/20",     bg: "bg-red-400/5"     },
-    { label: "SLA Compliance",       value: "81%",             color: "text-teal-400",    border: "border-teal-400/20",    bg: "bg-teal-400/5"    },
-    { label: "Sub-Districts",        value: String(subDistrictCount), color: "text-cyan-400",    border: "border-cyan-400/20",    bg: "bg-cyan-400/5"    },
-    { label: "Active Officers",      value: String(activeOfficers),  color: "text-emerald-400", border: "border-emerald-400/20", bg: "bg-emerald-400/5" },
+    { label: "Critical Escalations", value: String(d.criticalEscalations), color: "text-red-400", border: "border-red-400/20", bg: "bg-red-400/5" },
+    { label: "SLA Compliance", value: `${d.slaCompliance}%`, color: "text-teal-400", border: "border-teal-400/20", bg: "bg-teal-400/5" },
+    { label: "Sub-Districts", value: String(subDistrictCount), color: "text-cyan-400", border: "border-cyan-400/20", bg: "bg-cyan-400/5" },
+    { label: "Active Officers", value: String(activeOfficers), color: "text-emerald-400", border: "border-emerald-400/20", bg: "bg-emerald-400/5" },
   ];
 
   return (
