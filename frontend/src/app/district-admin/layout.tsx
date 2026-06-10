@@ -27,15 +27,15 @@ export default function DistrictAdminLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-page)] text-[var(--color-text-primary)]">
-      <div className="flex min-h-screen">
+    <div className="h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
+      <div className="flex h-full">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block lg:w-[250px] lg:flex-shrink-0">
+        <div className="hidden lg:flex lg:flex-shrink-0">
           <DistrictAdminSidebar />
         </div>
 
         {/* Main content */}
-        <div className="flex flex-1 flex-col min-w-0">
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
           <DistrictAdminHeader
             onMenuToggle={() => setIsMobileSidebarOpen(true)}
             title={districtLabel}
