@@ -21,54 +21,12 @@ import {
   DistrictActivityFeed,
 } from "@/components/district-admin-dashboard";
 import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
+import { useDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 
 // Lazy load the map component with no server-side rendering
 const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
   ssr: false,
 });
-
-const kpiData = [
-  {
-    title: "Total Complaints",
-    value: "1,240",
-    change: "14.2%",
-    icon: <ClipboardList size={20} />,
-    trend: "up" as const,
-    variant: "neutral" as const,
-  },
-  {
-    title: "Open Complaints",
-    value: "318",
-    change: "8.7%",
-    icon: <AlertTriangle size={20} />,
-    trend: "up" as const,
-    variant: "warn" as const,
-  },
-  {
-    title: "Resolved Complaints",
-    value: "872",
-    change: "6.3%",
-    icon: <CheckCircle2 size={20} />,
-    trend: "down" as const,
-    variant: "good" as const,
-  },
-  {
-    title: "Escalated Cases",
-    value: "50",
-    change: "18.4%",
-    icon: <ShieldAlert size={20} />,
-    trend: "up" as const,
-    variant: "danger" as const,
-  },
-] as const;
-
-function DashboardPair({ children }: { children: ReactNode }) {
-  return (
-    <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-      {children}
-    </section>
-  );
-}
 
 function DashboardTriple({ children }: { children: ReactNode }) {
   return (
@@ -83,6 +41,43 @@ function CardSlot({ children }: { children: ReactNode }) {
 }
 
 export default function DistrictAdminDashboard() {
+  const d = useDistrictDashboardMetrics();
+
+  const kpiData = [
+    {
+      title: "Total Complaints",
+      value: String(d.totalComplaints),
+      change: `${d.newTickets} new tickets`,
+      icon: <ClipboardList size={20} />,
+      trend: "up" as const,
+      variant: "neutral" as const,
+    },
+    {
+      title: "Open Complaints",
+      value: String(d.openComplaints),
+      change: `${d.resolutionRequests} resolution requests`,
+      icon: <AlertTriangle size={20} />,
+      trend: "up" as const,
+      variant: "warn" as const,
+    },
+    {
+      title: "Resolved Complaints",
+      value: String(d.resolvedComplaints),
+      change: `${d.evidenceReviews} evidence reviews`,
+      icon: <CheckCircle2 size={20} />,
+      trend: "down" as const,
+      variant: "good" as const,
+    },
+    {
+      title: "Escalated Cases",
+      value: String(d.escalatedCases),
+      change: `${d.incomingEscalations} incoming`,
+      icon: <ShieldAlert size={20} />,
+      trend: "up" as const,
+      variant: "danger" as const,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
       {/* Hero Banner */}

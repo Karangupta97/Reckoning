@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   Search,
-  Bell,
   Settings,
   Calendar,
   ChevronDown,
@@ -18,18 +17,12 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
   title?: string;
   subtitle?: string;
-}
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  timestamp: string;
-  unread: boolean;
 }
 
 const DATE_OPTIONS = [
@@ -38,39 +31,6 @@ const DATE_OPTIONS = [
   "This Month",
   "This Quarter",
 ] as const;
-
-const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "1",
-    title: "Road quality anomaly detected",
-    timestamp: "4 min ago",
-    unread: true,
-  },
-  {
-    id: "2",
-    title: "Budget overspend warning",
-    timestamp: "18 min ago",
-    unread: true,
-  },
-  {
-    id: "3",
-    title: "AI complaint spike detected",
-    timestamp: "42 min ago",
-    unread: true,
-  },
-  {
-    id: "4",
-    title: "Contractor risk score increased",
-    timestamp: "1 hr ago",
-    unread: false,
-  },
-  {
-    id: "5",
-    title: "GIS monitoring alert",
-    timestamp: "2 hr ago",
-    unread: false,
-  },
-];
 
 const SETTINGS_ITEMS: {
   label: string;
@@ -104,7 +64,6 @@ export default function Header({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] =
     useState<(typeof DATE_OPTIONS)[number]>("This Month");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
 
@@ -116,33 +75,23 @@ export default function Header({
   }, []);
 
   const closeAllDropdowns = useCallback(() => {
-    setShowNotifications(false);
-    setShowSettings(false);
-    setShowDateDropdown(false);
-  }, []);
-
-  const toggleNotifications = useCallback(() => {
-    setShowNotifications((prev) => !prev);
     setShowSettings(false);
     setShowDateDropdown(false);
   }, []);
 
   const toggleSettings = useCallback(() => {
     setShowSettings((prev) => !prev);
-    setShowNotifications(false);
     setShowDateDropdown(false);
   }, []);
 
   const toggleDateDropdown = useCallback(() => {
     setShowDateDropdown((prev) => !prev);
-    setShowNotifications(false);
     setShowSettings(false);
   }, []);
 
-  const hasUnreadNotifications = NOTIFICATIONS.some((n) => n.unread);
-
   return (
     <header className="header-container">
+      {/* Left */}
       <div className="flex min-w-0 shrink-0 items-center gap-3">
         {isMobile && onMenuToggle && (
           <motion.button
@@ -164,6 +113,7 @@ export default function Header({
         </div>
       </div>
 
+      {/* Search */}
       <label className="header-search order-last w-full min-w-0 lg:order-none">
         <Search size={16} className="text-muted shrink-0" aria-hidden />
         <input
@@ -176,7 +126,9 @@ export default function Header({
         />
       </label>
 
+      {/* Right actions */}
       <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-3 sm:flex-nowrap">
+        {/* Date range */}
         <div className="relative">
           <motion.button
             type="button"
@@ -209,9 +161,7 @@ export default function Header({
                       setSelectedDate(option);
                       setShowDateDropdown(false);
                     }}
-                    className={`dropdown-item ${
-                      selectedDate === option ? "dropdown-item-active" : ""
-                    }`}
+                    className={`dropdown-item ${selectedDate === option ? "dropdown-item-active" : ""}`}
                   >
                     {option}
                   </button>
@@ -221,65 +171,11 @@ export default function Header({
           </AnimatePresence>
         </div>
 
-        <div className="relative">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={toggleNotifications}
-            className="btn-icon"
-            aria-expanded={showNotifications}
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-            {hasUnreadNotifications && (
-              <span className="notification-dot" aria-hidden />
-            )}
-          </motion.button>
-
-          <AnimatePresence>
-            {showNotifications && (
-              <motion.div
-                {...dropdownMotion}
-                className="dashboard-panel glass-panel absolute right-0 top-[calc(100%+8px)] z-50 w-80 overflow-hidden"
-              >
-                <div className="dropdown-panel-header">
-                  <h3 className="text-primary text-sm font-semibold">
-                    Notifications
-                  </h3>
-                  <button
-                    type="button"
-                    className="btn-secondary !h-8 !px-3 !text-[11px]"
-                    onClick={closeAllDropdowns}
-                  >
-                    View All
-                  </button>
-                </div>
-                <div className="max-h-72 overflow-y-auto py-1">
-                  {NOTIFICATIONS.map((notification) => (
-                    <button
-                      key={notification.id}
-                      type="button"
-                      className={`dropdown-item flex-col !items-start gap-1 ${
-                        notification.unread ? "dropdown-item-unread" : ""
-                      }`}
-                    >
-                      <span className="text-primary text-left text-xs leading-snug">
-                        {notification.title}
-                      </span>
-                      <span className="text-muted text-[10px]">
-                        {notification.timestamp}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <AdminNotificationBell portal="super" />
 
         <ThemeToggle />
 
+        {/* Settings */}
         <div className="relative">
           <motion.button
             type="button"
@@ -319,6 +215,7 @@ export default function Header({
           </AnimatePresence>
         </div>
 
+        {/* Avatar */}
         <div className="dashboard-card flex min-w-0">
           <div className="dashboard-avatar relative shrink-0">
             <User size={16} aria-hidden />

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Bell,
   Settings,
   Calendar,
   ChevronDown,
@@ -18,19 +17,13 @@ import {
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { districtLabel, districtLocationLabel } from "@/lib/district-config";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
   title?: string;
   subtitle?: string;
-}
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  timestamp: string;
-  unread: boolean;
 }
 
 const DATE_OPTIONS = [
@@ -40,51 +33,18 @@ const DATE_OPTIONS = [
   "This Quarter",
 ] as const;
 
-const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "1",
-    title: "New escalation: Pothole — Ward 12",
-    timestamp: "3 min ago",
-    unread: true,
-  },
-  {
-    id: "2",
-    title: "SLA breach warning — Mehrauli sub-district",
-    timestamp: "22 min ago",
-    unread: true,
-  },
-  {
-    id: "3",
-    title: "5 complaints pending review",
-    timestamp: "45 min ago",
-    unread: true,
-  },
-  {
-    id: "4",
-    title: "Sub-district officer login detected",
-    timestamp: "1 hr ago",
-    unread: false,
-  },
-  {
-    id: "5",
-    title: "Monthly district report generated",
-    timestamp: "3 hr ago",
-    unread: false,
-  },
-];
-
 const SETTINGS_ITEMS: {
   label: string;
   icon: typeof User;
   href?: string;
   danger?: boolean;
 }[] = [
-  { label: "Profile Settings",  icon: User,       href: "/district-admin/profile?tab=profile"  },
-  { label: "District Settings", icon: Sliders,    href: "/district-admin/settings"              },
-  { label: "Security",          icon: Shield,     href: "/district-admin/profile?tab=security"  },
+  { label: "Profile Settings",  icon: User,       href: "/district-admin/profile?tab=profile"      },
+  { label: "District Settings", icon: Sliders,    href: "/district-admin/settings"                  },
+  { label: "Security",          icon: Shield,     href: "/district-admin/profile?tab=security"      },
   { label: "Notifications",     icon: Settings,   href: "/district-admin/profile?tab=notifications" },
-  { label: "Help Center",       icon: HelpCircle, href: "/district-admin/profile?tab=preferences" },
-  { label: "Logout",            icon: LogOut,     danger: true                                  },
+  { label: "Help Center",       icon: HelpCircle, href: "/district-admin/profile?tab=preferences"   },
+  { label: "Logout",            icon: LogOut,     danger: true                                      },
 ];
 
 const dropdownMotion = {
@@ -105,7 +65,6 @@ export default function DistrictAdminHeader({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] =
     useState<(typeof DATE_OPTIONS)[number]>("This Month");
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
 
@@ -117,30 +76,19 @@ export default function DistrictAdminHeader({
   }, []);
 
   const closeAll = useCallback(() => {
-    setShowNotifications(false);
-    setShowSettings(false);
-    setShowDateDropdown(false);
-  }, []);
-
-  const toggleNotifications = useCallback(() => {
-    setShowNotifications((p) => !p);
     setShowSettings(false);
     setShowDateDropdown(false);
   }, []);
 
   const toggleSettings = useCallback(() => {
     setShowSettings((p) => !p);
-    setShowNotifications(false);
     setShowDateDropdown(false);
   }, []);
 
   const toggleDate = useCallback(() => {
     setShowDateDropdown((p) => !p);
-    setShowNotifications(false);
     setShowSettings(false);
   }, []);
-
-  const hasUnread = NOTIFICATIONS.some((n) => n.unread);
 
   return (
     <header className="da-header-container">
@@ -224,59 +172,7 @@ export default function DistrictAdminHeader({
           </AnimatePresence>
         </div>
 
-        {/* Notifications */}
-        <div className="relative">
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={toggleNotifications}
-            className="da-btn-icon"
-            aria-expanded={showNotifications}
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-            {hasUnread && <span className="da-notification-dot" aria-hidden />}
-          </motion.button>
-
-          <AnimatePresence>
-            {showNotifications && (
-              <motion.div
-                {...dropdownMotion}
-                className="dashboard-panel glass-panel absolute right-0 top-[calc(100%+8px)] z-50 w-80 overflow-hidden"
-              >
-                <div className="da-dropdown-panel-header">
-                  <h3 className="text-primary text-sm font-semibold">
-                    Notifications
-                  </h3>
-                  <button
-                    type="button"
-                    className="da-btn-secondary !h-8 !px-3 !text-[11px]"
-                    onClick={closeAll}
-                  >
-                    View All
-                  </button>
-                </div>
-                <div className="max-h-72 overflow-y-auto py-1">
-                  {NOTIFICATIONS.map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      className={`da-dropdown-item flex-col !items-start gap-1 ${n.unread ? "da-dropdown-item-unread" : ""}`}
-                    >
-                      <span className="text-primary text-left text-xs leading-snug">
-                        {n.title}
-                      </span>
-                      <span className="text-muted text-[10px]">
-                        {n.timestamp}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <AdminNotificationBell portal="district" />
 
         <ThemeToggle />
 
