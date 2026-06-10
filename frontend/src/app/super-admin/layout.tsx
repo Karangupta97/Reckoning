@@ -29,12 +29,12 @@ export default function SuperAdminLayout({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--color-page)] text-[var(--color-text-primary)]">
-      <div className="flex min-h-screen">
+    <div className="h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
+      <div className="flex h-full">
         <div className="hidden lg:block lg:w-[250px] lg:flex-shrink-0">
           <Sidebar activePath={pathname} />
         </div>
-        <div className="flex flex-1 flex-col min-w-0">
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
           <Header onMenuToggle={() => setIsMobileSidebarOpen(true)} />
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
             {children}

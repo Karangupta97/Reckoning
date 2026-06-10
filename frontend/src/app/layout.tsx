@@ -101,7 +101,6 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         {/* Critical CSS to prevent theme FOUC: set body colors based on detected theme */}
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -110,7 +109,8 @@ export default async function RootLayout({
             body { background-color: var(--color-page, #EFF2F9); color: var(--color-text-primary, #1C2B3A); }
           `.replace(/\n\s*/g, '')
         }} />
-        <script dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }} />
+        <script id="theme-init" dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+        <script id="extension-cleanup" dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }} />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}

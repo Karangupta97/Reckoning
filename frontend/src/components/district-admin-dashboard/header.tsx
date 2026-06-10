@@ -95,16 +95,14 @@ export default function DistrictAdminHeader({
       {/* Left */}
       <div className="flex min-w-0 shrink-0 items-center gap-3">
         {isMobile && onMenuToggle && (
-          <motion.button
+          <button
             type="button"
-            whileTap={{ scale: 0.95 }}
-            whileHover={{ scale: 1.02 }}
             onClick={onMenuToggle}
             className="da-btn-icon lg:hidden"
             aria-label="Open navigation"
           >
             <Menu size={18} />
-          </motion.button>
+          </button>
         )}
         <div className="min-w-0">
           <h1 className="text-primary truncate text-base font-bold leading-tight lg:text-lg">
@@ -131,10 +129,8 @@ export default function DistrictAdminHeader({
       <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-3 sm:flex-nowrap">
         {/* Date range */}
         <div className="relative">
-          <motion.button
+          <button
             type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
             onClick={toggleDate}
             className={`da-header-button ${showDateDropdown ? "da-header-button-active" : ""}`}
             aria-expanded={showDateDropdown}
@@ -143,7 +139,7 @@ export default function DistrictAdminHeader({
             <Calendar size={14} className="text-muted" aria-hidden />
             <span>{selectedDate}</span>
             <ChevronDown size={14} className="text-muted" aria-hidden />
-          </motion.button>
+          </button>
 
           <AnimatePresence>
             {showDateDropdown && (
@@ -178,17 +174,15 @@ export default function DistrictAdminHeader({
 
         {/* Settings */}
         <div className="relative">
-          <motion.button
+          <button
             type="button"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
             onClick={toggleSettings}
             className="da-btn-icon"
             aria-expanded={showSettings}
             aria-label="Settings"
           >
             <Settings size={18} />
-          </motion.button>
+          </button>
 
           <AnimatePresence>
             {showSettings && (

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Bell } from "lucide-react";
 
 interface NotificationItem {
@@ -53,31 +53,69 @@ const dropdownMotion = {
 };
 
 interface AdminNotificationBellProps {
-  /** Which admin portal is using this bell (reserved for future portal-scoped queries). */
   portal: "district" | "sub-district" | "super";
 }
 
-export function AdminNotificationBell({ portal: _ }: AdminNotificationBellProps) {
+const PORTAL_STYLES: Record<AdminNotificationBellProps["portal"], { buttonClassName: string; dotClassName: string }> = {
+  district: {
+    buttonClassName: "da-btn-icon",
+    dotClassName: "da-notification-dot",
+  },
+  "sub-district": {
+    buttonClassName: "sda-btn-icon",
+    dotClassName: "sda-notification-dot",
+  },
+  super: {
+    buttonClassName: "btn-icon",
+    dotClassName: "notification-dot",
+  },
+};
+
+export function AdminNotificationBell({ portal }: AdminNotificationBellProps) {
+  const { buttonClassName, dotClassName } = PORTAL_STYLES[portal];
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const toggle = useCallback(() => setOpen((p) => !p), []);
   const close = useCallback(() => setOpen(false), []);
 
+  // Close on outside click or Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    const handleClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("mousedown", handleClick);
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [close]);
+
   const hasUnread = MOCK_NOTIFICATIONS.some((n) => n.unread);
+  const unreadCount = MOCK_NOTIFICATIONS.filter((n) => n.unread).length;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={containerRef}>
       <motion.button
         type="button"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={toggle}
-        className="da-btn-icon"
-        aria-expanded={open}
+        className={buttonClassName}
         aria-label="Notifications"
+        aria-expanded={open}
       >
         <Bell size={18} />
-        {hasUnread && <span className="da-notification-dot" aria-hidden />}
+        {hasUnread && (
+          <span
+            className={dotClassName}
+            aria-hidden={true}
+          >
+            {unreadCount}
+          </span>
+        )}
       </motion.button>
 
       <AnimatePresence>

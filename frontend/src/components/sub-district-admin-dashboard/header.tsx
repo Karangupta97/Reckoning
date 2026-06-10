@@ -76,15 +76,13 @@ export default function SubDistrictAdminHeader({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const closeAll = useCallback(() => {
-    setShowSettings(false);
-    setShowDateDropdown(false);
-    setShowProfile(false);
-  }, []);
+  const closeSettings = useCallback(() => setShowSettings(false), []);
+  const closeDateDropdown = useCallback(() => setShowDateDropdown(false), []);
+  const closeProfile = useCallback(() => setShowProfile(false), []);
 
-  const settingsRef = useDropdownClose(() => setShowSettings(false));
-  const dateRef     = useDropdownClose(() => setShowDateDropdown(false));
-  const profileRef  = useDropdownClose(() => setShowProfile(false));
+  const settingsRef = useDropdownClose(closeSettings);
+  const dateRef     = useDropdownClose(closeDateDropdown);
+  const profileRef  = useDropdownClose(closeProfile);
 
   return (
     <header className="sda-header-container">
