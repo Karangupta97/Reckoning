@@ -7,9 +7,6 @@ import {
   Sliders, MapPin, Clock, AlertTriangle, Save,
   CheckCircle2, Globe, Building2, Users, ShieldCheck,
 } from "lucide-react";
-import { DemoResetButton } from "@/components/admin/DemoResetButton";
-import { useComplaintStore } from "@/store/complaintStore";
-import { useEscalationStore } from "@/store/escalationStore";
 
 function SaveButton({ saved, onClick }: { saved: boolean; onClick: () => void }) {
   return (
@@ -65,18 +62,6 @@ export default function DistrictSettingsPage() {
   const [geoAlerts, setGeoAlerts]         = useState(true);
   const [slaHours, setSlaHours]           = useState("48");
   const [timezone, setTimezone]           = useState("Asia/Kolkata");
-
-  // Live metrics
-  const complaints = useComplaintStore((s) => s.complaints);
-  const escalations = useEscalationStore((s) => s.escalations);
-  const subDistricts = new Set(complaints.map((c) => c.subDistrict)).size;
-  const activeComplaints = complaints.filter((c) => c.status !== "Resolved" && c.status !== "Rejected");
-  const slaCompliance = activeComplaints.length > 0
-    ? Math.round((activeComplaints.filter((c) => c.slaStatus === "On Track").length / activeComplaints.length) * 100)
-    : 100;
-  const escalationRate = complaints.length > 0
-    ? ((complaints.filter((c) => c.status === "Escalated").length / complaints.length) * 100).toFixed(1)
-    : "0";
 
   const handleSave = () => {
     setSaved(true);
@@ -188,9 +173,9 @@ export default function DistrictSettingsPage() {
           <Section title="Sub-District Policies">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                { label: "Active Sub-Districts", value: String(subDistricts), color: "text-teal-400", icon: Users },
-                { label: "Avg SLA Compliance", value: `${slaCompliance}%`, color: "text-emerald-400", icon: ShieldCheck },
-                { label: "Escalation Rate", value: `${escalationRate}%`, color: "text-amber-400", icon: AlertTriangle },
+                { label: "Active Sub-Districts", value: "6", color: "text-teal-400", icon: Users },
+                { label: "Avg SLA Compliance", value: "81%", color: "text-emerald-400", icon: ShieldCheck },
+                { label: "Escalation Rate", value: "4.0%", color: "text-amber-400", icon: AlertTriangle },
               ].map((s) => (
                 <div key={s.label} className="flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3">
                   <s.icon size={16} className={s.color} />
@@ -200,21 +185,6 @@ export default function DistrictSettingsPage() {
                   </div>
                 </div>
               ))}
-            </div>
-          </Section>
-        </DashboardCard>
-      </motion.div>
-
-      {/* Demo Mode */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <DashboardCard className="p-5 flex flex-col gap-3">
-          <Section title="Demo & Testing">
-            <div className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">Reset All Demo Data</p>
-                <p className="text-xs text-[var(--color-text-muted)]">Clear all stores and reload with fresh seed data for demo replay</p>
-              </div>
-              <DemoResetButton />
             </div>
           </Section>
         </DashboardCard>

@@ -15,7 +15,17 @@ import type { TooltipContentProps } from "recharts/types/component/Tooltip";
 import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useIsClient } from "@/hooks/useIsClient";
-import { useDistrictAnalyticsMetrics } from "@/hooks/use-analytics-metrics";
+
+const data = [
+  { month: "Jan", complaints: 210, resolved: 180 },
+  { month: "Feb", complaints: 285, resolved: 230 },
+  { month: "Mar", complaints: 260, resolved: 245 },
+  { month: "Apr", complaints: 340, resolved: 290 },
+  { month: "May", complaints: 420, resolved: 370 },
+  { month: "Jun", complaints: 390, resolved: 360 },
+  { month: "Jul", complaints: 480, resolved: 430 },
+  { month: "Aug", complaints: 510, resolved: 460 },
+];
 
 const chartMargin = { top: 8, right: 8, bottom: 4, left: 4 };
 const chartMarginCompact = { top: 8, right: 8, bottom: 0, left: 0 };
@@ -57,7 +67,6 @@ function ComplaintTrendChart({
   tall?: boolean;
 }) {
   const isClient = useIsClient();
-  const { trendData } = useDistrictAnalyticsMetrics();
   const tickSize = compact ? 10 : 12;
 
   return (
@@ -103,7 +112,7 @@ function ComplaintTrendChart({
       >
         {isClient ? <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={trendData}
+            data={data}
             margin={compact ? chartMarginCompact : { top: 8, right: 8, bottom: 4, left: 4 }}
           >
             <defs>

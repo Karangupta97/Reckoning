@@ -29,10 +29,6 @@ import {
   useBudgetApprovalStore,
   type BudgetRequest,
 } from "@/store/budgetApprovalStore";
-import { RelatedRecordsPanel } from "@/components/admin/RelatedRecordsPanel";
-import { CaseJourneyTimeline } from "@/components/admin/CaseJourneyTimeline";
-import { WhyBudgetExists } from "@/components/admin/JudgeExperienceCards";
-import { getRelatedRecordsForEscalation, buildEscalationJourney } from "@/lib/case-traceability";
 
 function Modal({
   open,
@@ -48,12 +44,13 @@ function Modal({
   if (!open) return null;
   return (
     <div className="admin-modal-overlay fixed inset-0 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={(e) => e.stopPropagation()}
-        className="admin-modal-panel relative w-full max-w-md rounded-xl border p-5"
+        className="relative w-full max-w-md rounded-xl border p-5 shadow-2xl"
         style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -112,7 +109,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
   const modifyApprovedAmount = useBudgetApprovalStore((s) => s.modifyApprovedAmount);
   const sendBackForReview = useBudgetApprovalStore((s) => s.sendBackForReview);
   const markUnderAudit = useBudgetApprovalStore((s) => s.markUnderAudit);
-  const releaseFunds = useBudgetApprovalStore((s) => s.releaseFunds);
   const appendActivity = useBudgetApprovalStore((s) => s.appendActivity);
   const appendNote = useBudgetApprovalStore((s) => s.appendNote);
 
@@ -124,7 +120,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
   const [modifyOpen, setModifyOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [auditOpen, setAuditOpen] = useState(false);
-  const [releaseOpen, setReleaseOpen] = useState(false);
 
   const [approveNote, setApproveNote] = useState("");
   const [approveAmount, setApproveAmount] = useState("");
@@ -135,8 +130,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
   const [modifyNote, setModifyNote] = useState("");
   const [reviewNote, setReviewNote] = useState("");
   const [auditNote, setAuditNote] = useState("");
-  const [releaseAmount, setReleaseAmount] = useState("");
-  const [releaseNote, setReleaseNote] = useState("");
 
   function showToast(msg: string) {
     setToast(msg);
@@ -208,16 +201,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
     showToast("Marked under audit");
   };
 
-  const handleReleaseFunds = () => {
-    const amt = parseFloat(releaseAmount);
-    if (!amt || amt <= 0) return;
-    releaseFunds(r.id, amt, releaseNote);
-    setReleaseOpen(false);
-    setReleaseAmount("");
-    setReleaseNote("");
-    showToast(`₹${amt} Cr released`);
-  };
-
   const handleAddNote = () => {
     if (!noteText.trim()) return;
     appendNote(r.id, noteText.trim());
@@ -285,13 +268,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="flex flex-col gap-3 lg:col-span-2">
-          {/* Why This Budget Exists */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 }}>
-            <DashboardCard className="p-4">
-              <WhyBudgetExists budgetId={id} />
-            </DashboardCard>
-          </motion.div>
-
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <DashboardCard className="p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2">
@@ -433,21 +409,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
                 <ActionBtn icon={IndianRupee} label="Modify Approved Amount" color="#8b5cf6" onClick={() => { setModifyAmount(String(r.approvedAmount ?? r.requestedAmount)); setModifyOpen(true); }} disabled={r.status === "Rejected"} />
                 <ActionBtn icon={RotateCcw} label="Send Back For Review" color="#f97316" onClick={() => setReviewOpen(true)} disabled={r.status === "Rejected"} />
                 <ActionBtn icon={Search} label="Mark Under Audit" color="#a855f7" onClick={() => setAuditOpen(true)} disabled={r.status === "Under Audit"} />
-                {r.status === "Approved" && !r.releasedAmount && (
-                  <ActionBtn icon={IndianRupee} label="Release Funds" color="#14b8a6" onClick={() => setReleaseOpen(true)} disabled={false} />
-                )}
-                {r.releasedAmount && (
-                  <div className="rounded-lg border px-3 py-2 mt-1" style={{ borderColor: "rgba(16,185,129,0.25)", background: "rgba(16,185,129,0.06)" }}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[var(--color-text-muted)]">Released</span>
-                      <span className="text-xs font-bold text-emerald-400">{formatBudgetAmount(r.releasedAmount)}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-0.5">
-                      <span className="text-[9px] text-[var(--color-text-muted)]">{r.releasedDate}</span>
-                      <span className="text-[9px] font-semibold text-emerald-400">{r.releaseStatus}</span>
-                    </div>
-                  </div>
-                )}
               </div>
             </DashboardCard>
           </motion.div>
@@ -633,47 +594,6 @@ export default function BudgetApprovalDetailPage({ params }: { params: Promise<{
         />
         <MFoot onClose={() => setAuditOpen(false)} onSubmit={handleAudit} label="Mark Under Audit" color="#a855f7" />
       </Modal>
-
-      <Modal open={releaseOpen} onClose={() => setReleaseOpen(false)} title="Release Funds">
-        <div className="flex flex-col gap-3">
-          <div className="rounded-lg border px-3 py-2" style={{ borderColor: "rgba(20,184,166,0.25)", background: "rgba(20,184,166,0.06)" }}>
-            <p className="text-[11px] text-[var(--color-text-secondary)]">
-              Approved amount: <span className="font-bold text-emerald-400">{formatBudgetAmount(r.approvedAmount ?? r.requestedAmount)}</span>
-            </p>
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">Release Amount (₹ Cr)</label>
-            <input type="number" value={releaseAmount} onChange={(e) => setReleaseAmount(e.target.value)}
-              placeholder={String(r.approvedAmount ?? r.requestedAmount)}
-              className="w-full rounded-lg border px-3 py-2 text-xs font-mono focus:outline-none"
-              style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }} />
-          </div>
-          <div>
-            <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1">Release Note</label>
-            <textarea value={releaseNote} onChange={(e) => setReleaseNote(e.target.value)} rows={2}
-              placeholder="Treasury reference or disbursement details…"
-              className="w-full rounded-lg border px-3 py-2 text-xs resize-none focus:outline-none"
-              style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }} />
-          </div>
-        </div>
-        <MFoot onClose={() => setReleaseOpen(false)} onSubmit={handleReleaseFunds} label="Release Funds" color="#14b8a6" />
-      </Modal>
-
-      {/* Related Records — traceability for linked escalations */}
-      {r.linkedEscalationIds && r.linkedEscalationIds.length > 0 && (
-        <div className="mt-3">
-          <DashboardCard className="p-4">
-            {r.linkedEscalationIds.map((escId) => (
-              <div key={escId} className="mb-3 last:mb-0">
-                <RelatedRecordsPanel
-                  records={getRelatedRecordsForEscalation(escId, "super")}
-                  title={`Records for ${escId}`}
-                />
-              </div>
-            ))}
-          </DashboardCard>
-        </div>
-      )}
     </div>
   );
 }

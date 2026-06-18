@@ -11,7 +11,6 @@ import { SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
 import { districtLabel } from "@/lib/district-config";
 import { useComplaintStore } from "@/store/complaintStore";
 import { TICKET_SEED } from "@/lib/ticket-seed";
-import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 
 export type ResolutionRequestStatus =
   | "Pending District Review"
@@ -56,12 +55,6 @@ export interface ResolutionRequest {
   clarificationMessage?: string;
   districtNote?: string;
   evidenceId?: string;
-  /** Resolution evidence — before/after verification */
-  beforePhotos?: string[];
-  afterPhotos?: string[];
-  completionNotes?: string;
-  workCompletionDate?: string;
-  estimatedWorkCost?: string;
 }
 
 export interface WorkTicket {
@@ -113,11 +106,6 @@ interface ComplaintWorkflowState {
     completionDate: string;
     evidenceId?: string;
     submittedBy?: string;
-    beforePhotos?: string[];
-    afterPhotos?: string[];
-    completionNotes?: string;
-    workCompletionDate?: string;
-    estimatedWorkCost?: string;
   }) => string;
   approveResolution: (id: string, note?: string, actor?: string) => void;
   rejectResolution: (id: string, note: string, actor?: string) => void;
@@ -168,11 +156,6 @@ export const useComplaintWorkflowStore = create<ComplaintWorkflowState>()(
           submittedAt: nowStr(),
           submittedBy: input.submittedBy ?? "Sub-District Officer",
           evidenceId: input.evidenceId,
-          beforePhotos: input.beforePhotos,
-          afterPhotos: input.afterPhotos,
-          completionNotes: input.completionNotes,
-          workCompletionDate: input.workCompletionDate,
-          estimatedWorkCost: input.estimatedWorkCost,
         };
         set({ resolutions: [req, ...get().resolutions] });
         const escHref = input.escalationId
@@ -214,9 +197,6 @@ export const useComplaintWorkflowStore = create<ComplaintWorkflowState>()(
           href: `/sub-district-admin/dashboard/complaints/${req.complaintId}`,
         });
         useComplaintStore.getState().setResolutionStatus(req.complaintId, "Approved", id, note);
-        // Award XP for resolution approval
-        awardXP("sub-district", "resolution_approved", `Resolution ${id} approved`);
-        awardXP("district", "complaint_resolved", `Resolution ${id} approved for ${req.complaintId}`);
       },
 
       rejectResolution: (id, note, actor = "District Admin") => {
@@ -315,11 +295,6 @@ export const useComplaintWorkflowStore = create<ComplaintWorkflowState>()(
         set({
           tickets: patchTicket(get().tickets, id, { status, timeline }),
         });
-        // Award XP when ticket is completed
-        if (status === "Completed") {
-          awardXP("sub-district", "ticket_completed", `Ticket ${id} completed`);
-          incrementBadgeProgress("sub-district", "sb1"); // Ticket Champion badge
-        }
       },
 
       updateTicketPriority: (id, priority, actor = "Sub-District Officer") => {

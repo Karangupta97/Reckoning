@@ -702,7 +702,7 @@ body {
 
 .dashboard-table-scroll {
   overflow: auto;
-  max-height: 36rem;
+  max-height: 22rem;
   border-radius: 0.75rem;
   border: 1px solid var(--dash-border);
   scrollbar-width: thin;
@@ -1250,13 +1250,10 @@ body {
 
 /* Admin portal modals — above sidebars (z-50) and notification dropdowns */
 .admin-modal-overlay {
-  z-index: 9999;
-  background-color: rgba(0, 0, 0, 0.8) !important;
-  backdrop-filter: blur(8px) !important;
+  z-index: 9000;
 }
 
 .admin-modal-panel {
   max-height: min(92vh, 720px);
   overflow-y: auto;
-  box-shadow: 0 0 0 1px var(--color-border), 0 20px 50px rgba(0, 0, 0, 0.5);
 }

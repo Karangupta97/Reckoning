@@ -5,7 +5,7 @@ import type {
   ReportBackendCategory,
   ReportBackendSeverity,
 } from "./reportTypes";
-import { fetchCitizenAuth, readResponseJson, extractMessage } from "@/lib/auth/citizenSession";
+import { fetchCitizenAuth, readResponseJson, extractMessage, refreshCitizenSession } from "@/lib/auth/citizenSession";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -50,6 +50,8 @@ export interface ComplaintSubmissionInput {
   aiCategory?: ReportBackendCategory | null;
   aiConfidence?: number | null;
   aiRawResult?: Record<string, unknown> | null;
+  /** S3 key for the annotated result image — stored permanently, no re-upload needed. */
+  aiAnnotatedImageKey?: string | null;
 }
 
 export interface ComplaintSubmissionResponse {
@@ -102,6 +104,9 @@ export async function analyzeReportMedia(params: {
 }): Promise<ReportAiAnalysisResult> {
   const response = await fetchCitizenAuth(apiUrl("/ai/detect"), {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify({ fileId: params.fileId }),
   });
 
@@ -131,13 +136,45 @@ export async function submitRoadHazardReport(params: {
   payload: ComplaintSubmissionInput;
   accessToken: string | null;
 }): Promise<ComplaintSubmissionResponse> {
-  const response = await fetchCitizenAuth(apiUrl("/complaints"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(params.payload),
+  // Hard 60-second deadline — the complaint submission path includes AI
+  // inference, PostGIS authority lookup, S3 annotation upload, and queue
+  // enqueue jobs. The backend keepAliveTimeout is 65 s, so this fires first
+  // and gives a clean user-facing error rather than an ECONNRESET.
+  const abort = new AbortController();
+  const timeoutId = setTimeout(() => abort.abort(), 60_000);
+
+  // Log the payload shape so we can catch field-shape mismatches quickly.
+  console.debug("[submitRoadHazardReport] payload →", JSON.stringify(params.payload, null, 2));
+
+  // Proactively refresh the session before submission. The user may have spent
+  // 10+ minutes filling the form (uploading images, running AI, selecting
+  // location), so the access token could have expired. Refreshing here ensures
+  // the submission request has a fresh token without relying on the 401-retry
+  // path (which can fail if parallel requests already rotated the refresh token).
+  await refreshCitizenSession().catch(() => {
+    // Non-fatal: if refresh fails, fetchCitizenAuth will still attempt its own
+    // 401 → refresh → retry cycle.
+    console.debug("[submitRoadHazardReport] Proactive refresh failed; proceeding with current token.");
   });
+
+  let response: Response;
+  try {
+    response = await fetchCitizenAuth(apiUrl("/complaints"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(params.payload),
+      signal: abort.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Request timed out after 60 seconds. Please try again.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const payload = await readResponseJson(response) as {
     success?: boolean;
@@ -147,10 +184,13 @@ export async function submitRoadHazardReport(params: {
   };
 
   if (!response.ok) {
-    throw new Error(extractMessage(payload, "Unable to submit your report. Please try again."));
+    const msg = extractMessage(payload, "Unable to submit your report. Please try again.");
+    console.error("[submitRoadHazardReport] API error →", response.status, msg, payload);
+    throw new Error(msg);
   }
 
   if (!payload.data?.id || !payload.data.ticketNumber) {
+    console.error("[submitRoadHazardReport] Unexpected response shape →", payload);
     throw new Error("Unable to submit your report. Please try again.");
   }
 

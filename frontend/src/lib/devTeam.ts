@@ -9,7 +9,6 @@ export const DEV_TEAM_EMAILS: readonly string[] = [
   "dev2@reckoning.dev",
   "dev3@reckoning.dev",
   "karantempmail.1@gmail.com",
-  "pranavc310527@gmail.com",
   "karangupta3319@gmail.com"
 ] as const;
 

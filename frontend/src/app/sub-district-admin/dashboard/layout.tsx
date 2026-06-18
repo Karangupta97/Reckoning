@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SubDistrictAdminSidebar, SubDistrictAdminHeader } from "@/components/sub-district-admin-dashboard";
 import "@/components/sub-district-admin-dashboard/sub-district-admin-theme.css";
 import { subDistrictLabel } from "@/lib/sub-district-config";
-import { useStoreSync } from "@/hooks/useStoreSync";
 
 export default function SubDistrictAdminLayout({
   children,
@@ -14,8 +13,6 @@ export default function SubDistrictAdminLayout({
 }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  useStoreSync();
 
   useEffect(() => {
     const checkMobile = () => {

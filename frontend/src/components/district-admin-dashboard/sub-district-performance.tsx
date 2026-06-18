@@ -1,11 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { Users } from "lucide-react";
-import { useComplaintStore } from "@/store/complaintStore";
-import { useMemo } from "react";
 
 interface SubDistrictRow {
   id: string;
@@ -17,36 +14,14 @@ interface SubDistrictRow {
   trend: "up" | "down" | "stable";
 }
 
-function computeRows(complaints: { subDistrict: string; status: string; slaStatus: string; officer: string }[]): SubDistrictRow[] {
-  const map = new Map<string, { total: number; resolved: number; onTrack: number; officer: string }>();
-
-  for (const c of complaints) {
-    const sd = c.subDistrict || "Unknown";
-    const cur = map.get(sd) ?? { total: 0, resolved: 0, onTrack: 0, officer: c.officer || "—" };
-    cur.total++;
-    if (c.status === "Resolved") cur.resolved++;
-    if (c.slaStatus === "On Track") cur.onTrack++;
-    if (c.officer && c.officer !== "Unassigned") cur.officer = c.officer;
-    map.set(sd, cur);
-  }
-
-  return [...map.entries()]
-    .map(([name, data], i) => {
-      const sla = data.total > 0 ? Math.round((data.onTrack / data.total) * 100) : 0;
-      const resRate = data.total > 0 ? data.resolved / data.total : 0;
-      return {
-        id: `SD-${String(i + 1).padStart(3, "0")}`,
-        name: name.replace(" Taluka", ""),
-        officer: data.officer,
-        complaints: data.total,
-        resolved: data.resolved,
-        sla,
-        trend: (resRate >= 0.7 ? "up" : resRate >= 0.5 ? "stable" : "down") as "up" | "down" | "stable",
-      };
-    })
-    .sort((a, b) => b.sla - a.sla)
-    .slice(0, 8);
-}
+const rows: SubDistrictRow[] = [
+  { id: "SD-001", name: "Mehrauli", officer: "R. Sharma", complaints: 142, resolved: 118, sla: 83, trend: "up" },
+  { id: "SD-002", name: "Vasant Kunj", officer: "P. Iyer", complaints: 96, resolved: 79, sla: 82, trend: "stable" },
+  { id: "SD-003", name: "Dwarka", officer: "A. Singh", complaints: 201, resolved: 185, sla: 92, trend: "up" },
+  { id: "SD-004", name: "Rohini", officer: "S. Gupta", complaints: 178, resolved: 132, sla: 74, trend: "down" },
+  { id: "SD-005", name: "Shahdara", officer: "M. Khan", complaints: 115, resolved: 94, sla: 82, trend: "stable" },
+  { id: "SD-006", name: "Najafgarh", officer: "T. Verma", complaints: 87, resolved: 55, sla: 63, trend: "down" },
+];
 
 function getSlaClass(sla: number) {
   if (sla >= 85) return "da-sla-bar-fill-good";
@@ -73,10 +48,6 @@ const trendClass: Record<string, string> = {
 };
 
 export default function SubDistrictPerformance() {
-  const complaints = useComplaintStore((s) => s.complaints);
-  const rows = useMemo(() => computeRows(complaints), [complaints]);
-  const router = useRouter();
-
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -92,7 +63,7 @@ export default function SubDistrictPerformance() {
             SLA compliance & resolution rates
           </p>
         </div>
-        <button type="button" onClick={() => router.push("/district-admin/reports")} className="da-btn-secondary shrink-0 !h-9 !px-3 !text-xs">
+        <button type="button" className="da-btn-secondary shrink-0 !h-9 !px-3 !text-xs">
           Full Report
         </button>
       </div>

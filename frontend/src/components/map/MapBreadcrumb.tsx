@@ -43,7 +43,7 @@ export function MapBreadcrumb({ drillState, onNavigate }: MapBreadcrumbProps) {
   return (
     <nav className="absolute top-3 left-3 z-[1000] flex items-center overflow-x-auto max-w-[calc(100%-120px)] no-scrollbar">
       <ol className="flex items-center gap-1 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm"
-        style={{ background: 'rgba(34,40,56,0.85)' }}
+        style={{ background: 'rgba(34,40,56,0.85)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
       >
         {items.map((item, index) => (
           <li key={item.level + item.label} className="flex items-center gap-1">

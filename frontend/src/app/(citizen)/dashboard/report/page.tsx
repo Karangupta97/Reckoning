@@ -343,9 +343,14 @@ function toBackendPayload(state: ReportFormState): ComplaintSubmissionInput | nu
           totalDetected: state.aiResult.totalDetected,
           inferenceMs: state.aiResult.inferenceMs,
           message: state.aiResult.message,
-          annotatedImage: state.aiResult.annotatedImage,
+          // Omit annotatedImage — the s3Key is already stored server-side by
+          // the AI service; sending the pre-signed URL in the POST body is
+          // unnecessary and bloats the payload.
         }
       : null,
+    // Pass the s3Key directly so the backend can link the annotated image to
+    // the complaint without re-uploading or re-fetching.
+    aiAnnotatedImageKey: state.aiResult?.annotatedImage?.s3Key ?? null,
   };
 }
 
@@ -601,19 +606,42 @@ export default function ReportPage() {
   const submitReport = useCallback(async () => {
     const payload = toBackendPayload(state);
     if (!payload) {
-      dispatch({ type: "SET_TOAST", toastMessage: "Complete the required fields before submitting." });
+      // Give a specific reason so the user knows what to fix.
+      const missingMediaIds = state.evidence.filter((e) => e.mediaId).length === 0;
+      const missingLocation = state.location.latitude == null || state.location.longitude == null;
+      const missingHazard = !state.hazardType;
+      const reason = missingMediaIds
+        ? "Evidence upload hasn't completed yet. Wait for the upload to finish."
+        : missingLocation
+          ? "Pin a location on the map before submitting."
+          : missingHazard
+            ? "Select a hazard type before submitting."
+            : "Complete the required fields before submitting.";
+      dispatch({ type: "SET_TOAST", toastMessage: reason });
       return;
     }
 
     dispatch({ type: "SET_SUBMITTING", isSubmitting: true });
+    dispatch({ type: "SET_TOAST", toastMessage: null });
 
     try {
       const response = await submitRoadHazardReport({ payload, accessToken });
       localStorage.removeItem("report-draft");
-      dispatch({ type: "SET_SUBMITTED", submittedReportId: response.id, submittedTicketNumber: response.ticketNumber });
+      // SET_SUBMITTED reducer also sets isSubmitting: false — but finally handles
+      // the error path and any edge-case where SET_SUBMITTED dispatch throws.
+      dispatch({
+        type: "SET_SUBMITTED",
+        submittedReportId: response.id,
+        submittedTicketNumber: response.ticketNumber,
+      });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to submit your report. Please try again.";
+      console.error("[submitReport] Failed →", message, error);
+      dispatch({ type: "SET_TOAST", toastMessage: message });
+    } finally {
+      // Always release the loading state — even if SET_SUBMITTED already cleared
+      // it (the dispatch is idempotent when isSubmitting is already false).
       dispatch({ type: "SET_SUBMITTING", isSubmitting: false });
-      dispatch({ type: "SET_TOAST", toastMessage: error instanceof Error ? error.message : "Unable to submit your report." });
     }
   }, [accessToken, state]);
 

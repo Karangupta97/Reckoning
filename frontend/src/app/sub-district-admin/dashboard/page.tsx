@@ -14,13 +14,30 @@ import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
 import { ComplaintTrendChart, ResolutionRateChart } from "@/components/district-admin-dashboard";
 import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 import { formatSlaLabel } from "@/lib/dashboard-metrics";
-import { PendingClarificationsWidget } from "@/components/admin/PendingClarificationsWidget";
 import type { ComplaintRecord } from "@/store/complaintStore";
 
 // Lazy load the map component with no server-side rendering
 const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
   ssr: false,
 });
+
+/* ─── Breadcrumb ─────────────────────────────────────────────── */
+function Breadcrumb({ items }: { items: { label: string; href?: string }[] }) {
+  return (
+    <nav className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)] mb-1" aria-label="Breadcrumb">
+      {items.map((item, i) => (
+        <span key={item.label} className="flex items-center gap-1.5">
+          {i > 0 && <span className="opacity-40">›</span>}
+          {item.href ? (
+            <Link href={item.href} className="hover:text-[var(--color-text-secondary)] transition-colors">{item.label}</Link>
+          ) : (
+            <span className="text-[var(--color-text-secondary)] font-medium">{item.label}</span>
+          )}
+        </span>
+      ))}
+    </nav>
+  );
+}
 
 type SubDistrictMetrics = ReturnType<typeof useSubDistrictDashboardMetrics>;
 
@@ -183,7 +200,7 @@ function SlaCommandCenter({ m }: { m: SubDistrictMetrics }) {
         </div>
         <Activity size={16} className="text-[var(--color-text-muted)]" />
       </div>
-      <div className="flex flex-row gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         {segments.map((s) => (
           <div key={s.label} className="flex-1 flex items-center justify-between rounded-lg border px-3 py-2"
             style={{ borderColor: `color-mix(in srgb, ${s.color} 25%, transparent)`, background: `color-mix(in srgb, ${s.color} 7%, transparent)` }}>
@@ -198,7 +215,7 @@ function SlaCommandCenter({ m }: { m: SubDistrictMetrics }) {
           </div>
         ))}
       </div>
-      <div className="mt-2">
+      <div className="mt-3">
         <div className="flex h-1.5 w-full overflow-hidden rounded-full">
           <div className="h-full bg-red-500" style={{ width: `${(m.sla.critical / total) * 100}%` }} />
           <div className="h-full" style={{ width: `${(m.sla.warning / total) * 100}%`, background: "var(--sda-amber)" }} />
@@ -284,8 +301,8 @@ function UrgentActionsTable({ rows }: { rows: ReturnType<typeof complaintRow>[] 
 function QuickActionsPanel() {
   const actions = [
     { label: "Create Ticket",     desc: "Open a new work order",   icon: Ticket,       href: "/sub-district-admin/dashboard/tickets?create=1", color: "var(--sda-amber)"        },
-    { label: "Resolve Complaint", desc: "Close a complaint case",  icon: CheckCircle2, href: "/sub-district-admin/dashboard/complaints", color: "var(--color-success)"    },
-    { label: "Upload Evidence",   desc: "Add photos or documents", icon: Upload,       href: "/sub-district-admin/dashboard/complaints", color: "var(--color-info)"       },
+    { label: "Resolve Complaint", desc: "Close a complaint case",  icon: CheckCircle2, href: "/sub-district-admin/dashboard/complaints/CMP-1024/resolve", color: "var(--color-success)"    },
+    { label: "Upload Evidence",   desc: "Add photos or documents", icon: Upload,       href: "/sub-district-admin/dashboard/complaints/CMP-1024/resolve", color: "var(--color-info)"       },
     { label: "Open Zone Map",     desc: "View complaint heatmap",  icon: Map,          href: "/sub-district-admin/dashboard/map",        color: "var(--color-text-muted)" },
   ];
   return (
@@ -390,10 +407,10 @@ function OfficerWorkload({ officers }: { officers: SubDistrictMetrics["officers"
 /* ─── Workload Overview ──────────────────────────────────────── */
 function WorkloadOverview({ workload }: { workload: SubDistrictMetrics["workload"] }) {
   const stats = [
-    { label: "Pending",     value: String(workload.pending),    color: "var(--sda-amber)"     },
-    { label: "In Progress", value: String(workload.inProgress), color: "var(--color-info)"    },
-    { label: "Awaiting",    value: String(workload.awaiting),   color: "#a78bfa"              },
-    { label: "Done Today",  value: String(workload.doneToday),  color: "var(--color-success)" },
+    { label: "Pending", value: String(workload.pending), color: "var(--sda-amber)", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "In Progress", value: String(workload.inProgress), color: "var(--color-info)", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Awaiting", value: String(workload.awaiting), color: "#a78bfa", href: "/sub-district-admin/dashboard/complaints" },
+    { label: "Done Today", value: String(workload.doneToday), color: "var(--color-success)", href: "/sub-district-admin/dashboard/complaints" },
   ];
   return (
     <DashboardCard
@@ -403,17 +420,19 @@ function WorkloadOverview({ workload }: { workload: SubDistrictMetrics["workload
       <h3 className="text-sm font-bold text-[var(--color-text-primary)] mb-2.5">Workload Overview</h3>
       <div className="grid grid-cols-2 gap-2">
         {stats.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-lg border px-3 py-2"
-            style={{
-              borderColor: `color-mix(in srgb, ${s.color} 22%, transparent)`,
-              background: `color-mix(in srgb, ${s.color} 6%, transparent)`,
-            }}
-          >
-            <div className="text-lg font-black tabular-nums leading-none" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">{s.label}</div>
-          </div>
+          <Link key={s.label} href={s.href}>
+            <motion.div
+              whileHover={{ y: -1, transition: { duration: 0.15 } }}
+              className="rounded-lg border px-3 py-2 cursor-pointer transition-all duration-150"
+              style={{
+                borderColor: `color-mix(in srgb, ${s.color} 22%, transparent)`,
+                background: `color-mix(in srgb, ${s.color} 6%, transparent)`,
+              }}
+            >
+              <div className="text-lg font-black tabular-nums leading-none" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[10px] text-[var(--color-text-muted)] leading-tight mt-1">{s.label}</div>
+            </motion.div>
+          </Link>
         ))}
       </div>
     </DashboardCard>
@@ -421,39 +440,36 @@ function WorkloadOverview({ workload }: { workload: SubDistrictMetrics["workload
 }
 
 /* ─── Citizen Impact ─────────────────────────────────────────── */
-function CitizenImpact({ m }: { m: SubDistrictMetrics }) {
-  const totalComplaints = m.totalComplaints;
-  const resolved = m.resolved;
-  const escalated = m.escalated;
-  const escalationRate = totalComplaints > 0 ? Math.round((escalated / totalComplaints) * 100) : 0;
-  const resolutionDays = totalComplaints > 0 ? "2.4d" : "—";
-
+function CitizenImpact() {
   const stats = [
-    { label: "Citizens Impacted",  value: String(totalComplaints * 3), color: "var(--color-danger)"  },
-    { label: "Roads Affected",     value: String(totalComplaints), color: "var(--sda-amber)"     },
-    { label: "Avg Resolution",     value: resolutionDays,  color: "var(--color-info)"    },
-    { label: "Repeat Complaints",  value: `${Math.round(totalComplaints * 0.08)}`, color: "var(--sda-orange)"    },
-    { label: "Escalation Rate",    value: `${escalationRate}%`, color: "var(--color-text-muted)" },
-    { label: "Resolved",           value: String(resolved),   color: "var(--color-success)" },
+    { label: "Citizens Impacted",  value: "1,240", color: "var(--color-danger)"  },
+    { label: "Roads Affected",     value: "18",    color: "var(--sda-amber)"     },
+    { label: "Avg Resolution",     value: "2.4d",  color: "var(--color-info)"    },
+    { label: "Repeat Complaints",  value: "8%",    color: "var(--sda-orange)"    },
+    { label: "Escalation Rate",    value: "4%",    color: "var(--color-text-muted)" },
+    { label: "Satisfaction",       value: "73%",   color: "var(--color-success)" },
   ];
   return (
-    <DashboardCard
-      initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-      className="p-4"
-    >
-      <div className="flex items-center gap-2 mb-2.5">
-        <Users size={14} className="text-blue-400" />
-        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Citizen Impact</h3>
-      </div>
-      <div className="flex flex-col divide-y divide-[var(--color-border)]">
-        {stats.map((s) => (
-          <div key={s.label} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
-            <span className="text-xs text-[var(--color-text-secondary)]">{s.label}</span>
-            <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
-          </div>
-        ))}
-      </div>
-    </DashboardCard>
+    <Link href="/sub-district-admin/dashboard/complaints">
+      <DashboardCard
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+        whileHover={{ y: -1, transition: { duration: 0.15 } }}
+        className="p-4 cursor-pointer"
+      >
+        <div className="flex items-center gap-2 mb-2.5">
+          <Users size={14} className="text-blue-400" />
+          <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Citizen Impact</h3>
+        </div>
+        <div className="flex flex-col divide-y divide-[var(--color-border)]">
+          {stats.map((s) => (
+            <div key={s.label} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
+              <span className="text-xs text-[var(--color-text-secondary)]">{s.label}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+      </DashboardCard>
+    </Link>
   );
 }
 
@@ -664,51 +680,71 @@ export default function SubDistrictAdminDashboard() {
   const urgentRows = m.urgent.map(complaintRow);
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Hero — full width */}
-      <HeroBanner m={m} />
+    <div className="flex flex-col gap-4">
+      <Breadcrumb items={[{ label: "Dashboard" }]} />
 
-      {/* 4-col KPI strip — 2 cols on mobile, 4 on desktop */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="min-w-0">
+        <HeroBanner m={m} />
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpiCards.map((card, i) => <KpiCard key={card.title} card={card} index={i} />)}
-      </div>
+      </section>
 
-      {/* SLA Command Center — full width */}
-      <SlaCommandCenter m={m} />
+      <section className="min-w-0">
+        <SlaCommandCenter m={m} />
+      </section>
 
-      {/* Pending Clarifications — compact widget */}
-      <PendingClarificationsWidget portal="sub-district" compact />
+      <section className="min-w-0">
+        <UrgentActionsTable rows={urgentRows} />
+      </section>
 
-      {/* Urgent Actions — full width */}
-      <UrgentActionsTable rows={urgentRows} />
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[65fr_35fr] lg:items-stretch">
+        <div className="min-w-0 flex flex-col">
+          <OfficerWorkload officers={m.officers} />
+        </div>
+        <div className="min-w-0">
+          <QuickActionsPanel />
+        </div>
+      </section>
 
-      {/* 70/30 — Officer Workload | Quick Actions */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[65fr_35fr] lg:[&>*]:self-stretch">
-        <OfficerWorkload officers={m.officers} />
-        <QuickActionsPanel />
-      </div>
+      {/* SECTION C — Citizen Impact 25% | Workload Overview 35% | Activity Feed 40% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-[25fr_35fr_40fr] lg:items-stretch">
+        <div className="min-w-0">
+          <CitizenImpact />
+        </div>
+        <div className="min-w-0">
+          <WorkloadOverview workload={m.workload} />
+        </div>
+        <div className="min-w-0 flex flex-col">
+          <ActivityFeed />
+        </div>
+      </section>
 
-      {/* Equal thirds — Citizen Impact | Workload Overview | Activity Feed */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[25fr_35fr_40fr] lg:[&>*]:self-stretch">
-        <CitizenImpact m={m} />
-        <WorkloadOverview workload={m.workload} />
-        <ActivityFeed />
-      </div>
+      {/* SECTION D — Complaint Heatmap full width */}
+      <section className="min-w-0">
+        <HeatmapPanel m={m} />
+      </section>
 
-      {/* Complaint Heatmap — full width */}
-      <HeatmapPanel m={m} />
+      {/* SECTION E — Resolution Trends 50% | Complaint Trends 50% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+        <div className="min-w-0 flex flex-col">
+          <ResolutionRateChart compact />
+        </div>
+        <div className="min-w-0 flex flex-col">
+          <ComplaintTrendChart compact tall />
+        </div>
+      </section>
 
-      {/* 50/50 — Resolution Rate | Complaint Trend */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:[&>*]:self-stretch">
-        <ResolutionRateChart compact />
-        <ComplaintTrendChart compact tall />
-      </div>
-
-      {/* 50/50 — Upcoming SLA | Recent Resolutions */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:[&>*]:self-stretch">
-        <UpcomingSLABreaches items={m.upcomingSla} />
-        <RecentResolutions items={m.recentResolved} />
-      </div>
+      {/* SECTION F — Upcoming SLA Breaches 50% | Recent Resolutions 50% */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+        <div className="min-w-0 flex flex-col">
+          <UpcomingSLABreaches items={m.upcomingSla} />
+        </div>
+        <div className="min-w-0 flex flex-col">
+          <RecentResolutions items={m.recentResolved} />
+        </div>
+      </section>
     </div>
   );
 }

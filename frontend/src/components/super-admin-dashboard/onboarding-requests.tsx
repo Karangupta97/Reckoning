@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { DashboardCard } from "./dashboard-card";
 import {
@@ -10,7 +10,6 @@ import {
   Clock3,
   CheckCircle2,
   XCircle,
-  Check,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -75,22 +74,12 @@ const statusIcon: Record<RequestStatus, LucideIcon> = {
 export default function OnboardingRequests() {
   const router = useRouter();
   const [requests, setRequests] = useState(initialRequests);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  };
 
   const updateStatus = useCallback((id: string, status: RequestStatus) => {
     setRequests((prev) =>
       prev.map((req) => (req.id === id ? { ...req, status } : req))
     );
-    const name = requests.find((r) => r.id === id)?.name ?? id;
-    if (status === "Approved") showToast(`${name} approved — access granted`);
-    else showToast(`${name} rejected`);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requests]);
+  }, []);
 
   return (
     <DashboardCard
@@ -181,21 +170,6 @@ export default function OnboardingRequests() {
           );
         })}
       </ul>
-
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg text-sm font-medium"
-            style={{ background: "var(--color-card)", borderColor: "rgba(34,211,238,0.35)", color: "#22d3ee" }}
-          >
-            <Check size={15} /> {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </DashboardCard>
   );
 }

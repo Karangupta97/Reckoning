@@ -14,13 +14,20 @@ export function EvidenceGallery({ report }: EvidenceGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [gpsCopied, setGpsCopied] = useState(false);
 
-  if (!report.hasPhoto || !report.photoUrl) return null;
+  // Prioritize real S3 URLs, fallback to mock photos if none exist
+  const photos = report.evidenceUrls && report.evidenceUrls.length > 0
+    ? report.evidenceUrls.map((url, i) => ({
+        url,
+        label: `Photo ${i + 1}`,
+      }))
+    : report.hasPhoto && report.photoUrl
+      ? Array.from({ length: report.photoCount }, (_, i) => ({
+          url: `${report.photoUrl}&w=${800 + i * 50}`,
+          label: `Photo ${i + 1}`,
+        }))
+      : [];
 
-  // Generate mock multiple photos from same URL with different crops
-  const photos = Array.from({ length: report.photoCount }, (_, i) => ({
-    url: `${report.photoUrl}&w=${800 + i * 50}`,
-    label: `Photo ${i + 1}`,
-  }));
+  if (photos.length === 0) return null;
 
   const copyGPS = () => {
     navigator.clipboard.writeText(report.location.gps);

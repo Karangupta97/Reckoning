@@ -67,7 +67,7 @@ const SEED: AdminNotification[] = [
     id: "n3",
     portal: "district",
     type: "budget_decision",
-    title: "Budget clarification requested — Urban Road Resurfacing Phase II",
+    title: "Budget clarification requested",
     message: "Super Admin requested clarification on your submission",
     entityId: "BUD-2026-002",
     href: "/district-admin/budget",

@@ -9,7 +9,6 @@ import ResolutionRateChart from "@/components/district-admin-dashboard/resolutio
 import DistrictPerformanceChart from "@/components/district-admin-dashboard/district-performance-chart";
 import SubDistrictPerformance from "@/components/district-admin-dashboard/sub-district-performance";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
-import { useDistrictAnalyticsMetrics } from "@/hooks/use-analytics-metrics";
 
 const TABS = [
   { id: "complaint", label: "Complaint Trends",  icon: TrendingUp,   param: "" },
@@ -19,17 +18,16 @@ const TABS = [
 
 type TabId = typeof TABS[number]["id"];
 
+const KPI = [
+  { label: "Avg Resolution Time", value: "4.2d",  color: "text-teal-400"    },
+  { label: "SLA Compliance",      value: "81%",   color: "text-emerald-400" },
+  { label: "Escalation Rate",     value: "4.0%",  color: "text-amber-400"   },
+  { label: "Citizen Satisfaction",value: "73%",   color: "text-cyan-400"    },
+];
+
 function AnalyticsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const metrics = useDistrictAnalyticsMetrics();
-
-  const KPI = [
-    { label: "Avg Resolution Time", value: `${metrics.avgResolutionDays}d`, color: "text-teal-400" },
-    { label: "SLA Compliance",      value: `${metrics.slaCompliance}%`,     color: "text-emerald-400" },
-    { label: "Escalation Rate",     value: `${metrics.escalationRate}%`,    color: "text-amber-400" },
-    { label: "Resolution Rate",     value: `${metrics.resolutionRate}%`,    color: "text-cyan-400" },
-  ];
 
   const tabParam = searchParams.get("tab") ?? "";
   const activeTab: TabId =

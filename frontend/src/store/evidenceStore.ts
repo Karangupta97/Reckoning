@@ -7,7 +7,6 @@ import { persist } from "zustand/middleware";
 import { useAuditLogStore } from "@/store/auditLogStore";
 import { useAdminNotificationStore } from "@/store/adminNotificationStore";
 import { adminPersistOptions } from "@/lib/store-persist";
-import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 
 export type EvidenceStatus =
   | "Pending Review"
@@ -361,14 +360,6 @@ export const useEvidenceStore = create<EvidenceState>()(
         entityId: id,
         href: "/district-admin/evidence",
       });
-    }
-    // Award XP for evidence submission
-    if (entry.uploadedBy.includes("Sub-District")) {
-      awardXP("sub-district", "evidence_submitted", `Evidence ${id} submitted`);
-      incrementBadgeProgress("sub-district", "sb3"); // Evidence Pro badge
-    } else {
-      awardXP("district", "evidence_verified", `Evidence ${id} submitted`);
-      incrementBadgeProgress("district", "db4"); // Evidence Verifier badge
     }
     return id;
   },

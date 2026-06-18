@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useThemeStore, type ThemeMode } from "@/stores/theme-store";
-import { DemoResetButton } from "@/components/admin/DemoResetButton";
 
 /* ─── Tab config ──────────────────────────────────────────────── */
 const TABS = [
@@ -525,20 +524,6 @@ export default function SettingsPage() {
           </AnimatePresence>
         </div>
       </DashboardCard>
-
-      {/* Demo Mode */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.12 }}>
-        <DashboardCard className="p-5">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Demo & Testing</p>
-          <div className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">Reset All Demo Data</p>
-              <p className="text-xs text-[var(--color-text-muted)]">Clear all stores and reload with fresh seed data for demo replay</p>
-            </div>
-            <DemoResetButton />
-          </div>
-        </DashboardCard>
-      </motion.div>
 
       {/* Help & Support footer */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}

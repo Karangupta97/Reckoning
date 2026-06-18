@@ -20,8 +20,6 @@ import {
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { EVIDENCE_STATUS_CLS } from "@/components/super-admin-dashboard/evidence-ui";
 import { useEvidenceStore } from "@/store/evidenceStore";
-import { RelatedRecordsPanel } from "@/components/admin/RelatedRecordsPanel";
-import { getRelatedRecordsForEscalation, getRelatedRecordsForComplaint } from "@/lib/case-traceability";
 
 function Modal({
   open,
@@ -37,11 +35,12 @@ function Modal({
   if (!open) return null;
   return (
     <div className="admin-modal-overlay fixed inset-0 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         onClick={(e) => e.stopPropagation()}
-        className="admin-modal-panel relative w-full max-w-md rounded-xl border p-5"
+        className="admin-modal-panel relative w-full max-w-md rounded-xl border p-5 shadow-2xl"
         style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
       >
         <div className="flex items-center justify-between mb-4">
@@ -338,19 +337,6 @@ export default function EvidenceDetailPage({ params }: { params: Promise<{ id: s
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}>
-            <DashboardCard className="p-4">
-              <RelatedRecordsPanel
-                records={
-                  record.relatedEntityType === "Escalation"
-                    ? getRelatedRecordsForEscalation(record.relatedEntityId, "super")
-                    : getRelatedRecordsForComplaint(record.relatedEntityId, "super")
-                }
-                title="Parent Case Records"
-              />
-            </DashboardCard>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <Link
               href={`/super-admin/audit?category=Evidence%20Decisions&entity=${record.id}`}
               className="block text-center text-xs text-cyan-400 hover:underline py-2"

@@ -14,7 +14,6 @@ import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card
 import { DISTRICT_CONFIG } from "@/lib/district-config";
 import { filterByDistrictScope } from "@/lib/district-scope";
 import { useEscalationStore } from "@/store/escalationStore";
-import { exportToCsv } from "@/lib/csv-export";
 import type { EscalationPriority, EscalationStatus, EscalationCategory, EscalationSLAStatus, Escalation } from "@/store/escalationStore";
 
 /* ─── Local type aliases (keeps all the rest of the file identical) ── */
@@ -147,11 +146,6 @@ export default function EscalationsPage() {
             <motion.button
               type="button"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-              onClick={() => exportToCsv("escalations", filtered.map(e => ({
-                ID: e.id, Title: e.title, SubDistrict: e.subDistrict,
-                Category: e.category, Priority: e.priority, Status: e.status,
-                SLA: e.slaLabel, AssignedTo: e.assignedTo, EscalatedOn: e.escalatedOn, DaysOpen: e.daysOpen,
-              })))}
               className="da-btn-secondary flex items-center gap-1.5 !h-9 !px-3 !text-xs"
             >
               <Download size={14} />

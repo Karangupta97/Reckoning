@@ -86,7 +86,7 @@ export function ReportSidebar({ stats, userName = "Rahul M." }: ReportSidebarPro
   const initials = getInitials(userName);
 
   return (
-    <aside className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto pr-1 pb-6">
+    <aside className="w-72 shrink-0 flex flex-col gap-4 overflow-y-auto pr-1 pb-6">
       {/* ── Profile Card ─────────────────────────────────────── */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}

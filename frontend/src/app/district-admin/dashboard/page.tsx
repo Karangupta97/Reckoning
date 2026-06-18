@@ -22,7 +22,6 @@ import {
 } from "@/components/district-admin-dashboard";
 import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
 import { useDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
-import { PendingClarificationsWidget } from "@/components/admin/PendingClarificationsWidget";
 
 // Lazy load the map component with no server-side rendering
 const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
@@ -126,8 +125,7 @@ export default function DistrictAdminDashboard() {
         <div className="min-w-0 xl:col-span-7 xl:flex xl:flex-col">
           <EscalationsTable />
         </div>
-        <div className="min-w-0 xl:col-span-5 xl:flex xl:flex-col gap-4">
-          <PendingClarificationsWidget portal="district" compact />
+        <div className="min-w-0 xl:col-span-5 xl:flex xl:flex-col">
           <DistrictActivityFeed />
         </div>
       </section>

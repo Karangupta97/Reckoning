@@ -6,8 +6,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { adminPersistOptions } from "@/lib/store-persist";
 import { COMPLAINT_SEED } from "@/lib/complaint-seed";
-import { useAdminNotificationStore } from "@/store/adminNotificationStore";
-import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 import type { Escalation, EscalationStatus } from "@/store/escalationStore";
 import type { ResolutionRequestStatus } from "@/store/complaintWorkflowStore";
 
@@ -271,15 +269,6 @@ export const useComplaintStore = create<ComplaintState>()(
             activityLog: appendActivity(c, actor, `Complaint assigned to ${officer}`),
           }),
         });
-        // Push notification for assignment
-        useAdminNotificationStore.getState().push({
-          portal: "sub-district",
-          type: "escalation_update",
-          title: "Officer assigned",
-          message: `${id} assigned to ${officer}`,
-          entityId: id,
-          href: `/sub-district-admin/dashboard/complaints/${id}`,
-        });
       },
 
       setStatus: (id, status, actor = "System", action) => {
@@ -291,11 +280,6 @@ export const useComplaintStore = create<ComplaintState>()(
             activityLog: appendActivity(c, actor, action ?? `Status updated to ${status}`),
           }),
         });
-        // Award XP on resolution
-        if (status === "Resolved") {
-          awardXP("sub-district", "complaint_resolved", `Complaint ${id} resolved`);
-          incrementBadgeProgress("sub-district", "sb6"); // Resolution King badge
-        }
       },
 
       setPriority: (id, priority) => {

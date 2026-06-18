@@ -27,6 +27,8 @@ import type { MyReport } from "./types";
 import { ReportTimeline } from "./ReportTimeline";
 import { OfficialResponseCard } from "./OfficialResponseCard";
 import { EvidenceGallery } from "./EvidenceGallery";
+import { AIAnnotatedPanel } from "./AIAnnotatedPanel";
+import { ReportLightbox } from "./ReportLightbox";
 
 /* ─── Constants ───────────────────────────────────────────────── */
 const HAZARD_ICONS: Record<string, React.ReactNode> = {
@@ -116,15 +118,7 @@ function formatViews(n: number): string {
 }
 
 /* ─── Risk Score Mini Gauge ───────────────────────────────────── */
-function RiskGauge({ severity }: { severity: string }) {
-  const scores: Record<string, number> = {
-    critical: 92,
-    high: 72,
-    medium: 48,
-    low: 24,
-  };
-  const score = scores[severity] ?? 50;
-
+function RiskGauge({ score }: { score: number }) {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -382,6 +376,15 @@ function ActionMenu({
 
 /* ─── Expanded Detail (accordion) ─────────────────────────────── */
 function ExpandedDetail({ report }: { report: MyReport }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const evidenceImages = report.evidenceUrls.length > 0
+    ? report.evidenceUrls
+    : report.hasPhoto && report.photoUrl
+      ? Array.from({ length: report.photoCount }, (_, i) => `${report.photoUrl}&w=${800 + i * 50}`)
+      : [];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -396,8 +399,8 @@ function ExpandedDetail({ report }: { report: MyReport }) {
         {report.description}
       </p>
 
-      {/* Evidence thumbnails */}
-      {report.hasPhoto && report.photoUrl && report.photoCount > 1 && (
+      {/* Evidence thumbnails — horizontal scrollable row */}
+      {evidenceImages.length > 0 && (
         <div>
           <p
             className="text-[0.7rem] font-semibold mb-2"
@@ -406,23 +409,50 @@ function ExpandedDetail({ report }: { report: MyReport }) {
             Evidence
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {Array.from({ length: report.photoCount }, (_, i) => (
-              <img
+            {evidenceImages.map((url, i) => (
+              <button
                 key={i}
-                src={`${report.photoUrl}&w=${800 + i * 50}`}
-                alt={`Evidence ${i + 1}`}
-                className="flex-shrink-0 w-20 h-20 rounded-lg object-cover"
-                loading="lazy"
-              />
+                onClick={() => { setLightboxIndex(i); setLightboxOpen(true); }}
+                className="flex-shrink-0 w-[120px] h-[90px] rounded-lg overflow-hidden group"
+              >
+                <img
+                  src={url}
+                  alt={`Evidence ${i + 1}`}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  loading="lazy"
+                />
+              </button>
             ))}
           </div>
         </div>
       )}
 
+      {/* AI Annotated Evidence */}
+      <AIAnnotatedPanel report={report} />
+
       {/* Official response */}
       {report.officialResponse && (
         <OfficialResponseCard response={report.officialResponse} />
       )}
+
+      {/* Stats row */}
+      <div
+        className="flex items-center gap-4 text-[0.7rem]"
+        style={{ color: "var(--color-text-muted)" }}
+      >
+        <span className="flex items-center gap-1">
+          <ThumbsUp size={11} />
+          <span style={{ fontFamily: "var(--font-mono)" }}>{report.upvotes}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <MessageCircle size={11} />
+          <span style={{ fontFamily: "var(--font-mono)" }}>{report.comments}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <Eye size={11} />
+          <span style={{ fontFamily: "var(--font-mono)" }}>{formatViews(report.views)}</span>
+        </span>
+      </div>
 
       {/* Full timeline */}
       <div>
@@ -434,6 +464,15 @@ function ExpandedDetail({ report }: { report: MyReport }) {
         </p>
         <ReportTimeline timeline={report.timeline} />
       </div>
+
+      {/* Lightbox */}
+      <ReportLightbox
+        images={evidenceImages}
+        annotatedImageUrl={report.annotatedImageUrl}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </motion.div>
   );
 }
@@ -586,7 +625,7 @@ export function ReportCard({ report, onView, onDelete }: ReportCardProps) {
 
             {/* Risk gauge */}
             <div className="w-28">
-              <RiskGauge severity={report.severity} />
+              <RiskGauge score={report.riskScore} />
             </div>
 
             {/* Action menu */}

@@ -15,18 +15,9 @@ import IndiaMap from "@/components/map/IndiaMap";
 import { useEscalationStore } from "@/store/escalationStore";
 import { useEvidenceStore, type EvidenceFile } from "@/store/evidenceStore";
 import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
-import { useBudgetApprovalStore } from "@/store/budgetApprovalStore";
-import { useAdminNotificationStore } from "@/store/adminNotificationStore";
 import { EvidenceFilePicker } from "@/components/evidence/EvidenceFilePicker";
-import { exportToCsv } from "@/lib/csv-export";
-import { RelatedRecordsPanel } from "@/components/admin/RelatedRecordsPanel";
-import { CaseJourneyTimeline } from "@/components/admin/CaseJourneyTimeline";
-import { CaseTraceabilityCard } from "@/components/admin/CaseTraceabilityCard";
-import { ClarificationThread, parseNotesToThread, ClarificationRequiredBadge, EscalationChainCard } from "@/components/admin/ClarificationThread";
-import { getRelatedRecordsForEscalation, buildEscalationJourney } from "@/lib/case-traceability";
 import { currentDistrictFields } from "@/lib/district-scope";
 import { buildEscalationDetail, fallbackEscalationDetail } from "@/lib/escalation-detail";
-import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 
 /* ─── Types ──────────────────────────────────────────────────── */
 type Priority  = "Critical" | "High" | "Medium" | "Low";
@@ -88,7 +79,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="admin-modal-overlay fixed inset-0 flex items-center justify-center p-4"
+      className="admin-modal-overlay fixed inset-0 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <motion.div
@@ -96,8 +87,8 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.94, opacity: 0 }}
         transition={{ type: "spring", damping: 24, stiffness: 320 }}
-        className="admin-modal-panel w-full max-w-md rounded-2xl border flex flex-col"
-        style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
+        className="w-full max-w-md rounded-2xl border shadow-xl flex flex-col"
+        style={{ background: "var(--color-card)", borderColor: "var(--color-border)", maxHeight: "92vh" }}
       >
         {children}
       </motion.div>
@@ -619,7 +610,7 @@ function StickyActions({
           disabled={isResolved} onClick={() => setResolveOpen(true)}
           className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ borderColor: "rgba(20,184,166,0.35)", background: "rgba(20,184,166,0.08)", color: "#14b8a6" }}>
-          <CheckCircle2 size={14} /> Approve Resolution
+          <CheckCircle2 size={14} /> Resolve Escalation
         </motion.button>
 
         <motion.button type="button" whileHover={{ x: isResolved || isEscalated ? 0 : 2 }} whileTap={{ scale: isResolved || isEscalated ? 1 : 0.97 }}
@@ -633,7 +624,7 @@ function StickyActions({
           disabled={isResolved} onClick={() => setRejectOpen(true)}
           className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#ef4444" }}>
-          <XCircle size={14} /> Return To Sub-District
+          <XCircle size={14} /> Reject
         </motion.button>
       </DashboardCard>
 
@@ -714,19 +705,8 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
   };
 
   const handleResolve = (note: string) => {
-    if (pendingResolution && pendingResolution.status === "Pending District Review") {
-      // Approve the resolution request (handles: RES→Approved, CMP→Resolved, notification to sub-district, XP)
-      approveResolution(pendingResolution.id, note);
-      // Close escalation status + audit (without duplicate notification/sync)
-      setEscStatus(id, "Resolved", "District Admin", `Resolution approved${note ? ` — ${note}` : ""}`);
-      // Award escalation-specific XP (resolveEscalation would do this, but we skip it to avoid duplicate notifications)
-      awardXP("district", "escalation_closed", `Escalation ${id} resolved`);
-      incrementBadgeProgress("district", "db3");
-    } else {
-      // No pending resolution — use full resolveEscalation flow (handles ESC + CMP sync + notification + XP)
-      resolveEscalation(id, note, "District Admin");
-    }
-    showToast("Resolution approved — case closed");
+    resolveEscalation(id, note, "District Officer");
+    showToast("Escalation marked as Resolved");
   };
 
   const handleEscalateFurther = (p: Priority, reason: string, description: string) => {
@@ -834,11 +814,6 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
         <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-          onClick={() => exportToCsv(`escalation-${e.id}`, [{
-            ID: e.id, Title: e.title, SubDistrict: e.subDistrict, Category: e.category,
-            Priority: e.priority, Status: e.status, SLA: e.slaLabel,
-            AssignedTo: e.assignedTo, EscalatedOn: e.escalatedOn, DaysOpen: e.daysOpen,
-          }])}
           className="da-btn-secondary flex items-center gap-1.5 !h-9 !px-3 !text-xs shrink-0">
           <Download size={13} /> Export
         </motion.button>
@@ -889,130 +864,17 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
               <DashboardCard className="p-4 flex items-center justify-between gap-3">
                 <div className="text-xs text-[var(--color-text-secondary)]">
                   Source complaint{" "}
-                  <span className="font-mono font-bold text-teal-400">
+                  <Link
+                    href={`/sub-district-admin/dashboard/complaints/${storeEsc.sourceComplaintId}`}
+                    className="font-mono font-bold text-teal-400 hover:underline"
+                  >
                     {storeEsc.sourceComplaintId}
-                  </span>
+                  </Link>
                   {" "}from {storeEsc.subDistrict}
                 </div>
               </DashboardCard>
             </motion.div>
           )}
-
-          {/* Funding Requirement — shown if sub-district flagged funding need */}
-          {storeEsc?.fundingRequired && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.072 }}>
-              <DashboardCard className="p-4 flex flex-col gap-2" style={{ borderColor: "rgba(245,158,11,0.3)" }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-amber-500/10">
-                    <span className="text-amber-400 text-xs font-bold">₹</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold text-[var(--color-text-primary)]">Funding Requirement</span>
-                    <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/12 text-amber-400">Required</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">Estimated Cost</p>
-                    <p className="text-xs font-bold text-amber-400">₹{storeEsc.estimatedCost ?? "TBD"} Lakhs</p>
-                  </div>
-                  <div className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">Requested By</p>
-                    <p className="text-xs font-medium text-[var(--color-text-primary)]">{storeEsc.subDistrict}</p>
-                  </div>
-                </div>
-                {storeEsc.fundingReason && (
-                  <div className="rounded-lg border px-3 py-2" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">Reason</p>
-                    <p className="text-xs font-medium text-[var(--color-text-primary)]">{storeEsc.fundingReason}</p>
-                  </div>
-                )}
-                {/* Create Budget Request button — only if no budget is linked yet */}
-                {!useBudgetApprovalStore.getState().requests.some((b) => b.linkedEscalationIds?.includes(id)) && (
-                  <Link href="/district-admin/budget">
-                    <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                      className="w-full flex items-center justify-center gap-2 h-9 rounded-lg border text-xs font-semibold mt-1"
-                      style={{ borderColor: "rgba(245,158,11,0.4)", background: "rgba(245,158,11,0.1)", color: "#f59e0b" }}>
-                      Create Budget Request
-                    </motion.button>
-                  </Link>
-                )}
-              </DashboardCard>
-            </motion.div>
-          )}
-
-          {/* Related Budget Requests — ESC → BUD traceability */}
-          {(() => {
-            const relatedBudgets = useBudgetApprovalStore.getState().requests.filter(
-              (b) => b.linkedEscalationIds?.includes(id)
-            );
-            if (relatedBudgets.length === 0) return null;
-            return (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.075 }}>
-                <DashboardCard className="p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-[var(--color-text-primary)]">Related Budget Requests</span>
-                  </div>
-                  {relatedBudgets.map((b) => (
-                    <Link key={b.id} href="/district-admin/budget"
-                      className="flex items-center justify-between rounded-lg border px-3 py-2 hover:bg-[var(--color-surface)] transition-colors"
-                      style={{ borderColor: "var(--color-border)" }}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[11px] font-bold text-teal-400">{b.id}</span>
-                        <span className="text-[11px] text-[var(--color-text-secondary)] truncate max-w-[140px]">{b.project}</span>
-                      </div>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: b.status === "Approved" ? "rgba(16,185,129,0.12)" : b.status.includes("Pending") ? "rgba(245,158,11,0.12)" : "rgba(34,211,238,0.12)",
-                          color: b.status === "Approved" ? "#10b981" : b.status.includes("Pending") ? "#f59e0b" : "#22d3ee",
-                        }}>
-                        {b.status}
-                      </span>
-                    </Link>
-                  ))}
-                </DashboardCard>
-              </motion.div>
-            );
-          })()}
-
-          {/* Related Evidence — ESC ↔ EV traceability */}
-          {(() => {
-            const relatedEvidence = useEvidenceStore.getState().records.filter(
-              (ev) => ev.relatedEntityId === id
-            );
-            if (relatedEvidence.length === 0) return null;
-            return (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.076 }}>
-                <DashboardCard className="p-4 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <Camera size={13} className="text-purple-400" />
-                    <span className="text-xs font-semibold text-[var(--color-text-primary)]">Related Evidence</span>
-                    <span className="text-[9px] text-[var(--color-text-muted)]">({relatedEvidence.length})</span>
-                  </div>
-                  {relatedEvidence.map((ev) => (
-                    <Link key={ev.id} href="/district-admin/evidence"
-                      className="flex items-center justify-between rounded-lg border px-3 py-2 hover:bg-[var(--color-surface)] transition-colors"
-                      style={{ borderColor: "var(--color-border)" }}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-mono text-[10px] font-bold text-purple-400">{ev.id}</span>
-                        <span className="text-[10px] text-[var(--color-text-secondary)] truncate">{ev.title}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[9px] text-[var(--color-text-muted)]">{ev.uploadedBy}</span>
-                        <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full"
-                          style={{
-                            background: ev.status === "Approved" ? "rgba(16,185,129,0.12)" : ev.status === "Rejected" ? "rgba(239,68,68,0.12)" : "rgba(245,158,11,0.12)",
-                            color: ev.status === "Approved" ? "#10b981" : ev.status === "Rejected" ? "#ef4444" : "#f59e0b",
-                          }}>
-                          {ev.status}
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </DashboardCard>
-              </motion.div>
-            );
-          })()}
 
           {pendingResolution && pendingResolution.status === "Pending District Review" && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
@@ -1025,33 +887,6 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
                 {pendingResolution.workPerformed && (
                   <p className="text-[11px] text-[var(--color-text-muted)]">Work: {pendingResolution.workPerformed}</p>
                 )}
-
-                {/* Resolution Evidence — Before/After */}
-                {(pendingResolution.beforePhotos?.length || pendingResolution.afterPhotos?.length) && (
-                  <div className="rounded-lg border p-3 flex flex-col gap-2" style={{ borderColor: "rgba(20,184,166,0.25)", background: "rgba(20,184,166,0.04)" }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-teal-400">Work Verification</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border p-2 text-center" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                        <p className="text-[9px] text-[var(--color-text-muted)]">Before</p>
-                        <p className="text-xs font-bold text-red-400">{pendingResolution.beforePhotos?.length ?? 0} photos</p>
-                      </div>
-                      <div className="rounded-lg border p-2 text-center" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
-                        <p className="text-[9px] text-[var(--color-text-muted)]">After</p>
-                        <p className="text-xs font-bold text-emerald-400">{pendingResolution.afterPhotos?.length ?? 0} photos</p>
-                      </div>
-                    </div>
-                    {pendingResolution.completionNotes && (
-                      <p className="text-[11px] text-[var(--color-text-secondary)]">Notes: {pendingResolution.completionNotes}</p>
-                    )}
-                    {pendingResolution.estimatedWorkCost && (
-                      <p className="text-[11px] text-[var(--color-text-muted)]">Work Cost: ₹{pendingResolution.estimatedWorkCost}</p>
-                    )}
-                    {pendingResolution.workCompletionDate && (
-                      <p className="text-[11px] text-[var(--color-text-muted)]">Completed: {pendingResolution.workCompletionDate}</p>
-                    )}
-                  </div>
-                )}
-
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => { approveResolution(pendingResolution.id); showToast("Closure approved — sub-district notified"); }}
                     className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white" style={{ background: "#10b981" }}>
@@ -1216,80 +1051,6 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
                   </div>
                 </div>
               ))}
-            </DashboardCard>
-          </motion.div>
-
-          {/* Case Traceability — judge-friendly chain */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }}>
-            <DashboardCard className="p-4">
-              <CaseTraceabilityCard complaintId={storeEsc?.sourceComplaintId ?? ""} portal="district" />
-            </DashboardCard>
-          </motion.div>
-
-          {/* Clarification Thread */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.195 }}>
-            <DashboardCard className="p-4 flex flex-col gap-3">
-              <ClarificationRequiredBadge show={
-                (storeEsc?.activityLog ?? []).some((a) => a.action.toLowerCase().includes("clarification requested") && !a.actor.includes("District"))
-              } />
-              {storeEsc?.parentEscalationId && (
-                <EscalationChainCard parentId={storeEsc.parentEscalationId} childId={id} parentTier="District" childTier="Super Admin" />
-              )}
-              <ClarificationThread
-                messages={parseNotesToThread(storeEsc?.notes, storeEsc?.activityLog)}
-                viewerRole="district"
-                complaintId={storeEsc?.sourceComplaintId}
-                escalationId={id}
-                onReply={(msg) => {
-                  useEscalationStore.getState().appendActivity(id, "District Admin", `Clarification reply — ${msg}`);
-                  useEscalationStore.getState().updateEscalation(id, {
-                    notes: (storeEsc?.notes ?? "") + `\n[District] ${msg}`,
-                  });
-                  // Notify based on escalation tier
-                  if (storeEsc?.tier === "super" || storeEsc?.parentEscalationId) {
-                    // District replying to Super Admin
-                    useAdminNotificationStore.getState().push({
-                      portal: "super",
-                      type: "clarification_request",
-                      title: "District clarification reply",
-                      message: `${id} — ${msg.substring(0, 80)}`,
-                      entityId: id,
-                      href: `/super-admin/complaints/escalated-cases/${id}`,
-                    });
-                  } else {
-                    // District replying to Sub-District
-                    useAdminNotificationStore.getState().push({
-                      portal: "sub-district",
-                      type: "clarification_request",
-                      title: "District clarification reply",
-                      message: `${storeEsc?.sourceComplaintId ?? id} — ${msg.substring(0, 80)}`,
-                      entityId: storeEsc?.sourceComplaintId ?? id,
-                      href: storeEsc?.sourceComplaintId ? `/sub-district-admin/dashboard/complaints/${storeEsc.sourceComplaintId}` : "/sub-district-admin/dashboard/clarifications",
-                    });
-                  }
-                }}
-              />
-            </DashboardCard>
-          </motion.div>
-
-          {/* Related Records — full traceability */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <DashboardCard className="p-4">
-              <RelatedRecordsPanel
-                records={getRelatedRecordsForEscalation(id, "district")}
-                title="Related Records"
-              />
-            </DashboardCard>
-          </motion.div>
-
-          {/* Case Journey — complete lifecycle */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
-            <DashboardCard className="p-4">
-              <CaseJourneyTimeline
-                steps={buildEscalationJourney(id)}
-                title="Case Journey"
-                accentColor="#14b8a6"
-              />
             </DashboardCard>
           </motion.div>
         </div>

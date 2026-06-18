@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DistrictAdminSidebar, DistrictAdminHeader } from "@/components/district-admin-dashboard";
 import "@/components/district-admin-dashboard/district-admin-theme.css";
 import { districtLabel } from "@/lib/district-config";
-import { useStoreSync } from "@/hooks/useStoreSync";
 
 export default function DistrictAdminLayout({
   children,
@@ -14,8 +13,6 @@ export default function DistrictAdminLayout({
 }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-  useStoreSync();
 
   useEffect(() => {
     const checkMobile = () => {

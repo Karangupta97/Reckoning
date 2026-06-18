@@ -12,7 +12,17 @@ import {
 } from "recharts";
 import { DashboardCard } from "./dashboard-card";
 import { useIsClient } from "@/hooks/useIsClient";
-import { useComplaintStore } from "@/store/complaintStore";
+
+const data = [
+  { month: "Jan", complaints: 320 },
+  { month: "Feb", complaints: 410 },
+  { month: "Mar", complaints: 380 },
+  { month: "Apr", complaints: 520 },
+  { month: "May", complaints: 610 },
+  { month: "Jun", complaints: 580 },
+  { month: "Jul", complaints: 700 },
+  { month: "Aug", complaints: 760 },
+];
 
 const chartMargin = { top: 8, right: 8, bottom: 4, left: 4 };
 const chartMarginCompact = { top: 8, right: 8, bottom: 0, left: 0 };
@@ -25,16 +35,7 @@ function ComplaintChart({
   tall?: boolean;
 }) {
   const isClient = useIsClient();
-  const complaints = useComplaintStore((s) => s.complaints);
-  const total = complaints.length;
   const tickSize = compact ? 10 : 12;
-
-  // Generate trend from live data
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
-  const data = months.map((month, i) => {
-    const factor = 0.5 + (i / months.length) * 0.7;
-    return { month, complaints: Math.max(1, Math.round((total / months.length) * factor * 1.5)) + (i % 3) * 3 };
-  });
 
   return (
     <DashboardCard

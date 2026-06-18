@@ -7,7 +7,6 @@ import { persist } from "zustand/middleware";
 import { useAuditLogStore } from "@/store/auditLogStore";
 import { useAdminNotificationStore } from "@/store/adminNotificationStore";
 import { adminPersistOptions } from "@/lib/store-persist";
-import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 
 function logBudgetAudit(entityId: string, action: string, previousStatus: string, newStatus: string) {
   useAuditLogStore.getState().addEntry({
@@ -23,20 +22,11 @@ function logBudgetAudit(entityId: string, action: string, previousStatus: string
 }
 
 function notifyDistrictBudget(entityId: string, title: string, message: string) {
-  const req = useBudgetApprovalStore.getState().requests.find(r => r.id === entityId);
-  const projectLabel = req ? ` — ${req.project}` : "";
-  const escLabel = req?.linkedEscalationIds?.length
-    ? ` [${req.linkedEscalationIds.join(", ")}]`
-    : "";
-  // Include amount details for budget decisions
-  const amountDetail = req
-    ? `\nRequested: ₹${req.requestedAmount} Cr${req.approvedAmount != null ? ` | Approved: ₹${req.approvedAmount} Cr | Diff: ${req.approvedAmount - req.requestedAmount > 0 ? "+" : ""}₹${(req.approvedAmount - req.requestedAmount).toFixed(1)} Cr` : ""}${req.releaseStatus ? ` | ${req.releaseStatus}` : ""}`
-    : "";
   useAdminNotificationStore.getState().push({
     portal: "district",
     type: "budget_decision",
-    title: `${title}${projectLabel}`,
-    message: `${entityId}: ${message}${amountDetail}${escLabel}`,
+    title,
+    message,
     entityId,
     href: "/district-admin/budget",
   });
@@ -113,15 +103,6 @@ export interface BudgetRequest {
   fiscalYear: string;
   justification: string;
   notes: string;
-  /** Linked escalation IDs — traceability between ESC and BUD */
-  linkedEscalationIds?: string[];
-  /** Fund release tracking */
-  releasedAmount?: number;
-  releasedDate?: string;
-  releaseStatus?: "Pending Release" | "Partially Released" | "Fully Released";
-  /** Approval metadata */
-  approvedBy?: string;
-  approvedDate?: string;
   documents: BudgetDocument[];
   timeline: BudgetTimelineStep[];
   activityLog: BudgetActivityEntry[];
@@ -182,7 +163,6 @@ const SEED: BudgetRequest[] = [
     submittedOn: "05 Jun 2026",
     submittedBy: "District Officer K. Patil",
     fiscalYear: "FY 2026-27",
-    linkedEscalationIds: ["ESC-4022", "ESC-4024"],
     justification:
       "Structural assessment reports confirm immediate risk on NH-48 bridge segment. Emergency allocation required to prevent traffic closure and safety incidents.",
     notes: "District has attached geotechnical survey and contractor quotations.",
@@ -234,11 +214,6 @@ const SEED: BudgetRequest[] = [
     project: "Smart Corridor Signal Upgrade",
     requestedAmount: 18.2,
     approvedAmount: 16.5,
-    approvedBy: "Super Admin",
-    approvedDate: "03 Jun 2026 11:00",
-    releasedAmount: 16.5,
-    releasedDate: "05 Jun 2026 09:00",
-    releaseStatus: "Fully Released",
     status: "Approved",
     priority: "Medium",
     requestType: "Standard",
@@ -416,7 +391,6 @@ interface BudgetApprovalState {
   modifyApprovedAmount: (id: string, amount: number, note: string) => void;
   sendBackForReview: (id: string, note: string) => void;
   markUnderAudit: (id: string, note: string) => void;
-  releaseFunds: (id: string, amount: number, note: string) => void;
   appendActivity: (id: string, actor: string, action: string) => void;
   appendNote: (id: string, note: string) => void;
 }
@@ -440,26 +414,13 @@ export const useBudgetApprovalStore = create<BudgetApprovalState>()(
     set({ nextBudgetId: get().nextBudgetId + 1 });
     const time = nowStr();
     const submittedOn = time;
-
-    // Build activity log with escalation links
-    const activityEntries: BudgetActivityEntry[] = [
-      { time, actor: entry.submittedBy, action: `Submitted budget request ${id}` },
-    ];
-    if (entry.linkedEscalationIds && entry.linkedEscalationIds.length > 0) {
-      activityEntries.push({
-        time,
-        actor: "System",
-        action: `Budget ${id} linked to ${entry.linkedEscalationIds.join(", ")}`,
-      });
-    }
-
     const req: BudgetRequest = {
       ...entry,
       id,
       submittedOn,
       status: "Pending Approval",
       timeline: seedTimeline(submittedOn, "Pending Approval"),
-      activityLog: activityEntries,
+      activityLog: [{ time, actor: entry.submittedBy, action: `Submitted budget request ${id}` }],
       approvalHistory: [],
       auditTrail: [{ time, actor: "System", event: "Request Created" }],
     };
@@ -467,7 +428,7 @@ export const useBudgetApprovalStore = create<BudgetApprovalState>()(
     useAuditLogStore.getState().addEntry({
       userRole: "District Admin",
       actor: entry.submittedBy,
-      action: `Budget request submitted — ${entry.project}${entry.linkedEscalationIds?.length ? ` (linked: ${entry.linkedEscalationIds.join(", ")})` : ""}`,
+      action: `Budget request submitted — ${entry.project}`,
       entityId: id,
       previousStatus: "—",
       newStatus: "Pending Approval",
@@ -509,9 +470,6 @@ export const useBudgetApprovalStore = create<BudgetApprovalState>()(
       requests: updateRequest(get().requests, id, {
         status: "Approved",
         approvedAmount: amount,
-        approvedBy: "Super Admin",
-        approvedDate: time,
-        releaseStatus: "Pending Release",
         timeline: patchTimeline(
           patchTimeline(
             patchTimeline(req.timeline, "Super Admin Review", { done: true, date: time, note: "Review complete" }),
@@ -529,13 +487,8 @@ export const useBudgetApprovalStore = create<BudgetApprovalState>()(
         auditTrail: [{ time, actor: "Super Admin", event: "Approval Recorded", detail: note }, ...req.auditTrail],
       }),
     });
-    const diff = amount - req.requestedAmount;
-    const diffLabel = diff === 0 ? "" : ` (${diff > 0 ? "+" : ""}${diff} Cr difference)`;
     logBudgetAudit(id, `Budget approved at ₹${amount} Cr`, req.status, "Approved");
-    notifyDistrictBudget(id, "Budget approved", `${id} approved at ₹${amount} Cr${diffLabel}`);
-    // Award XP for budget approval
-    awardXP("district", "budget_approved", `Budget ${id} approved`);
-    incrementBadgeProgress("district", "db5"); // Budget Champion badge
+    notifyDistrictBudget(id, "Budget approved", `${id} approved at ₹${amount} Cr`);
   },
 
   rejectBudget: (id, reason, note) => {
@@ -629,31 +582,6 @@ export const useBudgetApprovalStore = create<BudgetApprovalState>()(
     });
     logBudgetAudit(id, "Marked under audit", req.status, "Under Audit");
     notifyDistrictBudget(id, "Budget under audit", note || "Audit in progress");
-  },
-
-  releaseFunds: (id, amount, note) => {
-    const req = get().requests.find((r) => r.id === id);
-    if (!req) return;
-    const time = nowStr();
-    const approved = req.approvedAmount ?? req.requestedAmount;
-    const releaseStatus = amount >= approved ? "Fully Released" : "Partially Released";
-    set({
-      requests: updateRequest(get().requests, id, {
-        releasedAmount: amount,
-        releasedDate: time,
-        releaseStatus: releaseStatus as "Fully Released" | "Partially Released",
-        timeline: patchTimeline(req.timeline, "Funds Disbursed", {
-          done: true, date: time, note: `₹${amount} Cr released`,
-        }),
-        activityLog: [
-          { time, actor: "Super Admin", action: `Funds released: ₹${amount} Cr${note ? ` — ${note}` : ""}` },
-          ...req.activityLog,
-        ],
-        auditTrail: [{ time, actor: "Treasury", event: "Funds Released", detail: `₹${amount} Cr` }, ...req.auditTrail],
-      }),
-    });
-    logBudgetAudit(id, `Funds released: ₹${amount} Cr`, req.status, releaseStatus);
-    notifyDistrictBudget(id, "Funds released", `₹${amount} Cr released for ${req.project}`);
   },
 
   appendActivity: (id, actor, action) => {

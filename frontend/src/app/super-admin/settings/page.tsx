@@ -8,7 +8,6 @@ import { Settings, User, Shield, Bell, Sliders, HelpCircle, Save, CheckCircle2, 
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useThemeStore } from "@/stores/theme-store";
 import { Sun, Moon, Monitor } from "lucide-react";
-import { DemoResetButton } from "@/components/admin/DemoResetButton";
 
 type TabId = "profile" | "security" | "notifications" | "system" | "help";
 
@@ -225,20 +224,6 @@ function SettingsContent() {
             </div>
           </DashboardCard>
         )}
-      </motion.div>
-
-      {/* Demo Reset */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <DashboardCard className="p-5">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] mb-3">Demo & Testing</h3>
-          <div className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-[var(--color-text-primary)]">Reset All Demo Data</p>
-              <p className="text-xs text-[var(--color-text-muted)]">Clear all stores and reload with fresh seed data for demo replay</p>
-            </div>
-            <DemoResetButton />
-          </div>
-        </DashboardCard>
       </motion.div>
     </div>
   );

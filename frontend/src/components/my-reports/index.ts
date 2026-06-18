@@ -14,4 +14,5 @@ export { EmptyState } from "./EmptyState";
 export { EvidenceGallery } from "./EvidenceGallery";
 export { OfficialResponseCard } from "./OfficialResponseCard";
 export { ExportButton } from "./ExportButton";
-export { CitizenImpactCard } from "./CitizenImpactCard";
+export { AIAnnotatedPanel } from "./AIAnnotatedPanel";
+export { ReportLightbox } from "./ReportLightbox";

@@ -44,6 +44,7 @@ export function MapControls({ mapRef, viewMode, onViewModeChange, isExpanded, on
           style={{
             background: 'var(--color-card)',
             borderColor: 'var(--color-border)',
+            boxShadow: 'var(--shadow-neu)',
           }}
           aria-label={isExpanded ? 'Minimize map' : 'Maximize map'}
         >
@@ -60,6 +61,7 @@ export function MapControls({ mapRef, viewMode, onViewModeChange, isExpanded, on
         style={{
           background: 'var(--color-card)',
           borderColor: 'var(--color-border)',
+          boxShadow: 'var(--shadow-neu)',
         }}
         aria-label="Zoom in"
       >
@@ -72,6 +74,7 @@ export function MapControls({ mapRef, viewMode, onViewModeChange, isExpanded, on
         style={{
           background: 'var(--color-card)',
           borderColor: 'var(--color-border)',
+          boxShadow: 'var(--shadow-neu)',
         }}
         aria-label="Zoom out"
       >
@@ -85,6 +88,7 @@ export function MapControls({ mapRef, viewMode, onViewModeChange, isExpanded, on
           style={{
             background: 'var(--color-card)',
             borderColor: 'var(--color-border)',
+            boxShadow: 'var(--shadow-neu)',
           }}
           aria-label="Map layers"
         >
@@ -97,6 +101,7 @@ export function MapControls({ mapRef, viewMode, onViewModeChange, isExpanded, on
             style={{
               background: 'var(--color-card)',
               borderColor: 'var(--color-border)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
             }}
           >
             {VIEW_MODES.map(mode => (

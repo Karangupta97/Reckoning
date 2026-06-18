@@ -57,7 +57,7 @@ export function useMyReports(): UseMyReportsResult {
     setError(null);
     try {
       const [fetchedReports, fetchedStats] = await Promise.all([
-        getMyComplaints(email),
+        getMyComplaints(undefined, email),
         getMyStats(email),
       ]);
       setReports(fetchedReports);

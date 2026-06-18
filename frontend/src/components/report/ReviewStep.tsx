@@ -148,6 +148,18 @@ export function ReviewStep({
             Suggested category: <span className="font-semibold text-[var(--color-amber)]">{aiResult?.suggestedCategory ? HAZARD_LABEL_BY_VALUE[aiResult.suggestedCategory] : "Manual review"}</span>
           </div>
         </div>
+        {aiResult?.annotatedImage?.url && (
+          <div className="mt-4">
+            <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">AI Annotated Detection</p>
+            <div className="overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--color-amber)_18%,transparent)]">
+              <img
+                src={aiResult.annotatedImage.url}
+                alt="AI annotated detection showing identified hazards"
+                className="h-auto w-full object-contain"
+              />
+            </div>
+          </div>
+        )}
       </motion.section>
 
       <div className="grid gap-4 lg:grid-cols-2">
