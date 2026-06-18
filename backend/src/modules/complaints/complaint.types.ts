@@ -109,6 +109,11 @@ export interface ComplaintListItem {
   assignedAuthority: { name: string; type: string } | null;
   createdAt: Date;
   updatedAt: Date;
+  media?: ComplaintMediaView[];
+  aiDetected?: boolean;
+  aiCategory?: IssueCategory | null;
+  aiConfidence?: number | null;
+  aiAnnotatedImage?: string | null;
 }
 
 /** Pagination envelope shared by list responses. */
@@ -188,6 +193,41 @@ export interface UpdateComplaintInput {
   landmark?: string;
   direction?: string;
   isAnonymous?: boolean;
+}
+
+/** Validated query for `GET /api/complaints/my` (citizen's own complaints). */
+export interface ListMyComplaintsQuery {
+  page: number;
+  limit: number;
+  status?: ComplaintStatus;
+  sort: "createdAt" | "severity" | "status";
+  sortOrder: "asc" | "desc";
+  search?: string;
+}
+
+/** A hazard-category count for the stats breakdown. */
+export interface HazardBreakdownItem {
+  category: IssueCategory;
+  count: number;
+}
+
+/** A recent activity event for the stats response. */
+export interface RecentActivityEvent {
+  text: string;
+  type: "resolved" | "assigned" | "rejected" | "verified" | "response";
+  createdAt: Date;
+}
+
+/** Response returned by `GET /api/complaints/my/stats`. */
+export interface MyComplaintsStatsResult {
+  total: number;
+  open: number;
+  inProgress: number;
+  resolved: number;
+  rejected: number;
+  hazardBreakdown: HazardBreakdownItem[];
+  resolutionRate: number;
+  recentActivity: RecentActivityEvent[];
 }
 
 /** Identity of the caller for authorization decisions in the service. */

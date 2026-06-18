@@ -6,10 +6,12 @@
  */
 
 import type { NextFunction, Request, Response } from "express";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "../../config/prisma.js";
 import { AppError } from "../../utils/AppError.js";
 import { getFileBuffer } from "../../services/s3.service.js";
-import { getSignedDownloadUrl } from "../../config/s3.js";
+import { BUCKET_NAME, s3Client } from "../../config/s3.js";
 import { runReckoningDetection, checkReckoningHealth } from "./ai.service.js";
 import { detectSchema } from "./ai.validation.js";
 
@@ -182,13 +184,151 @@ export async function downloadAnnotatedResult(
     }
 
     // Generate fresh presigned URL.
-    const url = await getSignedDownloadUrl(s3Key, DOWNLOAD_EXPIRY_SECONDS);
+    const url = await getSignedUrl(
+      s3Client,
+      new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key }),
+      { expiresIn: DOWNLOAD_EXPIRY_SECONDS },
+    );
 
     res.status(200).json({
       success: true,
       data: {
         url,
         expiresIn: DOWNLOAD_EXPIRY_SECONDS,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /api/ai/detect/:complaintId
+ *
+ * Retrieves the AI detection result for a submitted complaint.
+ * Resolves the S3 presigned URL for the annotated image if present.
+ *
+ * Falls back to reading AI fields stored directly on the complaint row when
+ * no `complaint_ai_results` record exists (e.g. the worker hasn't processed
+ * the job yet or Redis was unavailable at submission time).
+ *
+ * Auth: requireAuth (owner check).
+ */
+export async function getComplaintDetectionResult(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const complaintId = req.params.complaintId as string;
+    const userId = req.user!.id;
+
+    // First try the dedicated AI results table (populated by the worker).
+    const row = await prisma.complaintAiResult.findFirst({
+      where: {
+        complaintId,
+        complaint: {
+          userId,
+          deletedAt: null,
+        },
+      },
+      select: {
+        suggestedCategory: true,
+        suggestedSeverity: true,
+        confidence: true,
+        totalDetected: true,
+        detections: true,
+        inferenceMs: true,
+        message: true,
+        annotatedImageS3Key: true,
+      },
+    });
+
+    if (row && row.annotatedImageS3Key) {
+      const annotatedImageUrl = BUCKET_NAME
+        ? await getSignedUrl(
+            s3Client,
+            new GetObjectCommand({ Bucket: BUCKET_NAME, Key: row.annotatedImageS3Key }),
+            { expiresIn: DOWNLOAD_EXPIRY_SECONDS },
+          )
+        : null;
+
+      res.status(200).json({
+        success: true,
+        data: {
+          suggestedCategory: row.suggestedCategory,
+          suggestedSeverity: row.suggestedSeverity,
+          confidence: row.confidence,
+          totalDetected: row.totalDetected,
+          detections: row.detections ?? [],
+          annotatedImage: annotatedImageUrl
+            ? {
+                url: annotatedImageUrl,
+                expiresIn: DOWNLOAD_EXPIRY_SECONDS,
+                s3Key: row.annotatedImageS3Key,
+              }
+            : null,
+          message: row.message ?? "AI analysis completed.",
+        },
+      });
+      return;
+    }
+
+    // Fallback: read AI fields directly from the complaint row.
+    // This covers cases where the worker hasn't run yet but the frontend
+    // pre-computed AI results before submission.
+    const complaint = await prisma.complaint.findFirst({
+      where: {
+        id: complaintId,
+        userId,
+        deletedAt: null,
+      },
+      select: {
+        aiDetected: true,
+        aiCategory: true,
+        aiConfidence: true,
+        aiAnnotatedImageKey: true,
+        aiRawResult: true,
+      },
+    });
+
+    if (!complaint?.aiDetected || !complaint.aiAnnotatedImageKey) {
+      res.status(200).json({ success: true, data: null });
+      return;
+    }
+
+    // Generate presigned URL from the complaint's stored S3 key.
+    const annotatedImageUrl = BUCKET_NAME
+      ? await getSignedUrl(
+          s3Client,
+          new GetObjectCommand({ Bucket: BUCKET_NAME, Key: complaint.aiAnnotatedImageKey }),
+          { expiresIn: DOWNLOAD_EXPIRY_SECONDS },
+        )
+      : null;
+
+    const raw = (complaint.aiRawResult as Record<string, unknown>) ?? {};
+    const totalDetected = typeof raw.totalDetected === "number" ? raw.totalDetected : 0;
+    const inferenceMs = typeof raw.inferenceMs === "number" ? raw.inferenceMs : null;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        suggestedCategory: complaint.aiCategory,
+        suggestedSeverity: null,
+        confidence: complaint.aiConfidence,
+        totalDetected,
+        detections: raw.detections ?? [],
+        annotatedImage: annotatedImageUrl
+          ? {
+              url: annotatedImageUrl,
+              expiresIn: DOWNLOAD_EXPIRY_SECONDS,
+              s3Key: complaint.aiAnnotatedImageKey,
+            }
+          : null,
+        inferenceMs,
+        message: totalDetected > 0
+          ? `Detected ${totalDetected} issue(s). Review and confirm.`
+          : "No issues detected.",
       },
     });
   } catch (error) {

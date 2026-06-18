@@ -2,11 +2,13 @@
  * Complaints router.
  *
  * Endpoints:
- *   POST   /api/complaints      → submit (auth + 10/hour/user rate limit)
- *   GET    /api/complaints      → public list (60/min/IP rate limit)
- *   GET    /api/complaints/:id  → public single (optional auth → owner detail)
- *   PATCH  /api/complaints/:id  → update own (auth, owner or ADMIN)
- *   DELETE /api/complaints/:id  → soft delete (auth, owner or ADMIN)
+ *   POST   /api/complaints         → submit (auth + 10/hour/user rate limit)
+ *   GET    /api/complaints         → public list (60/min/IP rate limit)
+ *   GET    /api/complaints/my      → own list (auth, paginated)
+ *   GET    /api/complaints/my/stats→ own aggregate stats (auth)
+ *   GET    /api/complaints/:id     → public single (optional auth → owner detail)
+ *   PATCH  /api/complaints/:id     → update own (auth, owner or ADMIN)
+ *   DELETE /api/complaints/:id     → soft delete (auth, owner or ADMIN)
  *
  * Each route applies its rate limiter, then Zod validation, then the thin
  * controller. Mounted by the app under `/api/complaints`.
@@ -18,6 +20,7 @@ import {
   complaintIdParamSchema,
   createComplaintSchema,
   listComplaintsSchema,
+  listMyComplaintsSchema,
   updateComplaintSchema,
 } from "./complaint.validation.js";
 import { validate } from "../../middleware/validate.js";
@@ -50,6 +53,20 @@ complaintRouter.get(
   listComplaintsLimiter,
   validate({ query: listComplaintsSchema }),
   complaintController.list,
+);
+
+// /my routes MUST come BEFORE /:id to avoid `my` being parsed as an id.
+complaintRouter.get(
+  "/my",
+  requireAuth,
+  validate({ query: listMyComplaintsSchema }),
+  complaintController.listMy,
+);
+
+complaintRouter.get(
+  "/my/stats",
+  requireAuth,
+  complaintController.myStats,
 );
 
 complaintRouter.get(

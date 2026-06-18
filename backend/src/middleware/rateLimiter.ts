@@ -59,8 +59,7 @@ async function buildRedisStore(): Promise<Store | undefined> {
     // Redis is not in use. `redis` is an optional peer of this module.
     const [{ default: RedisStore }, { createClient }] = await Promise.all([
       import("rate-limit-redis"),
-      // @ts-expect-error — `redis` is an optional dependency; types may be absent.
-      import("redis") as Promise<typeof import("redis")>,
+      import("redis"),
     ]);
 
     const client = createClient({ url: env.REDIS_URL });

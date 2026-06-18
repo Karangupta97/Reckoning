@@ -13,12 +13,16 @@ import {
   detectFromUpload,
   downloadAnnotatedResult,
   ReckoningHealth,
+  getComplaintDetectionResult,
 } from "./ai.controller.js";
 
 export const aiRouter: Router = Router();
 
 // Citizen-only: analyse an uploaded image before filing a complaint.
 aiRouter.post("/detect", requireAuth, detectFromUpload);
+
+// Citizen-only: fetch AI detection results of a submitted complaint.
+aiRouter.get("/detect/:complaintId", requireAuth, getComplaintDetectionResult);
 
 // Citizen-only: re-generate presigned URL for annotated result image.
 aiRouter.get("/result/:s3Key/download", requireAuth, downloadAnnotatedResult);

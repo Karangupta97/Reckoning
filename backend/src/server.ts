@@ -135,6 +135,14 @@ async function bootstrap(): Promise<void> {
     );
   });
 
+  // Node.js defaults keepAliveTimeout to 5 s. Slow requests (AI inference +
+  // PostGIS + S3) can take 20-40 s — the connection would be reset before the
+  // response is sent, causing ECONNRESET on the client even though the DB
+  // write already succeeded. 65 s clears the request with room to spare.
+  // headersTimeout must always be > keepAliveTimeout.
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 70_000;
+
   const shutdown = async (signal: string): Promise<void> => {
     // eslint-disable-next-line no-console
     console.log(`\n[${signal}] Shutting down gracefully...`);
@@ -148,6 +156,21 @@ async function bootstrap(): Promise<void> {
 
   process.on("SIGINT", () => void shutdown("SIGINT"));
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
+
+  // Suppress ioredis/BullMQ socket errors (ECONNRESET, ETIMEDOUT) that bubble
+  // up as uncaught exceptions during reconnection. ioredis handles reconnection
+  // internally — these are informational, not fatal.
+  process.on("uncaughtException", (error: NodeJS.ErrnoException) => {
+    if (error.code === "ECONNRESET" || error.code === "ETIMEDOUT") {
+      // eslint-disable-next-line no-console
+      console.warn(`[redis] Connection issue (${error.code}) — reconnecting...`);
+      return;
+    }
+    // Re-throw truly unexpected errors.
+    // eslint-disable-next-line no-console
+    console.error("[uncaughtException]", error);
+    process.exit(1);
+  });
 }
 
 void bootstrap();

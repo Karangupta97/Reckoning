@@ -22,8 +22,11 @@ export const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
+  connectionTimeoutMillis: 10_000,
   ssl: isProduction ? { rejectUnauthorized: true } : false,
+  // Cap any individual statement at 15 s so a single slow PostGIS query can
+  // never hold a connection (or an HTTP request) hostage beyond this window.
+  statement_timeout: 15_000,
 });
 
 // Pool-level errors should be logged but never crash the process. Individual

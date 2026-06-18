@@ -87,9 +87,14 @@ const mediaIdsSchema = z
   .refine((arr) => arr.length <= 5, "At most 5 media files are allowed.");
 
 /** AI confidence in the inclusive 0–1 range. */
-const aiConfidenceSchema = numberFromInput
-  .min(0, "aiConfidence must be between 0 and 1.")
-  .max(1, "aiConfidence must be between 0 and 1.")
+const aiConfidenceSchema = z
+  .preprocess((value) => {
+    if (value === null || value === "null" || value === undefined || value === "") return null;
+    return value;
+  }, z.coerce.number().nullable())
+  .refine((val) => val === null || (val >= 0 && val <= 1), {
+    message: "aiConfidence must be between 0 and 1.",
+  })
   .optional();
 
 /**
@@ -98,6 +103,7 @@ const aiConfidenceSchema = numberFromInput
  */
 const aiRawResultSchema = z
   .preprocess((value) => {
+    if (value === null || value === "null" || value === undefined || value === "") return null;
     if (typeof value === "string") {
       try {
         return JSON.parse(value);
@@ -106,7 +112,7 @@ const aiRawResultSchema = z
       }
     }
     return value;
-  }, z.record(z.string(), z.unknown()))
+  }, z.record(z.string(), z.unknown()).nullable())
   .optional();
 
 /** `POST /api/complaints` body schema. */
@@ -124,9 +130,20 @@ export const createComplaintSchema = z.object({
   landmark: cleanText(200),
   direction: cleanText(100),
   isAnonymous: booleanFromInput.optional(),
-  aiCategory: z.nativeEnum(IssueCategory).optional(),
+  aiCategory: z
+    .preprocess((value) => {
+      if (value === null || value === "null" || value === "") return null;
+      return value;
+    }, z.nativeEnum(IssueCategory).nullable())
+    .optional(),
   aiConfidence: aiConfidenceSchema,
   aiRawResult: aiRawResultSchema,
+  aiAnnotatedImageKey: z
+    .preprocess((value) => {
+      if (value === null || value === "null" || value === undefined || value === "") return null;
+      return value;
+    }, z.string().nullable())
+    .optional(),
 });
 
 /** `GET /api/complaints` query schema (all optional, sensible defaults). */
@@ -176,3 +193,16 @@ export type CreateComplaintBody = z.infer<typeof createComplaintSchema>;
 export type ListComplaintsQueryBody = z.infer<typeof listComplaintsSchema>;
 /** Inferred type for the update body. */
 export type UpdateComplaintBody = z.infer<typeof updateComplaintSchema>;
+
+/** `GET /api/complaints/my` query schema (citizen's own complaints). */
+export const listMyComplaintsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.nativeEnum(ComplaintStatus).optional(),
+  sort: z.enum(["createdAt", "severity", "status"]).default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  search: z.string().trim().max(200).optional(),
+});
+
+/** Inferred type for the /my query. */
+export type ListMyComplaintsQueryBody = z.infer<typeof listMyComplaintsSchema>;

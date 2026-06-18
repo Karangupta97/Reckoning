@@ -74,10 +74,24 @@ export interface NotificationUserJob {
 /**
  * Shared Redis connection options for BullMQ, or `null` when Redis is not
  * configured. `maxRetriesPerRequest` MUST be null for BullMQ blocking clients.
+ *
+ * Upstash Redis requires TLS — use `rediss://` (note the double 's') in
+ * REDIS_URL. The `tls` option is auto-enabled when the URL scheme is `rediss`.
  */
-export const connection: ConnectionOptions | null = env.REDIS_URL
-  ? { url: env.REDIS_URL, maxRetriesPerRequest: null }
-  : null;
+export const connection: ConnectionOptions | null = (() => {
+  if (!env.REDIS_URL) return null;
+
+  const useTls = env.REDIS_URL.startsWith("rediss://");
+
+  return {
+    url: env.REDIS_URL,
+    maxRetriesPerRequest: null,
+    // Enable TLS for rediss:// URLs (required by Upstash and most managed Redis).
+    ...(useTls ? { tls: { rejectUnauthorized: false } } : {}),
+    // Limit reconnection attempts to avoid log spam when Redis is temporarily down.
+    retryStrategy: (times: number) => Math.min(times * 500, 10_000),
+  };
+})();
 
 /** Default job options applied to every queued job. */
 const defaultJobOptions: QueueOptions["defaultJobOptions"] = {

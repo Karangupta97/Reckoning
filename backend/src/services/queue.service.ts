@@ -31,6 +31,8 @@ import {
   processAuthorityNotification,
   processAdminNotification,
 } from "../jobs/handlers.js";
+import { prisma } from "../config/prisma.js";
+import { Prisma } from "@prisma/client";
 import type { Queue } from "bullmq";
 
 /**
@@ -59,14 +61,13 @@ async function safeEnqueue<T extends object>(
     }
   }
 
-  // Fallback path: run inline so the side effect still happens locally.
+  // Fallback path: fire-and-forget so the side effect still happens locally
+  // without ever blocking the HTTP response (email delivery is non-critical).
   if (fallback) {
-    try {
-      await fallback();
-    } catch (error) {
+    fallback().catch((error) => {
       // eslint-disable-next-line no-console
       console.error(`[queue.service] Inline '${jobName}' failed:`, error);
-    }
+    });
     return;
   }
 
@@ -75,14 +76,78 @@ async function safeEnqueue<T extends object>(
 }
 
 /**
- * Enqueue AI analysis for a complaint (future on-server inference).
+ * Enqueue AI analysis for a complaint.
  *
- * No inline fallback yet — no-ops without Redis.
+ * When queues are disabled, runs the "fast path" inline: if the complaint
+ * already has AI results from the frontend (aiAnnotatedImageKey + aiRawResult),
+ * persist them into `complaint_ai_results` so the citizen can see them in
+ * "My Reports". No fresh inference is attempted inline (that's heavyweight).
  *
  * @param complaintId Complaint to analyse.
  */
 export async function enqueueAiAnalysis(complaintId: string): Promise<void> {
-  await safeEnqueue(aiAnalysisQueue, QUEUE_NAMES.aiAnalysis, { complaintId });
+  await safeEnqueue(
+    aiAnalysisQueue,
+    QUEUE_NAMES.aiAnalysis,
+    { complaintId },
+    () => persistPreComputedAiResult(complaintId),
+  );
+}
+
+/**
+ * Inline fallback for AI analysis: persist pre-computed results that the
+ * frontend stored on the complaint during submission.
+ *
+ * @param complaintId Complaint with potential pre-computed AI data.
+ */
+async function persistPreComputedAiResult(complaintId: string): Promise<void> {
+  const complaint = await prisma.complaint.findUnique({
+    where: { id: complaintId },
+    select: {
+      aiDetected: true,
+      aiCategory: true,
+      aiConfidence: true,
+      aiAnnotatedImageKey: true,
+      aiRawResult: true,
+    },
+  });
+
+  if (!complaint?.aiDetected || !complaint.aiAnnotatedImageKey || !complaint.aiRawResult) {
+    // No pre-computed result — skip (fresh inference requires Redis workers).
+    return;
+  }
+
+  const raw = complaint.aiRawResult as Record<string, unknown>;
+  const totalDetected = typeof raw.totalDetected === "number" ? raw.totalDetected : 0;
+  const inferenceMs = typeof raw.inferenceMs === "number" ? raw.inferenceMs : null;
+  const detections = (raw.detections ?? raw.primary ?? null) as Prisma.InputJsonValue;
+  const message = totalDetected > 0
+    ? `Detected ${totalDetected} issue(s). Review and confirm.`
+    : "No issues detected.";
+
+  await prisma.complaintAiResult.upsert({
+    where: { complaintId },
+    create: {
+      complaintId,
+      annotatedImageS3Key: complaint.aiAnnotatedImageKey,
+      suggestedCategory: complaint.aiCategory ?? null,
+      suggestedSeverity: null,
+      confidence: complaint.aiConfidence ?? null,
+      totalDetected,
+      detections,
+      inferenceMs,
+      message,
+    },
+    update: {
+      annotatedImageS3Key: complaint.aiAnnotatedImageKey,
+      suggestedCategory: complaint.aiCategory ?? null,
+      confidence: complaint.aiConfidence ?? null,
+      totalDetected,
+      detections,
+      inferenceMs,
+      message,
+    },
+  });
 }
 
 /**

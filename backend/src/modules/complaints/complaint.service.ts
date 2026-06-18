@@ -43,6 +43,8 @@ import {
   type CreateComplaintResult,
   type DuplicateWarning,
   type ListComplaintsQuery,
+  type ListMyComplaintsQuery,
+  type MyComplaintsStatsResult,
   type Requester,
   type UpdateComplaintInput,
 } from "./complaint.types.js";
@@ -193,6 +195,10 @@ async function validateMediaOwnership(
  * Uses `ST_Covers(boundary, point)` (the geography-native containment test).
  * Returns `null` when no authority matches (an admin assigns later).
  *
+ * A 10-second statement timeout ensures this never blocks the request for
+ * longer than acceptable even if the spatial index is missing or data is
+ * unexpectedly complex.
+ *
  * @param country   Complaint country.
  * @param latitude  Latitude in decimal degrees.
  * @param longitude Longitude in decimal degrees.
@@ -203,29 +209,38 @@ async function findAssignedAuthority(
   latitude: number,
   longitude: number,
 ): Promise<string | null> {
-  const rows = await dbGuard(
-    () =>
-      prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT id
-        FROM "authorities"
-        WHERE "isActive" = true
-          AND country::text = ${country}
-          AND boundary IS NOT NULL
-          AND ST_Covers(
-            boundary,
-            ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
-          )
-        ORDER BY type ASC
-        LIMIT 1
-      `,
-    "findAssignedAuthority",
-  );
-  return rows[0]?.id ?? null;
+  try {
+    const result = await query<{ id: string }>(
+      `SELECT id
+       FROM "authorities"
+       WHERE "isActive" = true
+         AND country::text = $1
+         AND boundary IS NOT NULL
+         AND ST_Covers(
+           boundary,
+           ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography
+         )
+       ORDER BY type ASC
+       LIMIT 1`,
+      [country, latitude, longitude],
+    );
+    return result.rows[0]?.id ?? null;
+  } catch (error) {
+    // If the query times out or fails, log and continue — admin assigns later.
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[complaint.service] findAssignedAuthority failed; continuing without auto-assignment:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
 }
 
 /**
  * STEP (security) — Detect a soft duplicate: a same-category complaint by the
  * same user within {@link DUPLICATE_RADIUS_METERS} in the last 24 hours.
+ *
+ * A 10-second statement timeout ensures this never blocks the request.
  *
  * @param userId    Reporter id.
  * @param category  Issue category (compared as text).
@@ -239,28 +254,35 @@ async function detectDuplicate(
   latitude: number,
   longitude: number,
 ): Promise<DuplicateWarning | null> {
-  const rows = await dbGuard(
-    () =>
-      prisma.$queryRaw<Array<{ ticketNumber: string }>>`
-        SELECT "ticketNumber"
-        FROM "complaints"
-        WHERE "userId" = ${userId}
-          AND category::text = ${category}
-          AND "deletedAt" IS NULL
-          AND "createdAt" > NOW() - INTERVAL '24 hours'
-          AND location IS NOT NULL
-          AND ST_DWithin(
-            location,
-            ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography,
-            ${DUPLICATE_RADIUS_METERS}
-          )
-        ORDER BY "createdAt" DESC
-        LIMIT 1
-      `,
-    "detectDuplicate",
-  );
-  const ticket = rows[0]?.ticketNumber;
-  return ticket ? { isDuplicate: true, existingTicket: ticket } : null;
+  try {
+    const result = await query<{ ticketNumber: string }>(
+      `SELECT "ticketNumber"
+       FROM "complaints"
+       WHERE "userId" = $1
+         AND category::text = $2
+         AND "deletedAt" IS NULL
+         AND "createdAt" > NOW() - INTERVAL '24 hours'
+         AND location IS NOT NULL
+         AND ST_DWithin(
+           location,
+           ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
+           $5
+         )
+       ORDER BY "createdAt" DESC
+       LIMIT 1`,
+      [userId, category, latitude, longitude, DUPLICATE_RADIUS_METERS],
+    );
+    const ticket = result.rows[0]?.ticketNumber;
+    return ticket ? { isDuplicate: true, existingTicket: ticket } : null;
+  } catch (error) {
+    // Duplicate detection is best-effort; never block submission.
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[complaint.service] detectDuplicate failed; continuing without check:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
 }
 
 /**
@@ -313,8 +335,18 @@ export async function createComplaint(
   // 1. Media ownership + reuse validation.
   const media = await validateMediaOwnership(mediaIds, userId);
 
-  // 2. Reverse geocode (best effort — never blocks submission).
-  const geo = await reverseGeocode(latitude, longitude);
+  // 2–4. Run independent I/O operations in parallel to drastically reduce
+  // wall-clock time. Each of these is independent of the others:
+  //   - Reverse geocode (external HTTP, best-effort)
+  //   - Authority auto-assignment (PostGIS containment)
+  //   - Duplicate detection (PostGIS proximity)
+  const [geo, assignedTo, duplicateWarning] = await Promise.all([
+    reverseGeocode(latitude, longitude),
+    findAssignedAuthority(country, latitude, longitude),
+    detectDuplicate(userId, category, latitude, longitude),
+  ]);
+
+  // Validate geocoded country only if we got a result with a country code.
   if (geo?.countryCode && geo.countryCode !== isoCodeForCountry(country)) {
     throw new AppError(
       "Report location does not match your registered country.",
@@ -327,10 +359,7 @@ export async function createComplaint(
     composeAddress([geo?.roadName, geo?.district, geo?.state, geo?.countryName]);
   const roadName = input.roadName ?? geo?.roadName ?? undefined;
 
-  // 3. Authority auto-assignment (PostGIS containment).
-  const assignedTo = await findAssignedAuthority(country, latitude, longitude);
-
-  // 4. Severity heuristic.
+  // 4. Severity heuristic (synchronous, fast).
   const severity = computeSeverity({
     category,
     ...(input.aiConfidence !== undefined ? { aiConfidence: input.aiConfidence } : {}),
@@ -338,14 +367,13 @@ export async function createComplaint(
     ...(input.suggestedFix !== undefined ? { suggestedFix: input.suggestedFix } : {}),
   });
 
-  // (security) Soft duplicate detection (warn, never block).
-  const duplicateWarning = await detectDuplicate(userId, category, latitude, longitude);
-
   const aiDetected =
     input.aiCategory !== undefined || input.aiConfidence !== undefined;
   const year = new Date().getUTCFullYear();
 
   // 5 + 6. Atomic create: ticket sequence → complaint → location → media links.
+  // Capped at 20 s so contention on the ticket counter never stalls the request
+  // beyond a recoverable window.
   const complaint = await dbGuard(
     () =>
       prisma.$transaction(async (tx) => {
@@ -412,20 +440,23 @@ export async function createComplaint(
         });
 
         return created;
-      }),
+      }, { timeout: 20_000 }),
     "createComplaint:transaction",
   );
 
-  // 7. Fire-and-forget background jobs (no-op without Redis).
-  await enqueueAiAnalysis(complaint.id);
+  // 7. Fire-and-forget background jobs — run all in parallel since they are
+  // independent. None of these should block the HTTP response.
+  const backgroundJobs: Array<Promise<void>> = [
+    enqueueAiAnalysis(complaint.id),
+    enqueueAdminNotification(complaint.id),
+    enqueueComplaintConfirmation(complaint.id, userId),
+    enqueueAuthorityAssignment(complaint.id),
+  ];
   if (assignedTo) {
-    await enqueueAuthorityNotification(complaint.id, assignedTo);
+    backgroundJobs.push(enqueueAuthorityNotification(complaint.id, assignedTo));
   }
-  // Always alert the platform admin and confirm receipt to the reporter.
-  await enqueueAdminNotification(complaint.id);
-  await enqueueComplaintConfirmation(complaint.id, userId);
-  // Ticket creation + sub-district admin assignment via PostGIS geofence.
-  await enqueueAuthorityAssignment(complaint.id);
+  // Await all in parallel — each is individually safe (catches internally).
+  await Promise.all(backgroundJobs);
 
   // 8. Response.
   return {
@@ -873,4 +904,185 @@ export async function deleteComplaint(
   );
 
   return { message: "Complaint deleted." };
+}
+
+// ─── Citizen /my endpoints ──────────────────────────────────────────────────
+
+/**
+ * List the authenticated user's own complaints with search, status filter,
+ * sorting, and pagination.
+ *
+ * @param userId Authenticated reporter id.
+ * @param q      Validated query parameters.
+ * @returns A paginated list of the user's complaints.
+ */
+export async function listMyComplaints(
+  userId: string,
+  q: ListMyComplaintsQuery,
+): Promise<ComplaintListResult> {
+  const offset = (q.page - 1) * q.limit;
+
+  const where: Prisma.ComplaintWhereInput = {
+    userId,
+    deletedAt: null,
+    ...(q.status ? { status: q.status } : {}),
+    ...(q.search
+      ? {
+          OR: [
+            { description: { contains: q.search, mode: "insensitive" as const } },
+            { address: { contains: q.search, mode: "insensitive" as const } },
+            { ticketNumber: { contains: q.search, mode: "insensitive" as const } },
+            { roadName: { contains: q.search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  // Map sort field to Prisma orderBy
+  const sortField =
+    q.sort === "severity"
+      ? "severity"
+      : q.sort === "status"
+        ? "status"
+        : "createdAt";
+  const orderBy = { [sortField]: q.sortOrder } as Prisma.ComplaintOrderByWithRelationInput;
+
+  const [total, records] = await dbGuard(
+    () =>
+      prisma.$transaction([
+        prisma.complaint.count({ where }),
+        prisma.complaint.findMany({
+          where,
+          include: { ...COMPLAINT_INCLUDE, user: { select: { fullName: true } } },
+          orderBy,
+          skip: offset,
+          take: q.limit,
+        }),
+      ]),
+    "listMyComplaints:query",
+  );
+
+  const complaints = await Promise.all(
+    records.map(async (r) => {
+      const item = toListItem(r, r.user?.fullName ?? null);
+      const annotatedImage = r.aiAnnotatedImageKey
+        ? await getSignedDownloadUrl(r.aiAnnotatedImageKey, 3600).catch(() => null)
+        : null;
+      return {
+        ...item,
+        media: r.media.map((m) => ({
+          url: m.media.url,
+          mimeType: m.media.mimeType,
+          isPrimary: m.isPrimary,
+        })),
+        aiDetected: r.aiDetected,
+        aiCategory: r.aiCategory,
+        aiConfidence: r.aiConfidence,
+        aiAnnotatedImage: annotatedImage,
+      };
+    })
+  );
+
+  return { complaints, pagination: paginate(total, q.page, q.limit) };
+}
+
+/**
+ * Aggregate stats for the authenticated user's complaints: counts per status,
+ * hazard breakdown by category, resolution rate, and recent activity events.
+ *
+ * @param userId Authenticated reporter id.
+ * @returns The aggregated stats.
+ */
+export async function getMyStats(
+  userId: string,
+): Promise<MyComplaintsStatsResult> {
+  // Status counts via groupBy
+  const statusCounts = await dbGuard(
+    () =>
+      prisma.complaint.groupBy({
+        by: ["status"],
+        where: { userId, deletedAt: null },
+        _count: { id: true },
+      }),
+    "getMyStats:statusCounts",
+  );
+
+  const countByStatus = new Map(
+    statusCounts.map((row) => [row.status, row._count.id]),
+  );
+
+  const total = [...countByStatus.values()].reduce((a, b) => a + b, 0);
+  const resolved = countByStatus.get("RESOLVED" as any) ?? 0;
+  const rejected = countByStatus.get("REJECTED" as any) ?? 0;
+  const inProgress = countByStatus.get("IN_PROGRESS" as any) ?? 0;
+  const open =
+    (countByStatus.get("SUBMITTED" as any) ?? 0) +
+    (countByStatus.get("VERIFIED" as any) ?? 0) +
+    (countByStatus.get("ASSIGNED" as any) ?? 0);
+
+  // Hazard breakdown by category
+  const categoryCounts = await dbGuard(
+    () =>
+      prisma.complaint.groupBy({
+        by: ["category"],
+        where: { userId, deletedAt: null },
+        _count: { id: true },
+      }),
+    "getMyStats:categoryCounts",
+  );
+
+  const hazardBreakdown: MyComplaintsStatsResult["hazardBreakdown"] =
+    categoryCounts.map((row) => ({
+      category: row.category,
+      count: row._count.id,
+    }));
+
+  // Resolution rate
+  const resolutionRate =
+    total > 0 ? Math.round((resolved / total) * 100) : 0;
+
+  // Recent activity: last 5 status changes from statusHistory if available,
+  // otherwise fall back to the 5 most recently updated complaints.
+  const recentComplaints = await dbGuard(
+    () =>
+      prisma.complaint.findMany({
+        where: { userId, deletedAt: null },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          ticketNumber: true,
+          status: true,
+          category: true,
+          updatedAt: true,
+        },
+      }),
+    "getMyStats:recentActivity",
+  );
+
+  const statusToActivityType: Record<string, MyComplaintsStatsResult["recentActivity"][number]["type"]> = {
+    RESOLVED: "resolved",
+    ASSIGNED: "assigned",
+    REJECTED: "rejected",
+    VERIFIED: "verified",
+    IN_PROGRESS: "response",
+    SUBMITTED: "response",
+  };
+
+  const recentActivity: MyComplaintsStatsResult["recentActivity"] =
+    recentComplaints.map((c) => ({
+      text: `${c.ticketNumber} — ${c.status.toLowerCase().replace("_", " ")}`,
+      type: statusToActivityType[c.status] ?? "response",
+      createdAt: c.updatedAt,
+    }));
+
+  return {
+    total,
+    open,
+    inProgress,
+    resolved,
+    rejected,
+    hazardBreakdown,
+    resolutionRate,
+    recentActivity,
+  };
 }

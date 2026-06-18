@@ -12,9 +12,10 @@ import { AppError } from "../../utils/AppError.js";
 import type {
   CreateComplaintBody,
   ListComplaintsQueryBody,
+  ListMyComplaintsQueryBody,
   UpdateComplaintBody,
 } from "./complaint.validation.js";
-import type { CreateComplaintInput, ListComplaintsQuery, Requester } from "./complaint.types.js";
+import type { CreateComplaintInput, ListComplaintsQuery, ListMyComplaintsQuery, Requester } from "./complaint.types.js";
 
 /**
  * Build a {@link Requester} from `req.user`, or `undefined` when anonymous.
@@ -65,6 +66,52 @@ export async function list(
   try {
     const query = req.query as unknown as ListComplaintsQueryBody;
     const result = await complaintService.listComplaints(query as ListComplaintsQuery);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `GET /api/complaints/my` — authenticated user's own complaints (paginated).
+ *
+ * @returns 200 with `{ success: true, data: ComplaintListResult }`.
+ */
+export async function listMy(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
+    }
+    const query = req.query as unknown as ListMyComplaintsQueryBody;
+    const result = await complaintService.listMyComplaints(
+      req.user.id,
+      query as ListMyComplaintsQuery,
+    );
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `GET /api/complaints/my/stats` — authenticated user's aggregate stats.
+ *
+ * @returns 200 with `{ success: true, data: MyComplaintsStatsResult }`.
+ */
+export async function myStats(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    if (!req.user) {
+      throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
+    }
+    const result = await complaintService.getMyStats(req.user.id);
     res.status(200).json({ success: true, data: result });
   } catch (error) {
     next(error);

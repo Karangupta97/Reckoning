@@ -1,9 +1,10 @@
 /**
  * AI-analysis worker — Reckoning inference on complaint images.
  *
- * Consumes `ai-analysis` jobs and runs the YOLOv8 road-damage model via the
- * Reckoning HuggingFace Space, then writes back `aiDetected`, `aiCategory`,
- * `aiConfidence`, `aiRawResult` and (re)derives severity.
+ * Consumes `ai-analysis` jobs. If the complaint already has AI results
+ * (pre-analysed by the frontend via /api/ai/detect before submission), the
+ * worker persists those results to `complaint_ai_results` without re-running
+ * inference. If no prior result exists, it runs fresh inference.
  *
  * Workers are OPT-IN: they only start when Redis is configured. Run this file
  * in its own process (e.g. `tsx src/jobs/workers/aiAnalysis.worker.ts`).
@@ -34,10 +35,17 @@ export function startAiAnalysisWorker(): Worker | null {
       const { complaintId } = job.data;
       logger.info(`[aiAnalysis.worker] Processing complaint ${complaintId}`);
 
-      // Fetch complaint to get userId for S3 annotated image path.
+      // Fetch the complaint — check if AI was already run by the frontend.
       const complaint = await prisma.complaint.findUnique({
         where: { id: complaintId },
-        select: { userId: true },
+        select: {
+          userId: true,
+          aiDetected: true,
+          aiCategory: true,
+          aiConfidence: true,
+          aiAnnotatedImageKey: true,
+          aiRawResult: true,
+        },
       });
 
       if (!complaint) {
@@ -45,6 +53,52 @@ export function startAiAnalysisWorker(): Worker | null {
         return;
       }
 
+      // ── Fast path: frontend already ran inference ─────────────────────────
+      // The /api/ai/detect endpoint ran before submission and stored the result
+      // on the complaint. Persist it to complaint_ai_results without re-running
+      // the expensive HuggingFace call.
+      if (complaint.aiDetected && complaint.aiAnnotatedImageKey && complaint.aiRawResult) {
+        const raw = complaint.aiRawResult as Record<string, unknown>;
+
+        const totalDetected = typeof raw.totalDetected === "number" ? raw.totalDetected : 0;
+        const inferenceMs = typeof raw.inferenceMs === "number" ? raw.inferenceMs : null;
+        const detections = (raw.detections ?? raw.primary ?? null) as Prisma.InputJsonValue;
+        const message = totalDetected > 0
+          ? `Detected ${totalDetected} issue(s). Review and confirm.`
+          : "No issues detected.";
+
+        await prisma.complaintAiResult.upsert({
+          where: { complaintId },
+          create: {
+            complaintId,
+            annotatedImageS3Key: complaint.aiAnnotatedImageKey,
+            suggestedCategory: complaint.aiCategory ?? null,
+            suggestedSeverity: null, // derived from severity field on complaint
+            confidence: complaint.aiConfidence ?? null,
+            totalDetected,
+            detections,
+            inferenceMs,
+            message,
+          },
+          update: {
+            annotatedImageS3Key: complaint.aiAnnotatedImageKey,
+            suggestedCategory: complaint.aiCategory ?? null,
+            confidence: complaint.aiConfidence ?? null,
+            totalDetected,
+            detections,
+            inferenceMs,
+            message,
+          },
+        });
+
+        logger.info(`[aiAnalysis.worker] Persisted pre-computed AI result for complaint ${complaintId}`, {
+          category: complaint.aiCategory,
+          confidence: complaint.aiConfidence,
+        });
+        return;
+      }
+
+      // ── Slow path: no prior result — run fresh inference ──────────────────
       // Find the first image linked to this complaint.
       const media = await prisma.complaintMedia.findFirst({
         where: { complaintId },
@@ -75,19 +129,51 @@ export function startAiAnalysisWorker(): Worker | null {
         return;
       }
 
-      // Persist AI results back to the complaint (including annotated image key).
-      await prisma.complaint.update({
-        where: { id: complaintId },
-        data: {
-          aiDetected: true,
-          aiCategory: result.suggestedCategory,
-          aiConfidence: result.confidence,
-          aiRawResult: result.raw as unknown as Prisma.InputJsonValue,
-          aiAnnotatedImageKey: result.annotatedS3Key,
-        },
+      const message = result.raw.totalDetected > 0
+        ? `Detected ${result.raw.totalDetected} issue(s).`
+        : "No issues detected.";
+      const detectionsJson = result.raw.detections as unknown as Prisma.InputJsonValue;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.complaintAiResult.upsert({
+          where: { complaintId },
+          create: {
+            complaintId,
+            annotatedImageS3Key: result.annotatedS3Key,
+            suggestedCategory: result.suggestedCategory,
+            suggestedSeverity: result.suggestedSeverity,
+            confidence: result.confidence,
+            totalDetected: result.raw.totalDetected,
+            detections: detectionsJson,
+            inferenceMs: result.raw.inferenceMs,
+            message,
+          },
+          update: {
+            annotatedImageS3Key: result.annotatedS3Key,
+            suggestedCategory: result.suggestedCategory,
+            suggestedSeverity: result.suggestedSeverity,
+            confidence: result.confidence,
+            totalDetected: result.raw.totalDetected,
+            detections: detectionsJson,
+            inferenceMs: result.raw.inferenceMs,
+            message,
+          },
+        });
+
+        // Keep the complaint row in sync for legacy consumers.
+        await tx.complaint.update({
+          where: { id: complaintId },
+          data: {
+            aiDetected: true,
+            aiCategory: result.suggestedCategory,
+            aiConfidence: result.confidence,
+            aiRawResult: result.raw as unknown as Prisma.InputJsonValue,
+            aiAnnotatedImageKey: result.annotatedS3Key,
+          },
+        });
       });
 
-      logger.info(`[aiAnalysis.worker] Completed for complaint ${complaintId}`, {
+      logger.info(`[aiAnalysis.worker] Completed fresh inference for complaint ${complaintId}`, {
         category: result.suggestedCategory,
         confidence: result.confidence,
       });

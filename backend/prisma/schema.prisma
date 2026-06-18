@@ -236,6 +236,7 @@ model Complaint {
   aiConfidence          Float?
   aiRawResult           Json?
   aiAnnotatedImageKey   String?
+  aiResult              ComplaintAiResult?
   severity              SeverityLevel             @default(MEDIUM)
   status                ComplaintStatus           @default(SUBMITTED)
   assignedTo            String?
@@ -268,6 +269,27 @@ model Complaint {
   @@index([createdAt])
   @@index([escalatedToDistrictId])
   @@map("complaints")
+  @@schema("public")
+}
+
+/// Persisted AI analysis result for a complaint.
+model ComplaintAiResult {
+  id                   String          @id @default(cuid())
+  complaintId          String          @unique
+  complaint            Complaint       @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  annotatedImageS3Key  String?
+  suggestedCategory    IssueCategory?
+  suggestedSeverity    SeverityLevel?
+  confidence           Float?
+  totalDetected        Int             @default(0)
+  detections           Json?
+  inferenceMs          Int?
+  message              String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  @@index([complaintId])
+  @@map("complaint_ai_results")
   @@schema("public")
 }
 
