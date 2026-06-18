@@ -280,7 +280,6 @@ export function generateTooltipHTML(stats: RegionStats, isDark: boolean): string
       border-radius: 12px;
       padding: 12px 14px;
       max-width: 220px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
       font-family: system-ui, -apple-system, sans-serif;
       font-size: 11px;
       line-height: 1.4;

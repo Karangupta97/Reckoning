@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Camera,
   FileCheck,
+  Download,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import {
@@ -22,6 +23,7 @@ import {
   useAuditLogStore,
   type AuditCategory,
 } from "@/store/auditLogStore";
+import { exportAuditLog } from "@/lib/report-generator";
 
 const CAT_ICON: Record<AuditCategory, typeof User> = {
   "User Actions": User,
@@ -93,6 +95,15 @@ export default function AuditLogCenterPage() {
         >
           Evidence Center →
         </Link>
+      </motion.div>
+
+      <motion.div className="flex justify-end -mt-2">
+        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+          onClick={() => exportAuditLog(categoryFilter ? { category: categoryFilter } : undefined)}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg border text-xs font-medium"
+          style={{ borderColor: "rgba(34,211,238,0.3)", background: "rgba(34,211,238,0.08)", color: "#22d3ee" }}>
+          <Download size={12} /> Export CSV
+        </motion.button>
       </motion.div>
 
       <motion.div

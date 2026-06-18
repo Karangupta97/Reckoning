@@ -23,7 +23,6 @@ export function MapLegend({ isDark }: MapLegendProps) {
       style={{
         background: isDark ? 'rgba(34,40,56,0.92)' : 'rgba(26,31,46,0.88)',
         backdropFilter: 'blur(8px)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.25)',
         border: `1px solid ${isDark ? '#313A50' : 'rgba(255,255,255,0.08)'}`,
       }}
     >
@@ -39,7 +38,7 @@ export function MapLegend({ isDark }: MapLegendProps) {
           <div key={item.label} className="flex items-center gap-2">
             <div
               className="h-2.5 w-2.5 rounded-full shrink-0"
-              style={{ background: item.color, boxShadow: `0 0 6px ${item.color}44` }}
+              style={{ background: item.color }}
             />
             <span className="text-[11px] text-white/85 whitespace-nowrap">{item.label}</span>
           </div>

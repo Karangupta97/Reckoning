@@ -106,7 +106,7 @@ const TABS: TabConfig[] = [
   {
     id: "map",
     label: "Map",
-    href: "/map",
+    href: "/dashboard/safety-map",
     ariaLabel: "Open Safety Map",
     IconOutlined: MapOutlined,
     IconFilled: MapFilled,

@@ -9,6 +9,7 @@ import { useAdminNotificationStore } from "@/store/adminNotificationStore";
 import { adminPersistOptions } from "@/lib/store-persist";
 import { districtLabel } from "@/lib/district-config";
 import { syncComplaintFromEscalation, useComplaintStore } from "@/store/complaintStore";
+import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 
 export type EscalationPriority = "Critical" | "High" | "Medium" | "Low";
 export type EscalationStatus = "Pending Review" | "Assigned" | "Investigating" | "Resolved" | "Closed";
@@ -49,6 +50,10 @@ export interface Escalation {
   daysOpen: number;
   reason?: string;
   notes?: string;
+  /** Funding traceability — set by sub-district during escalation */
+  fundingRequired?: boolean;
+  estimatedCost?: number;
+  fundingReason?: string;
   activityLog?: EscalationActivityEntry[];
 }
 
@@ -196,7 +201,9 @@ export const useEscalationStore = create<EscalationState>()(
       }),
     });
     logEscalationAudit(id, `Assigned to ${officer}`, prev, status, actor);
+    // Award XP for assignment
     if (isDistrictActor(actor)) {
+      awardXP("district", "escalation_assigned", `Escalation ${id} assigned to ${officer}`);
       notifySubDistrict(
         { ...esc, assignedTo: officer, status },
         "Officer assigned",
@@ -292,6 +299,9 @@ export const useEscalationStore = create<EscalationState>()(
     if (isDistrictActor(actor)) {
       notifySubDistrict(esc, "Escalation resolved", `${id} marked resolved by district`, "escalation_decision");
       syncComplaintFromEscalation({ ...esc, status: "Resolved" });
+      // Award XP for district admin
+      awardXP("district", "escalation_closed", `Escalation ${id} resolved`);
+      incrementBadgeProgress("district", "db3"); // Escalation Closer badge
     }
   },
 

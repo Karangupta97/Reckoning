@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import {
   ChevronLeft,
@@ -30,11 +30,13 @@ import {
   AlertTriangle,
   TrafficCone,
   TreePine,
+  Award,
 } from "lucide-react";
 import type { MyReport } from "./types";
 import { ReportTimeline } from "./ReportTimeline";
 import { OfficialResponseCard } from "./OfficialResponseCard";
 import { EvidenceGallery } from "./EvidenceGallery";
+import { CitizenImpactCard } from "./CitizenImpactCard";
 
 /* ─── Lazy Leaflet Map ────────────────────────────────────────── */
 const LocationMap = dynamic(() => import("./LocationMap"), { ssr: false });
@@ -97,6 +99,7 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [impactCardOpen, setImpactCardOpen] = useState(false);
 
   const banner = STATUS_BANNER[report.status] || STATUS_BANNER.submitted;
 
@@ -335,6 +338,23 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
               </button>
             </div>
           </div>
+
+          {/* Impact Card — visible when report is resolved */}
+          {report.status === "resolved" && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <button
+                onClick={() => setImpactCardOpen(true)}
+                className="w-full py-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--color-info) 30%, transparent)",
+                  background: "color-mix(in srgb, var(--color-info) 8%, var(--color-card))",
+                  color: "var(--color-info)",
+                }}
+              >
+                <Award size={14} /> Generate Shareable Impact Card
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -405,6 +425,27 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
           </motion.div>
         </div>
       )}
+
+      {/* Impact Card Modal */}
+      <AnimatePresence>
+        {impactCardOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={() => setImpactCardOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border p-5"
+              style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
+            >
+              <CitizenImpactCard report={report} onClose={() => setImpactCardOpen(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

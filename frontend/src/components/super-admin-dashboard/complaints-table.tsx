@@ -114,7 +114,8 @@ export default function ComplaintsTable() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.04 }}
-                className="dashboard-table-row"
+                className="dashboard-table-row cursor-pointer hover:bg-[var(--color-surface)]"
+                onClick={() => router.push(`/super-admin/complaints/citizen-complaints`)}
               >
                 <td className="dashboard-table-td">
                   <div className="flex min-w-0 items-center gap-2">

@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Bell, AlertTriangle, TrendingUp, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Bell, AlertTriangle, TrendingUp, ShieldAlert, CheckCircle2, Brain, Zap, BarChart3 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import RiskAlerts from "@/components/super-admin-dashboard/risk-alerts";
+import { useRoadIntelligence } from "@/hooks/use-road-intelligence";
 
 const ALERTS = [
   { id: "ALT-001", type: "Budget Anomaly",       project: "NH-48 Highway Expansion",   state: "Maharashtra", severity: "Critical", time: "3 min ago",  resolved: false },
@@ -22,6 +23,19 @@ const severityBadge: Record<string, string> = {
 };
 
 export default function AIAlertsPage() {
+  const ri = useRoadIntelligence();
+
+  // AI-derived insights from live store data
+  const aiInsights = [
+    ri.districtRisks[0] ? `${ri.districtRisks[0].district} shows ${ri.districtRisks[0].complaints * 5 > 50 ? "critical" : "elevated"} complaint density (${ri.districtRisks[0].complaints} active cases)` : null,
+    ri.slaCompliance < 70 ? `SLA compliance at ${ri.slaCompliance}% — below governance threshold. Immediate intervention recommended.` : null,
+    ri.districtRisks.filter(d => d.breaches > 0).length > 1 ? `Multi-district SLA breach pattern detected (${ri.districtRisks.filter(d => d.breaches > 0).length} districts affected)` : null,
+    ri.totalRequested > 0 && ri.totalApproved === 0 ? `Budget approval delay: ₹${ri.totalRequested.toFixed(1)} Cr requested, ₹0 approved — pipeline stalled` : null,
+    ri.escalationRatePct > 60 ? `High escalation-to-complaint ratio (${ri.escalationRatePct}%) suggests systemic sub-district capacity issues` : null,
+    ri.resolutionVelocity < 40 ? `Resolution momentum critically low (${ri.resolutionVelocity}%) — governance backlog forming` : null,
+    `Infrastructure Health Score: ${ri.infrastructureHealthScore}/100 — ${ri.infrastructureHealthScore >= 70 ? "within acceptable range" : "requires attention"}`,
+  ].filter(Boolean) as string[];
+
   return (
     <div className="flex flex-col gap-4">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2">
@@ -77,6 +91,51 @@ export default function AIAlertsPage() {
           </DashboardCard>
         </motion.div>
       </div>
+
+      {/* AI Predictive Insights — derived from live governance data */}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <DashboardCard className="p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Brain size={14} className="text-cyan-400" />
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">AI Predictive Insights</h3>
+            <span className="text-[9px] text-[var(--color-text-muted)] ml-auto">Rule-based analysis</span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {aiInsights.map((insight, i) => (
+              <motion.div key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.04 }}
+                className="flex items-start gap-2.5 rounded-lg border px-3 py-2.5"
+                style={{ borderColor: "rgba(34,211,238,0.2)", background: "rgba(34,211,238,0.03)" }}>
+                <Zap size={12} className="text-cyan-400 mt-0.5 shrink-0" />
+                <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">{insight}</p>
+              </motion.div>
+            ))}
+          </div>
+        </DashboardCard>
+      </motion.div>
+
+      {/* AI Risk Alerts from Road Intelligence */}
+      {ri.aiAlerts.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <DashboardCard className="p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 size={14} className="text-orange-400" />
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">District Risk Forecast</h3>
+            </div>
+            <div className="flex flex-col gap-2">
+              {ri.aiAlerts.map((alert, i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border px-3 py-2"
+                  style={{ borderColor: alert.priority === "High" ? "rgba(239,68,68,0.2)" : "rgba(245,158,11,0.2)", background: alert.priority === "High" ? "rgba(239,68,68,0.04)" : "rgba(245,158,11,0.04)" }}>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-[var(--color-text-primary)]">{alert.corridor}, {alert.state}</p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">{alert.reason}</p>
+                  </div>
+                  <span className="text-xs font-bold tabular-nums shrink-0 ml-2" style={{ color: alert.priority === "High" ? "#ef4444" : "#f59e0b" }}>{alert.riskScore}%</span>
+                </div>
+              ))}
+            </div>
+          </DashboardCard>
+        </motion.div>
+      )}
     </div>
   );
 }

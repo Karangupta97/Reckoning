@@ -101,18 +101,17 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Critical CSS to prevent theme FOUC: set body colors based on detected theme */}
+        {/* Theme init + extension cleanup — injected via dangerouslySetInnerHTML to run before React hydration */}
+        <meta name="color-scheme" content="light dark" />
         <style dangerouslySetInnerHTML={{
-          __html: `
-            html.dark { --color-page: #1A1F2E; --color-text-primary: #EDF1F7; }
-            html.light { --color-page: #EFF2F9; --color-text-primary: #1C2B3A; }
-            body { background-color: var(--color-page, #EFF2F9); color: var(--color-text-primary, #1C2B3A); }
-          `.replace(/\n\s*/g, '')
+          __html: `html.dark{--color-page:#1A1F2E;--color-text-primary:#EDF1F7}html.light{--color-page:#EFF2F9;--color-text-primary:#1C2B3A}body{background-color:var(--color-page,#EFF2F9);color:var(--color-text-primary,#1C2B3A)}`
         }} />
-        <script id="theme-init" dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
-        <script id="extension-cleanup" dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_CLEANUP }} />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {/* Theme init script — must run before paint to prevent FOUC */}
+        {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
+        <noscript><style dangerouslySetInnerHTML={{ __html: "html{color-scheme:light}" }} /></noscript>
+        <div id="__theme_init" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `<script>${THEME_INIT}${EXTENSION_ATTR_CLEANUP}</script>` }} />
         {children}
       </body>
     </html>

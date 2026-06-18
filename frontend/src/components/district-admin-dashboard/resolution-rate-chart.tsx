@@ -11,13 +11,7 @@ import {
 } from "recharts";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useIsClient } from "@/hooks/useIsClient";
-
-const data = [
-  { name: "Resolved", value: 58 },
-  { name: "In Progress", value: 24 },
-  { name: "Escalated", value: 12 },
-  { name: "Overdue", value: 6 },
-];
+import { useDistrictAnalyticsMetrics } from "@/hooks/use-analytics-metrics";
 
 // Teal / Emerald / Amber / Red palette
 const COLORS = ["#14b8a6", "#10b981", "#f59e0b", "#ef4444"];
@@ -28,6 +22,11 @@ function ResolutionRateChart({
   compact?: boolean;
 }) {
   const isClient = useIsClient();
+  const { resolutionBreakdown, resolutionTotal, resolvedCount, overdueCount } = useDistrictAnalyticsMetrics();
+  const data = resolutionBreakdown;
+  const resolvedPct = data[0]?.value ?? 0;
+  const overduePct = data[3]?.value ?? 0;
+
   return (
     <DashboardCard
       initial={{ opacity: 0, y: 14 }}
@@ -48,7 +47,7 @@ function ResolutionRateChart({
           )}
         </div>
         <div className="shrink-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[10px] text-[var(--color-text-secondary)] sm:text-xs">
-          1,240 Total
+          {resolutionTotal.toLocaleString()} Total
         </div>
       </div>
 
@@ -56,22 +55,22 @@ function ResolutionRateChart({
         <div className="mb-3 flex gap-2">
           <div className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-center">
             <p className="text-[10px] text-[var(--color-text-muted)]">Resolved</p>
-            <p className="text-sm font-bold text-teal-400">58%</p>
+            <p className="text-sm font-bold text-teal-400">{resolvedPct}%</p>
           </div>
           <div className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2 text-center">
             <p className="text-[10px] text-[var(--color-text-muted)]">Overdue</p>
-            <p className="text-sm font-bold text-red-400">6%</p>
+            <p className="text-sm font-bold text-red-400">{overduePct}%</p>
           </div>
         </div>
       ) : (
         <div className="mb-5 grid grid-cols-2 gap-3">
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
             <p className="text-xs text-[var(--color-text-muted)]">Resolved</p>
-            <p className="mt-1 text-lg font-bold text-teal-400">719</p>
+            <p className="mt-1 text-lg font-bold text-teal-400">{resolvedCount}</p>
           </div>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
             <p className="text-xs text-[var(--color-text-muted)]">Overdue</p>
-            <p className="mt-1 text-lg font-bold text-red-400">74</p>
+            <p className="mt-1 text-lg font-bold text-red-400">{overdueCount}</p>
           </div>
         </div>
       )}

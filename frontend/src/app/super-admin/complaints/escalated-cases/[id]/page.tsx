@@ -12,6 +12,15 @@ import {
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import IndiaMap from "@/components/map/IndiaMap";
 import { useEscalationStore } from "@/store/escalationStore";
+import { useEvidenceStore } from "@/store/evidenceStore";
+import { useBudgetApprovalStore, formatBudgetAmount } from "@/store/budgetApprovalStore";
+import { useAdminNotificationStore } from "@/store/adminNotificationStore";
+import { RelatedRecordsPanel } from "@/components/admin/RelatedRecordsPanel";
+import { CaseJourneyTimeline } from "@/components/admin/CaseJourneyTimeline";
+import { CaseTraceabilityCard } from "@/components/admin/CaseTraceabilityCard";
+import { ClarificationThread, parseNotesToThread, ClarificationRequiredBadge, EscalationChainCard } from "@/components/admin/ClarificationThread";
+import { JudgeQuickAnswers } from "@/components/admin/JudgeExperienceCards";
+import { getRelatedRecordsForEscalation, buildEscalationJourney } from "@/lib/case-traceability";
 import type { EscalationStatus, EscalationPriority } from "@/store/escalationStore";
 
 /* ─── Helpers ────────────────────────────────────────────────── */
@@ -270,6 +279,8 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
   const appendActivity = useEscalationStore(s => s.appendActivity);
   const resolveEscalation = useEscalationStore(s => s.resolveEscalation);
   const rejectEscalation = useEscalationStore(s => s.rejectEscalation);
+  const budgetRequests = useBudgetApprovalStore(s => s.requests);
+  const evidenceRecords = useEvidenceStore(s => s.records);
   const base = escalations.find(e => e.id === id) ?? {
     id, title: `Escalation ${id}`, subDistrict: "Unknown", category: "General",
     priority: "High" as EscalationPriority, status: "Pending Review" as EscalationStatus,
@@ -312,16 +323,16 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
   };
 
   const handleApprove = (note: string) => {
-    setEscStatus(id, "Investigating", "Super Admin", `Escalation approved${note ? ` — ${note}` : ""}`);
+    setEscStatus(id, "Investigating", "Super Admin", `Accepted for state review${note ? ` — ${note}` : ""}`);
     setApproveOpen(false);
     syncFromStore();
-    showToast("Escalation approved");
+    showToast("Accepted for state review");
   };
   const handleReject = (reason: string, note: string) => {
     rejectEscalation(id, reason, note, "Super Admin");
     setRejectOpen(false);
     syncFromStore();
-    showToast("Escalation rejected");
+    showToast("Returned to district");
   };
   const handleReview = (note: string) => {
     setEscStatus(id, "Investigating", "Super Admin", `Marked as Investigating${note ? ` — ${note}` : ""}`);
@@ -528,12 +539,12 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
             <DashboardCard className="p-4 flex flex-col gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Case Actions</p>
 
-              {/* Approve */}
+              {/* Accept State Review */}
               <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
                 disabled={isResolved} onClick={() => setApproveOpen(true)}
                 className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ borderColor: "rgba(20,184,166,0.35)", background: "rgba(20,184,166,0.08)", color: "#14b8a6" }}>
-                <CheckCircle2 size={14} /> Approve Escalation
+                <CheckCircle2 size={14} /> Accept State Review
               </motion.button>
 
               {/* Mark Under Review */}
@@ -570,12 +581,12 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
                 <ClipboardCheck size={14} /> Approve Closure
               </motion.button>
 
-              {/* Reject */}
+              {/* Return To District */}
               <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: 0.97 }}
                 disabled={isResolved} onClick={() => setRejectOpen(true)}
                 className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#ef4444" }}>
-                <XCircle size={14} /> Reject
+                <XCircle size={14} /> Return To District
               </motion.button>
             </DashboardCard>
           </motion.div>
@@ -626,6 +637,136 @@ export default function EscalationDetailPage({ params }: { params: Promise<{ id:
               ))}
             </DashboardCard>
           </motion.div>
+
+          {/* Judge Quick Answers */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+            <DashboardCard className="p-4">
+              <JudgeQuickAnswers complaintId={live?.sourceComplaintId} escalationId={id} />
+            </DashboardCard>
+          </motion.div>
+
+          {/* Case Traceability */}
+          {live?.sourceComplaintId && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }}>
+              <DashboardCard className="p-4">
+                <CaseTraceabilityCard complaintId={live.sourceComplaintId} portal="super" />
+              </DashboardCard>
+            </motion.div>
+          )}
+
+          {/* Clarification Thread */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.195 }}>
+            <DashboardCard className="p-4 flex flex-col gap-3">
+              <ClarificationRequiredBadge show={
+                (live?.activityLog ?? []).some((a) => a.action.toLowerCase().includes("clarification requested") && !a.actor.includes("Super"))
+              } />
+              {live?.parentEscalationId && (
+                <EscalationChainCard parentId={live.parentEscalationId} childId={id} parentTier="District" childTier="Super Admin" />
+              )}
+              <ClarificationThread
+                messages={parseNotesToThread(base.notes, live?.activityLog)}
+                viewerRole="super"
+                complaintId={live?.sourceComplaintId}
+                escalationId={id}
+                onReply={(msg) => {
+                  useEscalationStore.getState().appendActivity(id, "Super Admin", `Clarification reply — ${msg}`);
+                  useEscalationStore.getState().updateEscalation(id, {
+                    notes: (live?.notes ?? base.notes ?? "") + `\n[Super Admin] ${msg}`,
+                  });
+                  // Notify district
+                  useAdminNotificationStore.getState().push({
+                    portal: "district",
+                    type: "clarification_request",
+                    title: "Super Admin clarification reply",
+                    message: `${id} — ${msg.substring(0, 80)}`,
+                    entityId: id,
+                    href: `/district-admin/dashboard/escalation/${live?.parentEscalationId ?? id}`,
+                  });
+                }}
+              />
+            </DashboardCard>
+          </motion.div>
+
+          {/* Related Records — full traceability */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <DashboardCard className="p-4">
+              <RelatedRecordsPanel
+                records={getRelatedRecordsForEscalation(id, "super")}
+                title="Related Records"
+              />
+            </DashboardCard>
+          </motion.div>
+
+          {/* Case Journey — complete lifecycle */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+            <DashboardCard className="p-4">
+              <CaseJourneyTimeline
+                steps={buildEscalationJourney(id)}
+                title="Case Journey"
+                accentColor="#22d3ee"
+              />
+            </DashboardCard>
+          </motion.div>
+
+          {/* Funding Impact — if linked budgets exist */}
+          {(() => {
+            const linkedBudgets = budgetRequests.filter(
+              (b) => b.linkedEscalationIds?.includes(id)
+            );
+            if (linkedBudgets.length === 0) return null;
+            return (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+                <DashboardCard className="p-4 flex flex-col gap-2">
+                  <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Funding Impact</h4>
+                  {linkedBudgets.map((b) => (
+                    <div key={b.id} className="rounded-lg border px-3 py-2.5" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-mono text-[10px] font-bold" style={{ color: "#22d3ee" }}>{b.id}</span>
+                        <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full"
+                          style={{
+                            background: b.status === "Approved" ? "rgba(16,185,129,0.12)" : "rgba(245,158,11,0.12)",
+                            color: b.status === "Approved" ? "#10b981" : "#f59e0b",
+                          }}>{b.status}</span>
+                      </div>
+                      <div className="flex flex-col gap-1 text-[10px]">
+                        <div className="flex justify-between">
+                          <span className="text-[var(--color-text-muted)]">Requested</span>
+                          <span className="font-bold text-[var(--color-text-primary)]">{formatBudgetAmount(b.requestedAmount)}</span>
+                        </div>
+                        {b.approvedAmount && (
+                          <div className="flex justify-between">
+                            <span className="text-[var(--color-text-muted)]">Approved</span>
+                            <span className="font-bold text-emerald-400">{formatBudgetAmount(b.approvedAmount)}</span>
+                          </div>
+                        )}
+                        {b.releasedAmount && (
+                          <div className="flex justify-between">
+                            <span className="text-[var(--color-text-muted)]">Released</span>
+                            <span className="font-bold text-cyan-400">{formatBudgetAmount(b.releasedAmount)}</span>
+                          </div>
+                        )}
+                        {b.approvedAmount && b.approvedAmount !== b.requestedAmount && (
+                          <div className="flex justify-between">
+                            <span className="text-[var(--color-text-muted)]">Difference</span>
+                            <span className="font-bold" style={{ color: b.approvedAmount < b.requestedAmount ? "#ef4444" : "#10b981" }}>
+                              {b.approvedAmount < b.requestedAmount ? "-" : "+"}
+                              {formatBudgetAmount(Math.abs(b.approvedAmount - b.requestedAmount))}
+                            </span>
+                          </div>
+                        )}
+                        {b.releaseStatus && (
+                          <div className="flex justify-between">
+                            <span className="text-[var(--color-text-muted)]">Release</span>
+                            <span className="font-semibold" style={{ color: b.releaseStatus === "Fully Released" ? "#10b981" : "#f59e0b" }}>{b.releaseStatus}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </DashboardCard>
+              </motion.div>
+            );
+          })()}
         </div>
       </div>
 

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Eye, ClipboardCheck, Clock, CheckCircle2, AlertTriangle, Search, Plus } from "lucide-react";
+import { Eye, ClipboardCheck, ClipboardList, Clock, CheckCircle2, AlertTriangle, Search, Plus } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useComplaintWorkflowStore, type TicketStatus } from "@/store/complaintWorkflowStore";
@@ -189,7 +189,17 @@ export default function TicketsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t, i) => (
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <ClipboardList size={24} className="text-[var(--color-text-muted)] opacity-40" />
+                      <p className="text-sm text-[var(--color-text-muted)]">No tickets match your filters</p>
+                      <p className="text-xs text-[var(--color-text-muted)] opacity-70">Try adjusting your search or filter criteria</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtered.map((t, i) => (
                 <motion.tr
                   key={t.id}
                   initial={{ opacity: 0 }}
