@@ -8,6 +8,8 @@ import { AiIntelligence } from "@/components/AiIntelligence";
 import { Features } from "@/components/Features";
 import { Countries } from "@/components/Countries";
 import { StatsBar } from "@/components/StatsBar";
+import { Testimonials } from "@/components/Testimonials";
+import { TrustBadges } from "@/components/TrustBadges";
 import { ReportCTA } from "@/components/ReportCTA";
 import { Footer } from "@/components/Footer";
 import {Agentation} from "agentation";
@@ -41,6 +43,8 @@ export default async function LandingPage({ params }: Props) {
         <Features />
         <Countries />
         <StatsBar />
+        <Testimonials />
+        <TrustBadges />
         <ReportCTA />
       </main>
       <Footer />

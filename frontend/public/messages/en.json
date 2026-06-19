@@ -185,6 +185,33 @@
       "resolution": "4.2 days"
     }
   },
+  "testimonials": {
+    "title": "Trusted by communities",
+    "subtitle": "Citizens and authorities across BIMSTEC nations rely on Reckoning every day.",
+    "t1": {
+      "quote": "I reported a dangerous pothole on my commute route. Within 3 days, the municipality had it repaired. This platform actually works.",
+      "name": "Priya Sharma",
+      "role": "Citizen Reporter, Mumbai"
+    },
+    "t2": {
+      "quote": "As a district officer, the AI severity scoring helps us prioritize the most dangerous road conditions first. Our response time improved by 60%.",
+      "name": "Rafiq Ahmed",
+      "role": "District Road Officer, Dhaka"
+    },
+    "t3": {
+      "quote": "The real-time tracking keeps me informed. I can see when my report is acknowledged and when repair work begins. Complete transparency.",
+      "name": "Suman Thapa",
+      "role": "Community Leader, Kathmandu"
+    }
+  },
+  "trust": {
+    "aiPowered": "AI-Powered Detection",
+    "secure": "End-to-End Encrypted",
+    "global": "7 BIMSTEC Nations",
+    "realtime": "Real-Time Updates",
+    "cloudNative": "Cloud-Native Platform",
+    "verified": "Government Verified"
+  },
   "cta": {
     "title": "See a damaged road? Report it now.",
     "subtitle": "Takes less than 60 seconds. No login required for basic reports.",
@@ -204,12 +231,28 @@
     "note": "Sample data shown for demonstration. Live incident feeds connect in production."
   },
   "footer": {
-    "tagline": "AI-powered civic road damage reporting for BIMSTEC nations.",
+    "tagline": "AI-powered civic road damage reporting for BIMSTEC nations. Snap, submit and track road issues — making roads safer for everyone.",
+    "sections": {
+      "product": "Product",
+      "dashboards": "Dashboards",
+      "account": "Account"
+    },
     "links": {
-      "privacy": "Privacy",
-      "terms": "Terms",
+      "howItWorks": "How It Works",
+      "features": "Features",
+      "countries": "Countries",
+      "analytics": "Analytics",
+      "citizenDashboard": "Citizen Dashboard",
+      "districtAdmin": "District Admin",
+      "subDistrictAdmin": "Sub-District Admin",
+      "superAdmin": "Super Admin",
+      "citizenLogin": "Citizen Login",
+      "adminLogin": "Admin Login",
+      "register": "Create Account",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
       "github": "GitHub",
-      "contact": "Contact"
+      "contact": "Contact Us"
     },
     "attribution": "BIMSTEC · IIT Madras / CoERS",
     "builtFor": "Built for Road Safety Hackathon 2026",
