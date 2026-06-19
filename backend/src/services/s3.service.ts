@@ -18,7 +18,7 @@ import {
   BUCKET_NAME,
   assertS3Configured,
   getSignedDownloadUrl,
-  MAX_PRESIGN_SECONDS,
+  DEFAULT_MEDIA_EXPIRY_SECONDS,
 } from "../config/s3.js";
 import { AppError } from "../utils/AppError.js";
 
@@ -59,16 +59,21 @@ export async function putObject(
 }
 
 /**
- * Resolve the URL to persist/return for a stored object.
+ * Generate a short-lived presigned URL for a stored media object.
  *
- * Returns a SigV4 presigned S3 URL valid for the maximum AWS lifetime (7 days
- * — see {@link MAX_PRESIGN_SECONDS}).
+ * URLs are **not** cached or stored — they are regenerated on every request.
+ * This ensures leaked URLs expire quickly (default: 1 hour) and the system
+ * never serves stale/expired links from the database.
  *
- * @param key S3 object key.
- * @returns A fetchable presigned URL for the object.
+ * @param key       S3 object key.
+ * @param expiresIn Optional custom lifetime in seconds (defaults to 1 hour).
+ * @returns A fetchable presigned URL valid for the specified lifetime.
  */
-export async function resolveMediaUrl(key: string): Promise<string> {
-  return getSignedDownloadUrl(key, MAX_PRESIGN_SECONDS);
+export async function resolveMediaUrl(
+  key: string,
+  expiresIn: number = DEFAULT_MEDIA_EXPIRY_SECONDS,
+): Promise<string> {
+  return getSignedDownloadUrl(key, expiresIn);
 }
 
 /**

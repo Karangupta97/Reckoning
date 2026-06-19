@@ -152,20 +152,6 @@ export async function runReckoningDetection(
 
     const data = response.data as ReckoningResponse;
 
-    // ═══ DEBUG LOGGING — remove after confirming fix ═══
-    console.log("=== RECKONING RAW RESPONSE KEYS ===");
-    console.log(Object.keys(data));
-    console.log("=== ANNOTATED IMAGE FIELD ===");
-    console.log("annotatedImage exists:", !!data.annotatedImage);
-    console.log("annotatedImage type:", typeof data.annotatedImage);
-    if (data.annotatedImage) {
-      console.log("base64 length:", data.annotatedImage.base64?.length ?? 0);
-      console.log("mimeType:", data.annotatedImage.mimeType);
-    }
-    console.log("=== FULL RESPONSE SIZE ===");
-    console.log("Response size bytes:", JSON.stringify(data).length);
-    // ═══ END DEBUG LOGGING ═══
-
     // Map all raw detections through the label → enum map.
     const allMapped: ReckoningDetection[] = (data.detections ?? []).map((d: unknown) => {
       const det = d as { label: string; confidence: number; bbox: { x1: number; y1: number; x2: number; y2: number } };

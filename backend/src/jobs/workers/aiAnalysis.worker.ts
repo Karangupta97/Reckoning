@@ -181,11 +181,36 @@ export function startAiAnalysisWorker(): Worker | null {
     {
       connection,
       concurrency: 3,
+      // ── Stalled job recovery ──────────────────────────────────────────────
+      // AI inference involves large image downloads and HuggingFace API calls
+      // that can trigger OOM kills or timeouts. Without stalled detection, a
+      // crashed job stays in "active" forever and the complaint never receives
+      // AI results.
+      //
+      // stalledInterval: How often (ms) the worker checks for stalled jobs.
+      //   30s is aggressive enough to recover quickly without excessive Redis
+      //   chatter on a healthy system.
+      //
+      // maxStalledCount: How many times a job can be re-stalled before it's
+      //   moved to "failed". 2 retries = 3 total attempts (original + 2 stall
+      //   recoveries), preventing infinite loops on a poison-pill image while
+      //   still handling transient OOM spikes.
+      //
+      // lockDuration: How long (ms) a job lock is held before the job is
+      //   considered stalled. Set higher than typical inference time (images
+      //   up to 10MB through HuggingFace ~15-45s) to avoid false positives.
+      stalledInterval: 30_000,
+      maxStalledCount: 2,
+      lockDuration: 120_000,
     },
   );
 
   worker.on("failed", (job, err) => {
     logger.error(`[aiAnalysis.worker] Job ${job?.id} failed: ${err.message}`);
+  });
+
+  worker.on("stalled", (jobId) => {
+    logger.warn(`[aiAnalysis.worker] Job ${jobId} stalled — will be retried by another worker instance.`);
   });
 
   logger.info("[aiAnalysis.worker] Started.");

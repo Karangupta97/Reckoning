@@ -203,6 +203,68 @@ export async function downloadAnnotatedResult(
 }
 
 /**
+ * GET /api/ai/image/:complaintId
+ *
+ * Proxy-streams the annotated AI image from S3 directly through the backend.
+ * This avoids CORS/presigned-URL issues in the browser. The response is the
+ * raw image bytes with correct Content-Type headers.
+ *
+ * Auth: requireAuth — ownership verified via complaint_ai_results join.
+ */
+export async function proxyAnnotatedImage(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const complaintId = req.params.complaintId as string;
+    const userId = req.user!.id;
+
+    // Find the AI result row for this complaint (owner check via join).
+    const row = await prisma.complaintAiResult.findFirst({
+      where: {
+        complaintId,
+        complaint: { userId, deletedAt: null },
+      },
+      select: { annotatedImageS3Key: true },
+    });
+
+    // Fallback: check aiAnnotatedImageKey on the complaint itself.
+    const s3Key =
+      row?.annotatedImageS3Key ??
+      (
+        await prisma.complaint.findFirst({
+          where: { id: complaintId, userId, deletedAt: null },
+          select: { aiAnnotatedImageKey: true },
+        })
+      )?.aiAnnotatedImageKey ??
+      null;
+
+    if (!s3Key) {
+      res.status(404).json({ success: false, message: "No annotated image available." });
+      return;
+    }
+
+    // Stream the S3 object directly to the response.
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: s3Key });
+    const s3Response = await s3Client.send(command);
+
+    // Set appropriate headers for image response.
+    res.setHeader("Content-Type", s3Response.ContentType || "image/jpeg");
+    if (s3Response.ContentLength) {
+      res.setHeader("Content-Length", s3Response.ContentLength.toString());
+    }
+    res.setHeader("Cache-Control", "private, max-age=3600");
+
+    // Pipe the readable stream to the HTTP response.
+    const stream = s3Response.Body as import("stream").Readable;
+    stream.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * GET /api/ai/detect/:complaintId
  *
  * Retrieves the AI detection result for a submitted complaint.

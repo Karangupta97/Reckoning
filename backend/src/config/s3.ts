@@ -28,6 +28,15 @@ import { AppError } from "../utils/AppError.js";
  */
 export const MAX_PRESIGN_SECONDS = 7 * 24 * 60 * 60;
 
+/**
+ * Default expiry for media URLs served to clients.
+ *
+ * 1 hour strikes the balance between usability (most page sessions) and
+ * security (leaked URLs are short-lived). Frontend must treat media URLs as
+ * ephemeral and re-fetch them via the API when needed.
+ */
+export const DEFAULT_MEDIA_EXPIRY_SECONDS = 3600;
+
 /** S3 bucket name (may be empty string when S3 is not configured). */
 export const BUCKET_NAME: string = env.AWS_S3_BUCKET_NAME ?? "";
 

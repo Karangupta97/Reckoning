@@ -17,6 +17,7 @@ import { Prisma, type Country } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
 import { query } from "../../config/db.js";
 import { getSignedDownloadUrl } from "../../config/s3.js";
+import { resolveMediaUrl } from "../../services/s3.service.js";
 import { AppError } from "../../utils/AppError.js";
 import { reverseGeocode, isoCodeForCountry } from "../../services/geocode.service.js";
 import {
@@ -78,7 +79,7 @@ const COMPLAINT_INCLUDE = {
   media: {
     orderBy: { order: "asc" },
     include: {
-      media: { select: { url: true, mimeType: true } },
+      media: { select: { s3Key: true, url: true, mimeType: true } },
     },
   },
   authority: {
@@ -93,19 +94,22 @@ type ComplaintWithRelations = Prisma.ComplaintGetPayload<{
 
 /**
  * Project linked media rows into the public media view (ordered, primary-first
- * by `order`). Internal `s3Key` is never included.
+ * by `order`). Generates **fresh** short-lived signed URLs from `s3Key` on
+ * every call — the stored `url` column is treated as a fallback only.
  *
  * @param complaint A complaint with its `media` relation loaded.
- * @returns Ordered media views.
+ * @returns Ordered media views with fresh presigned URLs.
  */
-function toMediaViews(complaint: ComplaintWithRelations): ComplaintMediaView[] {
-  return complaint.media.map((link) => ({
-    id: link.id,
-    url: link.media.url,
-    mimeType: link.media.mimeType,
-    isPrimary: link.isPrimary,
-    order: link.order,
-  }));
+async function toMediaViews(complaint: ComplaintWithRelations): Promise<ComplaintMediaView[]> {
+  return Promise.all(
+    complaint.media.map(async (link) => ({
+      id: link.id,
+      url: await resolveMediaUrl(link.media.s3Key),
+      mimeType: link.media.mimeType,
+      isPrimary: link.isPrimary,
+      order: link.order,
+    })),
+  );
 }
 
 /**
@@ -593,12 +597,15 @@ function buildPrismaOrderBy(q: ListComplaintsQuery): Prisma.ComplaintOrderByWith
  * @param distance Optional distance in metres from the query point.
  * @returns A public {@link ComplaintListItem}.
  */
-function toListItem(
+async function toListItem(
   c: ComplaintWithRelations & { user?: { fullName: string } | null },
   fullName: string | null,
   distance?: number,
-): ComplaintListItem {
+): Promise<ComplaintListItem> {
   const primary = c.media.find((m) => m.isPrimary) ?? c.media[0];
+  const primaryMedia = primary
+    ? { url: await resolveMediaUrl(primary.media.s3Key), mimeType: primary.media.mimeType }
+    : null;
   return {
     id: c.id,
     ticketNumber: c.ticketNumber,
@@ -614,7 +621,7 @@ function toListItem(
     },
     country: c.country,
     submittedBy: reporterLabel(c.isAnonymous, fullName),
-    primaryMedia: primary ? { url: primary.media.url, mimeType: primary.media.mimeType } : null,
+    primaryMedia,
     upvotes: c.upvotes,
     viewCount: c.viewCount,
     assignedAuthority: c.authority ? { name: c.authority.name, type: c.authority.type } : null,
@@ -653,10 +660,12 @@ export async function listComplaints(q: ListComplaintsQuery): Promise<ComplaintL
 
     // Preserve the SQL ordering (findMany does not guarantee `in` order).
     const byId = new Map(records.map((r) => [r.id, r]));
-    const complaints = ids
-      .map((id) => byId.get(id))
-      .filter((r): r is (typeof records)[number] => Boolean(r))
-      .map((r) => toListItem(r, r.user?.fullName ?? null, distanceById.get(r.id)));
+    const complaints = await Promise.all(
+      ids
+        .map((id) => byId.get(id))
+        .filter((r): r is (typeof records)[number] => Boolean(r))
+        .map((r) => toListItem(r, r.user?.fullName ?? null, distanceById.get(r.id))),
+    );
 
     return { complaints, pagination: paginate(total, q.page, q.limit) };
   }
@@ -693,7 +702,7 @@ export async function listComplaints(q: ListComplaintsQuery): Promise<ComplaintL
     "listComplaints:query",
   );
 
-  const complaints = records.map((r) => toListItem(r, r.user?.fullName ?? null));
+  const complaints = await Promise.all(records.map((r) => toListItem(r, r.user?.fullName ?? null)));
   return { complaints, pagination: paginate(total, q.page, q.limit) };
 }
 
@@ -724,7 +733,7 @@ function paginate(total: number, page: number, limit: number) {
  * @param requester The caller, when authenticated.
  * @returns A {@link ComplaintDetail} (owner sees `isAnonymous`).
  */
-function toDetail(
+async function toDetail(
   c: ComplaintWithRelations & { user: { fullName: string } | null },
   requester?: Requester,
 ): Promise<ComplaintDetail> {
@@ -732,49 +741,47 @@ function toDetail(
   const fullName = c.user?.fullName ?? null;
 
   // Generate presigned URL for annotated image if available.
-  const annotatedImagePromise = c.aiAnnotatedImageKey
-    ? getSignedDownloadUrl(c.aiAnnotatedImageKey, 3600).catch(() => null)
-    : Promise.resolve(null);
+  const aiAnnotatedImage = c.aiAnnotatedImageKey
+    ? await getSignedDownloadUrl(c.aiAnnotatedImageKey, 3600).catch(() => null)
+    : null;
 
-  return annotatedImagePromise.then((aiAnnotatedImage) => {
-    const detail: ComplaintDetail = {
-      id: c.id,
-      ticketNumber: c.ticketNumber,
-      category: c.category,
-      severity: c.severity,
-      status: c.status,
-      description: c.description,
-      suggestedFix: c.suggestedFix,
-      location: {
-        latitude: c.latitude,
-        longitude: c.longitude,
-        address: c.address,
-        roadName: c.roadName,
-        roadNumber: c.roadNumber,
-        landmark: c.landmark,
-        direction: c.direction,
-      },
-      country: c.country,
-      submittedBy: reporterLabel(c.isAnonymous, fullName),
-      media: toMediaViews(c),
-      aiDetected: c.aiDetected,
-      aiCategory: c.aiCategory,
-      aiConfidence: c.aiConfidence,
-      aiAnnotatedImage,
-      upvotes: c.upvotes,
-      viewCount: c.viewCount,
-      assignedAuthority: c.authority
-        ? { id: c.authority.id, name: c.authority.name, type: c.authority.type, country: c.authority.country }
-        : null,
-      timeline: [], // populated by the workflow layer (SOON)
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-    };
+  const detail: ComplaintDetail = {
+    id: c.id,
+    ticketNumber: c.ticketNumber,
+    category: c.category,
+    severity: c.severity,
+    status: c.status,
+    description: c.description,
+    suggestedFix: c.suggestedFix,
+    location: {
+      latitude: c.latitude,
+      longitude: c.longitude,
+      address: c.address,
+      roadName: c.roadName,
+      roadNumber: c.roadNumber,
+      landmark: c.landmark,
+      direction: c.direction,
+    },
+    country: c.country,
+    submittedBy: reporterLabel(c.isAnonymous, fullName),
+    media: await toMediaViews(c),
+    aiDetected: c.aiDetected,
+    aiCategory: c.aiCategory,
+    aiConfidence: c.aiConfidence,
+    aiAnnotatedImage,
+    upvotes: c.upvotes,
+    viewCount: c.viewCount,
+    assignedAuthority: c.authority
+      ? { id: c.authority.id, name: c.authority.name, type: c.authority.type, country: c.authority.country }
+      : null,
+    timeline: [], // populated by the workflow layer (SOON)
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+  };
 
-    // Only the owner learns the anonymity setting of their own complaint.
-    if (isOwner) detail.isAnonymous = c.isAnonymous;
-    return detail;
-  });
+  // Only the owner learns the anonymity setting of their own complaint.
+  if (isOwner) detail.isAnonymous = c.isAnonymous;
+  return detail;
 }
 
 /**
@@ -964,17 +971,19 @@ export async function listMyComplaints(
 
   const complaints = await Promise.all(
     records.map(async (r) => {
-      const item = toListItem(r, r.user?.fullName ?? null);
+      const item = await toListItem(r, r.user?.fullName ?? null);
       const annotatedImage = r.aiAnnotatedImageKey
         ? await getSignedDownloadUrl(r.aiAnnotatedImageKey, 3600).catch(() => null)
         : null;
       return {
         ...item,
-        media: r.media.map((m) => ({
-          url: m.media.url,
-          mimeType: m.media.mimeType,
-          isPrimary: m.isPrimary,
-        })),
+        media: await Promise.all(
+          r.media.map(async (m) => ({
+            url: await resolveMediaUrl(m.media.s3Key),
+            mimeType: m.media.mimeType,
+            isPrimary: m.isPrimary,
+          })),
+        ),
         aiDetected: r.aiDetected,
         aiCategory: r.aiCategory,
         aiConfidence: r.aiConfidence,

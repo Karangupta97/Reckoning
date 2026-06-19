@@ -12,6 +12,7 @@ import { requireAuth } from "../../middleware/requireAuth.js";
 import {
   detectFromUpload,
   downloadAnnotatedResult,
+  proxyAnnotatedImage,
   ReckoningHealth,
   getComplaintDetectionResult,
 } from "./ai.controller.js";
@@ -23,6 +24,9 @@ aiRouter.post("/detect", requireAuth, detectFromUpload);
 
 // Citizen-only: fetch AI detection results of a submitted complaint.
 aiRouter.get("/detect/:complaintId", requireAuth, getComplaintDetectionResult);
+
+// Citizen-only: proxy-stream annotated image (bypasses S3 CORS).
+aiRouter.get("/image/:complaintId", requireAuth, proxyAnnotatedImage);
 
 // Citizen-only: re-generate presigned URL for annotated result image.
 aiRouter.get("/result/:s3Key/download", requireAuth, downloadAnnotatedResult);

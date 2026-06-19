@@ -33,12 +33,14 @@ export function AIAnnotatedPanel({ report }: AIAnnotatedPanelProps) {
   // Image load state — tracks whether the <img> itself has loaded or errored
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [imgBlobUrl, setImgBlobUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     setFetchLoading(true);
     setImgLoaded(false);
     setImgError(false);
+    setImgBlobUrl(null);
 
     async function fetchAIAnalysis() {
       try {
@@ -55,6 +57,26 @@ export function AIAnnotatedPanel({ report }: AIAnnotatedPanelProps) {
         if (isMounted) {
           setData(result);
         }
+
+        // If AI data has an annotated image, fetch it via proxy as a blob.
+        if (result?.annotatedImage && isMounted) {
+          try {
+            const imgResponse = await axios.get(apiUrl(`/ai/image/${report.id}`), {
+              headers: accessToken
+                ? { Authorization: `Bearer ${accessToken}` }
+                : undefined,
+              withCredentials: true,
+              responseType: "blob",
+            });
+            if (isMounted) {
+              const blobUrl = URL.createObjectURL(imgResponse.data);
+              setImgBlobUrl(blobUrl);
+            }
+          } catch (imgErr) {
+            console.error("[AIAnnotatedPanel] Failed to fetch annotated image via proxy", imgErr);
+            if (isMounted) setImgError(true);
+          }
+        }
       } catch (err) {
         console.error("[AIAnnotatedPanel] Failed to fetch AI analysis", err);
         if (isMounted) setData(null);
@@ -67,6 +89,11 @@ export function AIAnnotatedPanel({ report }: AIAnnotatedPanelProps) {
 
     return () => {
       isMounted = false;
+      // Revoke blob URL on cleanup to free memory.
+      setImgBlobUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
     };
   }, [report.id, accessToken]);
 
@@ -104,11 +131,8 @@ export function AIAnnotatedPanel({ report }: AIAnnotatedPanelProps) {
     );
   }
 
-  // Strict: only use the nested annotatedImage.url — never a flat field
-  const imageUrl =
-    typeof data?.annotatedImage?.url === "string" && data.annotatedImage.url.length > 0
-      ? data.annotatedImage.url
-      : null;
+  // Use the blob URL fetched via authenticated proxy (bypasses S3 CORS).
+  const imageUrl = imgBlobUrl;
 
   // Show placeholder when: no url, or image errored after load attempt
   const showPlaceholder = !imageUrl || imgError;
@@ -152,7 +176,6 @@ export function AIAnnotatedPanel({ report }: AIAnnotatedPanelProps) {
               <img
                 src={imageUrl}
                 alt="AI annotated evidence with YOLOv8 bounding boxes"
-                crossOrigin="anonymous"
                 className="w-full max-w-sm rounded-xl object-cover border"
                 style={{
                   maxHeight: 280,
@@ -163,6 +186,7 @@ export function AIAnnotatedPanel({ report }: AIAnnotatedPanelProps) {
                   transition: "opacity 0.2s ease",
                 }}
                 loading="lazy"
+                referrerPolicy="no-referrer"
                 onLoad={() => setImgLoaded(true)}
                 onError={() => {
                   setImgError(true);
