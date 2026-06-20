@@ -7,9 +7,7 @@ import { useAuthStore } from "@/stores/authStore";
 import {
   BACKEND_CATEGORY_BY_HAZARD,
   DEFAULT_LOCATION_STATE,
-  HAZARD_BY_BACKEND_CATEGORY,
   SUPPORTED_EVIDENCE_MIME_TYPES,
-  SEVERITY_BY_BACKEND,
   createInitialReportState,
   type ReportAiAnalysisResult,
   type ReportBackendCategory,
@@ -297,21 +295,7 @@ async function extractExifGpsLocation(file: File): Promise<{ latitude: number; l
   return null;
 }
 
-function mapBackendCategoryToUi(category: string | null): ReportHazardType | null {
-  if (!category) {
-    return null;
-  }
 
-  return HAZARD_BY_BACKEND_CATEGORY[category as ReportBackendCategory] ?? null;
-}
-
-function mapBackendSeverityToUi(severity: string | null): ReportSeverityLevel | null {
-  if (!severity) {
-    return null;
-  }
-
-  return SEVERITY_BY_BACKEND[severity as keyof typeof SEVERITY_BY_BACKEND] ?? null;
-}
 
 function toBackendPayload(state: ReportFormState): ComplaintSubmissionInput | null {
   if (state.location.latitude == null || state.location.longitude == null || !state.hazardType) {
@@ -331,6 +315,7 @@ function toBackendPayload(state: ReportFormState): ComplaintSubmissionInput | nu
     longitude: state.location.longitude,
     mediaIds,
     description: state.description.trim() || undefined,
+    roadName: state.location.address ? state.location.address.split(",")[0].trim() : undefined,
     landmark: state.location.landmark.trim() || undefined,
     aiCategory,
     aiConfidence: state.aiResult?.confidence ?? null,
@@ -570,18 +555,74 @@ export default function ReportPage() {
       dispatch({ type: "UPDATE_EVIDENCE", evidence: uploadedEvidence });
       dispatch({ type: "SET_ANALYSIS_STATE", analysisState: "scanning" });
 
-      const firstUploadedImage = uploadedEvidence.find((item) => item.mediaId && item.mimeType.startsWith("image/"));
-      if (!firstUploadedImage?.mediaId) {
+      const imageItems = uploadedEvidence.filter((item) => item.mediaId && item.mimeType.startsWith("image/"));
+      if (imageItems.length === 0) {
         throw new Error("Upload at least one image to analyse the hazard.");
       }
 
-      const result = await analyzeReportMedia({ fileId: firstUploadedImage.mediaId, accessToken });
-      const uiCategory = result.suggestedCategory ? mapBackendCategoryToUi(result.suggestedCategory) : null;
-      const uiSeverity = result.suggestedSeverity ? mapBackendSeverityToUi(result.suggestedSeverity) : null;
+      const results: ReportAiAnalysisResult[] = [];
+      for (const item of imageItems) {
+        try {
+          const res = await analyzeReportMedia({ fileId: item.mediaId!, accessToken });
+          results.push(res);
+        } catch (err) {
+          console.warn("Analysis failed for image", item.mediaId, err);
+        }
+      }
 
-      dispatch({ type: "SET_AI_RESULT", aiResult: result });
+      if (results.length === 0) {
+        throw new Error("AI analysis failed or is temporarily unavailable for your images.");
+      }
+
+      // Find the result with the highest confidence to be the primary AI result
+      let bestResult = results[0];
+      let maxConfidence = -1;
+      for (const res of results) {
+        if (res.confidence != null && res.confidence > maxConfidence) {
+          maxConfidence = res.confidence;
+          bestResult = res;
+        }
+      }
+
+      const uiCategory = bestResult.suggestedCategory;
+
+      // Combine severities: maximum severity level detected among all images
+      const severityScores: Record<ReportSeverityLevel, number> = {
+        low: 1,
+        medium: 2,
+        high: 3,
+        critical: 4,
+      };
+
+      let maxSeverityScore = 0;
+      let uiSeverity: ReportSeverityLevel | null = null;
+      for (const res of results) {
+        if (res.suggestedSeverity) {
+          const score = severityScores[res.suggestedSeverity];
+          if (score > maxSeverityScore) {
+            maxSeverityScore = score;
+            uiSeverity = res.suggestedSeverity;
+          }
+        }
+      }
+
+      if (!uiSeverity) {
+        uiSeverity = "medium";
+      }
+
+      // Merge all detected issues and sum total counts
+      const mergedIssues = Array.from(new Set(results.flatMap((r) => r.allDetectedIssues)));
+      const mergedTotal = results.reduce((sum, r) => sum + r.totalDetected, 0);
+
+      const finalAiResult = {
+        ...bestResult,
+        allDetectedIssues: mergedIssues,
+        totalDetected: mergedTotal,
+      };
+
+      dispatch({ type: "SET_AI_RESULT", aiResult: finalAiResult });
       dispatch({ type: "SET_HAZARD_TYPE", hazardType: uiCategory ?? state.hazardType ?? "other" });
-      dispatch({ type: "SET_SEVERITY", severity: uiSeverity ?? state.severity ?? "medium" });
+      dispatch({ type: "SET_SEVERITY", severity: uiSeverity });
 
       const suggestion = buildAiSuggestionText(uiCategory);
       dispatch({ type: "SET_TITLE", title: suggestion.title });

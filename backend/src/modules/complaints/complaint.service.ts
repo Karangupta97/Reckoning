@@ -360,7 +360,7 @@ export async function createComplaint(
   }
   const address =
     geo?.address ??
-    composeAddress([geo?.roadName, geo?.district, geo?.state, geo?.countryName]);
+    composeAddress([input.roadName || geo?.roadName, geo?.district, geo?.state, geo?.countryName]);
   const roadName = input.roadName ?? geo?.roadName ?? undefined;
 
   // 4. Severity heuristic (synchronous, fast).

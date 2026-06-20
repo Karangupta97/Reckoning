@@ -149,7 +149,7 @@ function mapComplaintToMyReport(c: any): MyReport {
   }
 
   const location = {
-    name: addressName || "Unknown Location",
+    name: addressName || roadName || "Unknown Location",
     road: roadName || "",
     subdistrict: "",
     district: "",

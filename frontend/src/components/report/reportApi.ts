@@ -1,9 +1,11 @@
-import type {
-  ReportAiAnalysisResult,
-  ReportHazardType,
-  ReportSeverityLevel,
-  ReportBackendCategory,
-  ReportBackendSeverity,
+import {
+  HAZARD_BY_BACKEND_CATEGORY,
+  SEVERITY_BY_BACKEND,
+  type ReportAiAnalysisResult,
+  type ReportHazardType,
+  type ReportSeverityLevel,
+  type ReportBackendCategory,
+  type ReportBackendSeverity,
 } from "./reportTypes";
 import { fetchCitizenAuth, readResponseJson, extractMessage } from "@/lib/auth/citizenSession";
 
@@ -119,8 +121,8 @@ export async function analyzeReportMedia(params: {
     throw new Error("AI analysis is temporarily unavailable.");
   }
   return {
-    suggestedCategory: data.suggestedCategory as ReportAiAnalysisResult["suggestedCategory"],
-    suggestedSeverity: data.suggestedSeverity as ReportAiAnalysisResult["suggestedSeverity"],
+    suggestedCategory: data.suggestedCategory ? (HAZARD_BY_BACKEND_CATEGORY[data.suggestedCategory] ?? "other") : null,
+    suggestedSeverity: data.suggestedSeverity ? (SEVERITY_BY_BACKEND[data.suggestedSeverity] ?? "medium") : null,
     confidence: data.confidence,
     allDetectedIssues: data.allDetectedIssues ?? [],
     totalDetected: data.totalDetected ?? 0,

@@ -53,10 +53,22 @@ const ANNOTATED_IMAGE_EXPIRY_SECONDS = 86400;
  * @param raw Raw detection from the Reckoning response.
  * @returns Detection with Reckoning enum mappings applied.
  */
-function mapDetection(raw: { label: string; confidence: number; bbox: { x1: number; y1: number; x2: number; y2: number } }): ReckoningDetection {
-  const mapping = DETECTION_MAP[raw.label] ?? FALLBACK_MAPPING;
+function mapDetection(raw: {
+  label?: string;
+  rawLabel?: string;
+  category?: string;
+  severity?: string;
+  confidence: number;
+  bbox: { x1: number; y1: number; x2: number; y2: number };
+}): ReckoningDetection {
+  const label = raw.rawLabel ?? raw.label ?? "";
+  const key = label.toLowerCase().trim();
+  const mapping = DETECTION_MAP[key] ?? DETECTION_MAP[label] ?? {
+    category: (raw.category as IssueCategory) ?? FALLBACK_MAPPING.category,
+    severity: (raw.severity as SeverityLevel) ?? FALLBACK_MAPPING.severity,
+  };
   return {
-    rawLabel: raw.label,
+    rawLabel: label,
     category: mapping.category,
     severity: mapping.severity,
     confidence: raw.confidence,
@@ -154,7 +166,14 @@ export async function runReckoningDetection(
 
     // Map all raw detections through the label → enum map.
     const allMapped: ReckoningDetection[] = (data.detections ?? []).map((d: unknown) => {
-      const det = d as { label: string; confidence: number; bbox: { x1: number; y1: number; x2: number; y2: number } };
+      const det = d as {
+        label?: string;
+        rawLabel?: string;
+        category?: string;
+        severity?: string;
+        confidence: number;
+        bbox: { x1: number; y1: number; x2: number; y2: number };
+      };
       return mapDetection(det);
     });
 
