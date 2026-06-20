@@ -79,7 +79,7 @@ const COMPLAINT_INCLUDE = {
   media: {
     orderBy: { order: "asc" },
     include: {
-      media: { select: { s3Key: true, url: true, mimeType: true } },
+      media: { select: { id: true, s3Key: true, url: true, mimeType: true } },
     },
   },
   authority: {
@@ -103,7 +103,7 @@ type ComplaintWithRelations = Prisma.ComplaintGetPayload<{
 async function toMediaViews(complaint: ComplaintWithRelations): Promise<ComplaintMediaView[]> {
   return Promise.all(
     complaint.media.map(async (link) => ({
-      id: link.id,
+      id: link.media.id,
       url: await resolveMediaUrl(link.media.s3Key),
       mimeType: link.media.mimeType,
       isPrimary: link.isPrimary,
@@ -769,6 +769,7 @@ async function toDetail(
     aiCategory: c.aiCategory,
     aiConfidence: c.aiConfidence,
     aiAnnotatedImage,
+    aiRawResult: c.aiRawResult ?? null,
     upvotes: c.upvotes,
     viewCount: c.viewCount,
     assignedAuthority: c.authority
@@ -979,6 +980,7 @@ export async function listMyComplaints(
         ...item,
         media: await Promise.all(
           r.media.map(async (m) => ({
+            id: m.media.id,
             url: await resolveMediaUrl(m.media.s3Key),
             mimeType: m.media.mimeType,
             isPrimary: m.isPrimary,
@@ -988,6 +990,7 @@ export async function listMyComplaints(
         aiCategory: r.aiCategory,
         aiConfidence: r.aiConfidence,
         aiAnnotatedImage: annotatedImage,
+        aiRawResult: r.aiRawResult ?? null,
       };
     })
   );

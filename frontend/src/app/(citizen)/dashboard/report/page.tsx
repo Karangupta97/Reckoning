@@ -329,6 +329,11 @@ function toBackendPayload(state: ReportFormState): ComplaintSubmissionInput | nu
           inferenceMs: state.aiResult.inferenceMs,
           message: state.aiResult.message,
           annotatedImage: state.aiResult.annotatedImage,
+          mediaResults: state.evidence.map((item) => ({
+            mediaId: item.mediaId,
+            url: item.uploadedUrl,
+            aiResult: item.aiResult ?? null,
+          })),
         }
       : null,
   };
@@ -561,14 +566,19 @@ export default function ReportPage() {
       }
 
       const results: ReportAiAnalysisResult[] = [];
-      for (const item of imageItems) {
-        try {
-          const res = await analyzeReportMedia({ fileId: item.mediaId!, accessToken });
-          results.push(res);
-        } catch (err) {
-          console.warn("Analysis failed for image", item.mediaId, err);
+      for (const item of uploadedEvidence) {
+        if (item.mediaId && item.mimeType.startsWith("image/")) {
+          try {
+            const res = await analyzeReportMedia({ fileId: item.mediaId, accessToken });
+            item.aiResult = res;
+            results.push(res);
+          } catch (err) {
+            console.warn("Analysis failed for image", item.mediaId, err);
+          }
         }
       }
+
+      dispatch({ type: "UPDATE_EVIDENCE", evidence: uploadedEvidence });
 
       if (results.length === 0) {
         throw new Error("AI analysis failed or is temporarily unavailable for your images.");

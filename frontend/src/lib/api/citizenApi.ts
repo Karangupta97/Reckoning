@@ -159,6 +159,33 @@ function mapComplaintToMyReport(c: any): MyReport {
     gps: `${(c.location?.latitude || c.latitude || 0).toFixed(4)}° N, ${(c.location?.longitude || c.longitude || 0).toFixed(4)}° E`,
   };
 
+  const aiRaw = c.aiRawResult
+    ? typeof c.aiRawResult === "string"
+      ? (() => {
+          try {
+            return JSON.parse(c.aiRawResult);
+          } catch {
+            return null;
+          }
+        })()
+      : c.aiRawResult
+    : null;
+
+  const mediaResults = aiRaw?.mediaResults || [];
+
+  const media = Array.isArray(c.media)
+    ? c.media.map((m: any) => {
+        const matchedAi = mediaResults.find((mr: any) => mr.mediaId === m.id || mr.url === m.url);
+        return {
+          id: m.id,
+          url: m.url,
+          mimeType: m.mimeType,
+          isPrimary: m.isPrimary,
+          aiResult: matchedAi?.aiResult ?? null,
+        };
+      })
+    : [];
+
   return {
     id: c.id,
     reportId: c.ticketNumber || c.id,
@@ -189,6 +216,7 @@ function mapComplaintToMyReport(c: any): MyReport {
     aiCategory: c.aiCategory,
     aiConfidence: c.aiConfidence,
     aiAnnotatedImage: c.aiAnnotatedImage,
+    media,
   };
 }
 

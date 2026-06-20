@@ -59,6 +59,7 @@ export interface ReportEvidenceFile {
   mediaId?: string | null;
   uploadedUrl?: string | null;
   exifLocation?: ReportEvidenceExifLocation | null;
+  aiResult?: ReportAiAnalysisResult | null;
 }
 
 export interface ReportAiAnalysisResult {

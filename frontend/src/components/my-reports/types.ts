@@ -1,3 +1,5 @@
+import type { ReportAiAnalysisResult } from "../report/reportTypes";
+
 // ─── My Reports Types ─────────────────────────────────────────────────────────
 
 export type HazardType = "pothole" | "flooding" | "accident" | "debris" | "signal";
@@ -69,6 +71,13 @@ export interface MyReport {
   aiCategory?: string | null;
   aiConfidence?: number | null;
   aiAnnotatedImage?: string | null;
+  media?: Array<{
+    id?: string;
+    url: string;
+    mimeType: string;
+    isPrimary: boolean;
+    aiResult?: ReportAiAnalysisResult | null;
+  }>;
 }
 
 export interface RecentActivityItem {

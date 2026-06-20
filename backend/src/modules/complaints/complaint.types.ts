@@ -114,6 +114,7 @@ export interface ComplaintListItem {
   aiCategory?: IssueCategory | null;
   aiConfidence?: number | null;
   aiAnnotatedImage?: string | null;
+  aiRawResult?: any;
 }
 
 /** Pagination envelope shared by list responses. */
@@ -165,6 +166,7 @@ export interface ComplaintDetail {
   timeline: TimelineEntry[];
   createdAt: Date;
   updatedAt: Date;
+  aiRawResult?: any;
 }
 
 /** Validated filters accepted by `listComplaints`. */

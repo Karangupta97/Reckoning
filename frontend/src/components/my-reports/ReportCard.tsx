@@ -418,50 +418,97 @@ function ExpandedDetail({ report, onImageClick }: { report: MyReport; onImageCli
               </p>
             )}
           </div>
-          {report.aiAnnotatedImage && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Original Image */}
-              {report.photoUrl && (
+          {report.media && report.media.filter(m => m.aiResult?.annotatedImage?.url).length > 0 ? (
+            <div className="mt-4 space-y-4">
+              {report.media.filter(m => m.aiResult?.annotatedImage?.url).map((m, idx) => (
+                <div key={idx} className="space-y-2">
+                  {report.media!.filter(m => m.aiResult?.annotatedImage?.url).length > 1 && (
+                    <p className="text-[11px] font-bold text-[var(--color-text-primary)]">Image {idx + 1} Analysis</p>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Original Image */}
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
+                      <div 
+                        className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                        onClick={() => onImageClick(m.url)}
+                      >
+                        <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                          <img
+                            src={m.url}
+                            alt={`Original Upload ${idx + 1}`}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI Detection */}
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
+                      <div 
+                        className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                        onClick={() => onImageClick(m.aiResult!.annotatedImage!.url)}
+                      >
+                        <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                          <img
+                            src={m.aiResult!.annotatedImage!.url}
+                            alt={`AI Annotated Detection ${idx + 1}`}
+                            className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            report.aiAnnotatedImage && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Original Image */}
+                {report.photoUrl && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
+                    <div 
+                      className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                      onClick={() => onImageClick(report.photoUrl!)}
+                    >
+                      <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                        <img
+                          src={report.photoUrl}
+                          alt="Original Upload"
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Detection */}
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
+                  <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
                   <div 
                     className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
-                    onClick={() => onImageClick(report.photoUrl!)}
+                    onClick={() => onImageClick(report.aiAnnotatedImage!)}
                   >
                     <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
                       <img
-                        src={report.photoUrl}
-                        alt="Original Upload"
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        src={report.aiAnnotatedImage}
+                        alt="AI Annotated Detection"
+                        className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* AI Detection */}
-              <div className="space-y-1">
-                <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
-                <div 
-                  className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
-                  onClick={() => onImageClick(report.aiAnnotatedImage!)}
-                >
-                  <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
-                    <img
-                      src={report.aiAnnotatedImage}
-                      alt="AI Annotated Detection"
-                      className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                </div>
               </div>
-            </div>
+            )
           )}
         </div>
       )}
 
       {/* Evidence thumbnails */}
-      {report.hasPhoto && report.photoUrl && report.photoCount > 1 && (
+      {report.media && report.media.length > 1 && (
         <div>
           <p
             className="text-[0.7rem] font-semibold mb-2"
@@ -470,16 +517,15 @@ function ExpandedDetail({ report, onImageClick }: { report: MyReport; onImageCli
             Evidence
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {Array.from({ length: report.photoCount }, (_, i) => {
-              const url = `${report.photoUrl}&w=${800 + i * 50}`;
+            {report.media.filter((m) => m.mimeType.startsWith("image/")).map((m, i) => {
               return (
                 <img
                   key={i}
-                  src={url}
+                  src={m.url}
                   alt={`Evidence ${i + 1}`}
                   className="flex-shrink-0 w-20 h-20 rounded-lg object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
                   loading="lazy"
-                  onClick={() => onImageClick(url)}
+                  onClick={() => onImageClick(m.url)}
                 />
               );
             })}
