@@ -23,6 +23,7 @@ import {
   ClipboardList,
   Wrench,
   Sparkles,
+  X,
 } from "lucide-react";
 import type { MyReport } from "./types";
 import { ReportTimeline } from "./ReportTimeline";
@@ -382,7 +383,7 @@ function ActionMenu({
 }
 
 /* ─── Expanded Detail (accordion) ─────────────────────────────── */
-function ExpandedDetail({ report }: { report: MyReport }) {
+function ExpandedDetail({ report, onImageClick }: { report: MyReport; onImageClick: (url: string) => void }) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -418,13 +419,41 @@ function ExpandedDetail({ report }: { report: MyReport }) {
             )}
           </div>
           {report.aiAnnotatedImage && (
-            <div className="mt-3 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">
-              <div className="relative aspect-video max-h-56 w-full flex justify-center bg-black/5">
-                <img
-                  src={report.aiAnnotatedImage}
-                  alt="AI Annotated Detection"
-                  className="h-full w-full object-contain"
-                />
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Original Image */}
+              {report.photoUrl && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
+                  <div 
+                    className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                    onClick={() => onImageClick(report.photoUrl!)}
+                  >
+                    <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                      <img
+                        src={report.photoUrl}
+                        alt="Original Upload"
+                        className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Detection */}
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
+                <div 
+                  className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                  onClick={() => onImageClick(report.aiAnnotatedImage!)}
+                >
+                  <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                    <img
+                      src={report.aiAnnotatedImage}
+                      alt="AI Annotated Detection"
+                      className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -441,15 +470,19 @@ function ExpandedDetail({ report }: { report: MyReport }) {
             Evidence
           </p>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {Array.from({ length: report.photoCount }, (_, i) => (
-              <img
-                key={i}
-                src={`${report.photoUrl}&w=${800 + i * 50}`}
-                alt={`Evidence ${i + 1}`}
-                className="flex-shrink-0 w-20 h-20 rounded-lg object-cover"
-                loading="lazy"
-              />
-            ))}
+            {Array.from({ length: report.photoCount }, (_, i) => {
+              const url = `${report.photoUrl}&w=${800 + i * 50}`;
+              return (
+                <img
+                  key={i}
+                  src={url}
+                  alt={`Evidence ${i + 1}`}
+                  className="flex-shrink-0 w-20 h-20 rounded-lg object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+                  loading="lazy"
+                  onClick={() => onImageClick(url)}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -482,6 +515,7 @@ interface ReportCardProps {
 
 export function ReportCard({ report, onView, onDelete }: ReportCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const statusCfg = STATUS_CONFIG[report.status] ?? STATUS_CONFIG.submitted;
   const severityColor = SEVERITY_COLORS[report.severity] ?? "var(--color-amber)";
   const hazardIcon = HAZARD_ICONS[report.hazardType];
@@ -689,11 +723,46 @@ export function ReportCard({ report, onView, onDelete }: ReportCardProps) {
               style={{ overflow: "hidden" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <ExpandedDetail report={report} />
+              <ExpandedDetail report={report} onImageClick={setLightboxImage} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLightboxImage(null);
+            }}
+          >
+            <button
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxImage(null);
+              }}
+              aria-label="Close image lightbox"
+            >
+              <X size={20} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={lightboxImage}
+              alt="Full screen view"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -101,6 +101,7 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [impactCardOpen, setImpactCardOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const banner = STATUS_BANNER[report.status] || STATUS_BANNER.submitted;
 
@@ -155,7 +156,8 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
             <img
               src={photos[activePhotoIndex]}
               alt={report.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-zoom-in"
+              onClick={() => setLightboxImage(photos[activePhotoIndex])}
             />
             {/* Photo dots */}
             {photos.length > 1 && (
@@ -300,13 +302,41 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
                 )}
               </div>
               {report.aiAnnotatedImage && (
-                <div className="mt-3 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">
-                  <div className="relative aspect-video max-h-56 w-full flex justify-center bg-black/5">
-                    <img
-                      src={report.aiAnnotatedImage}
-                      alt="AI Annotated Detection"
-                      className="h-full w-full object-contain"
-                    />
+                <div className="mt-4 space-y-4">
+                  {/* Original Image */}
+                  {report.photoUrl && (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
+                      <div 
+                        className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                        onClick={() => setLightboxImage(report.photoUrl!)}
+                      >
+                        <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                          <img
+                            src={report.photoUrl}
+                            alt="Original Upload"
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Detection */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
+                    <div 
+                      className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
+                      onClick={() => setLightboxImage(report.aiAnnotatedImage!)}
+                    >
+                      <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
+                        <img
+                          src={report.aiAnnotatedImage}
+                          alt="AI Annotated Detection"
+                          className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -478,6 +508,36 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
             >
               <CitizenImpactCard report={report} onClose={() => setImpactCardOpen(false)} />
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+            onClick={() => setLightboxImage(null)}
+          >
+            <button
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+              onClick={() => setLightboxImage(null)}
+              aria-label="Close image lightbox"
+            >
+              <X size={20} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={lightboxImage}
+              alt="Full screen view"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
           </motion.div>
         )}
       </AnimatePresence>
