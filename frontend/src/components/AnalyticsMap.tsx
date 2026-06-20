@@ -214,7 +214,7 @@ export function AnalyticsMap() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-2xl border border-[var(--color-border)] shadow-[var(--shadow-neu-lg)]"
+      className="relative w-full overflow-hidden rounded-2xl border border-[var(--color-border)]"
       style={{ height: "60vh", minHeight: "400px" }}
     >
       {/* Map canvas — explicit height ensures Mapbox can calculate dimensions */}

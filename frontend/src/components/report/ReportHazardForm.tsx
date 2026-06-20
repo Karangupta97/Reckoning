@@ -184,22 +184,6 @@ export function ReportHazardForm({
       <div
         className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-page)_85%,transparent)] backdrop-blur-xl ${sidebarOffsetClass}`}
       >
-        {/* Inline submit error — visible directly above the button, only on step 5 */}
-        <AnimatePresence>
-          {showSubmit && state.toastMessage && !state.isSubmitting && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden border-b border-[color-mix(in_srgb,var(--color-danger)_20%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_8%,transparent)] px-4 py-2 sm:px-6"
-            >
-              <p className="text-xs font-medium text-[var(--color-danger)]">
-                ⚠ {state.toastMessage}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-0">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Draft saved</p>
@@ -213,8 +197,7 @@ export function ReportHazardForm({
               <button
                 type="button"
                 onClick={onPrevStep}
-                disabled={state.isSubmitting}
-                className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface)] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface)]"
               >
                 <ChevronLeft size={16} />
                 Back

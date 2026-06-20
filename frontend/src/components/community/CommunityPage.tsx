@@ -86,8 +86,17 @@ export function CommunityPage() {
     }
   }, [commentsByReport, email]);
 
-  const handleShare = useCallback((_id: string) => {
-    // Share logic placeholder
+  const handleShare = useCallback((id: string) => {
+    const text = `Road hazard reported: ${id} — View on Reckoning`;
+    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard/my-reports`;
+
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({ title: `Complaint ${id}`, text, url }).catch(() => {});
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(`${text}\n${url}`).then(() => {
+        // Toast handled by parent if available
+      });
+    }
   }, []);
 
   const handleNavPrev = useCallback(() => {

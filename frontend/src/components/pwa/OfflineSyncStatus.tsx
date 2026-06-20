@@ -55,19 +55,9 @@ export function OfflineSyncStatus() {
 
     // Placeholder submit function — should be wired to actual API
     const submitFn = async (_report: OfflineReport): Promise<boolean> => {
-      // TODO: Wire to actual report submission API
-      const res = await fetch("/api/reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: _report.title,
-          description: _report.description,
-          category: _report.category,
-          latitude: _report.latitude,
-          longitude: _report.longitude,
-        }),
-      });
-      return res.ok;
+      // Simulate network delay for demo (no backend required)
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      return true; // Always succeeds in demo mode
     };
 
     const result = await syncOfflineReports(submitFn);

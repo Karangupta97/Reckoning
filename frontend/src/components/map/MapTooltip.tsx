@@ -21,7 +21,6 @@ export function MapTooltip({ stats, isDark }: MapTooltipProps) {
         background: isDark ? '#222838' : '#FFFFFF',
         borderColor: isDark ? '#313A50' : '#D6DFE8',
         maxWidth: 220,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         fontSize: 11,
         lineHeight: 1.4,

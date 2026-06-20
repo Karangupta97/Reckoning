@@ -66,7 +66,6 @@ export function MapSidebar({ stats, onClose, isDark }: MapSidebarProps) {
         style={{
           background: isDark ? '#222838' : '#FFFFFF',
           borderLeft: `1px solid ${isDark ? '#313A50' : '#D6DFE8'}`,
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
         }}
       >
         {/* Header */}

@@ -34,14 +34,6 @@ export interface OfficialResponse {
   createdAt: string;
 }
 
-/** AI detection result from the Verdict model (YOLOv8). */
-export interface AiDetection {
-  hazardType: string;
-  severity: string;
-  confidence: number;
-  riskScore: number;
-}
-
 export interface MyReport {
   id: string;
   reportId: string;
@@ -56,14 +48,6 @@ export interface MyReport {
   hasPhoto: boolean;
   photoUrl?: string;
   photoCount: number;
-  /** All uploaded evidence image URLs. */
-  evidenceUrls: string[];
-  /** YOLOv8 bounding-box annotated image URL from the Verdict model. */
-  annotatedImageUrl?: string;
-  /** AI detection result (hazard type, severity, confidence, risk score). */
-  aiDetection?: AiDetection;
-  /** Standalone risk score 0–100. */
-  riskScore: number;
   upvotes: number;
   hasUpvoted: boolean;
   comments: number;
@@ -81,6 +65,10 @@ export interface MyReport {
   rejectionReason?: string;
   officialResponse?: OfficialResponse;
   timeline: TimelineEntry[];
+  aiDetected?: boolean;
+  aiCategory?: string | null;
+  aiConfidence?: number | null;
+  aiAnnotatedImage?: string | null;
 }
 
 export interface RecentActivityItem {

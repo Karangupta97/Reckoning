@@ -51,7 +51,7 @@ const NAV_ITEMS: Array<{
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", exactMatch: true },
   { id: "reportHazard", label: "Report Hazard", icon: Plus, href: "/dashboard/report", highlight: true },
     { id: "reports", label: "My Reports", icon: FileText, href: "/dashboard/my-reports" },
-    { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/map" },
+    { id: "map", label: "Safety Map", icon: Map, href: "/dashboard/safety-map" },
     { id: "notifications", label: "Notifications", icon: Bell, href: "/dashboard/notifications" },
     { id: "community", label: "Community", icon: Users, href: "/dashboard/community" },
     { id: "achievements", label: "Achievements", icon: Trophy, href: "/dashboard/achievements" },

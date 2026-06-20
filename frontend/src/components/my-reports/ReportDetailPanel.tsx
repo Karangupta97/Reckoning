@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import {
   ChevronLeft,
@@ -30,12 +30,14 @@ import {
   AlertTriangle,
   TrafficCone,
   TreePine,
+  Award,
+  Sparkles,
 } from "lucide-react";
 import type { MyReport } from "./types";
 import { ReportTimeline } from "./ReportTimeline";
 import { OfficialResponseCard } from "./OfficialResponseCard";
 import { EvidenceGallery } from "./EvidenceGallery";
-import { AIAnnotatedPanel } from "./AIAnnotatedPanel";
+import { CitizenImpactCard } from "./CitizenImpactCard";
 
 /* ─── Lazy Leaflet Map ────────────────────────────────────────── */
 const LocationMap = dynamic(() => import("./LocationMap"), { ssr: false });
@@ -98,6 +100,7 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [impactCardOpen, setImpactCardOpen] = useState(false);
 
   const banner = STATUS_BANNER[report.status] || STATUS_BANNER.submitted;
 
@@ -120,12 +123,10 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
     }
   };
 
-  // Generate photos (prioritize real S3 URLs)
-  const photos = report.evidenceUrls && report.evidenceUrls.length > 0
-    ? report.evidenceUrls
-    : report.hasPhoto && report.photoUrl
-      ? Array.from({ length: report.photoCount }, (_, i) => `${report.photoUrl}&w=${800 + i * 50}`)
-      : [];
+  // Generate mock photos
+  const photos = report.hasPhoto && report.photoUrl
+    ? Array.from({ length: report.photoCount }, (_, i) => `${report.photoUrl}&w=${800 + i * 50}`)
+    : [];
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -278,6 +279,40 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
             </p>
           </div>
 
+          {/* AI Analysis */}
+          {report.aiDetected && (
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+              <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
+                <Sparkles size={13} className="text-[var(--color-amber)] animate-pulse" /> AI Analysis
+              </p>
+              <div className="space-y-1.5 text-xs text-[var(--color-text-secondary)]">
+                {report.aiCategory && (
+                  <p>
+                    <span className="font-semibold text-[var(--color-text-primary)]">Suggested Category:</span>{" "}
+                    {report.aiCategory.charAt(0).toUpperCase() + report.aiCategory.slice(1).toLowerCase().replace("_", " ")}
+                  </p>
+                )}
+                {report.aiConfidence != null && (
+                  <p>
+                    <span className="font-semibold text-[var(--color-text-primary)]">Confidence:</span>{" "}
+                    {Math.round(report.aiConfidence * 100)}%
+                  </p>
+                )}
+              </div>
+              {report.aiAnnotatedImage && (
+                <div className="mt-3 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">
+                  <div className="relative aspect-video max-h-56 w-full flex justify-center bg-black/5">
+                    <img
+                      src={report.aiAnnotatedImage}
+                      alt="AI Annotated Detection"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Official Response */}
           {report.officialResponse && (
             <OfficialResponseCard response={report.officialResponse} />
@@ -291,9 +326,6 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
 
           {/* Evidence Gallery */}
           <EvidenceGallery report={report} />
-
-          {/* AI Annotated Evidence */}
-          <AIAnnotatedPanel report={report} />
 
           {/* Location Map */}
           <div>
@@ -341,6 +373,23 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
               </button>
             </div>
           </div>
+
+          {/* Impact Card — visible when report is resolved */}
+          {report.status === "resolved" && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <button
+                onClick={() => setImpactCardOpen(true)}
+                className="w-full py-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                style={{
+                  borderColor: "color-mix(in srgb, var(--color-info) 30%, transparent)",
+                  background: "color-mix(in srgb, var(--color-info) 8%, var(--color-card))",
+                  color: "var(--color-info)",
+                }}
+              >
+                <Award size={14} /> Generate Shareable Impact Card
+              </button>
+            </motion.div>
+          )}
         </div>
       </div>
 
@@ -411,6 +460,27 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
           </motion.div>
         </div>
       )}
+
+      {/* Impact Card Modal */}
+      <AnimatePresence>
+        {impactCardOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={() => setImpactCardOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border p-5"
+              style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}
+            >
+              <CitizenImpactCard report={report} onClose={() => setImpactCardOpen(false)} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

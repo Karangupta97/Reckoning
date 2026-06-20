@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FileWarning, ClipboardCheck,
   MapPinned, UserCircle, X, Zap, Flame, MapPin,
-  TrendingUp, ShieldCheck, Clock,
+  TrendingUp, ShieldCheck, Clock, Trophy, Award, IndianRupee, MessageSquare,
 } from "lucide-react";
 import { subDistrictSidebarSubtitle, SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
 
@@ -18,11 +18,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard",  icon: <LayoutDashboard size={18} />, href: "/sub-district-admin/dashboard",            color: "text-[var(--color-text-muted)]" },
-  { label: "Complaints", icon: <FileWarning size={18} />,     href: "/sub-district-admin/dashboard/complaints", color: "text-[var(--color-text-muted)]" },
-  { label: "Tickets",    icon: <ClipboardCheck size={18} />,  href: "/sub-district-admin/dashboard/tickets",    color: "text-[var(--color-text-muted)]" },
-  { label: "Map View",   icon: <MapPinned size={18} />,       href: "/sub-district-admin/dashboard/map",        color: "text-[var(--color-text-muted)]" },
-  { label: "Profile",    icon: <UserCircle size={18} />,      href: "/sub-district-admin/dashboard/profile",    color: "text-[var(--color-text-muted)]" },
+  { label: "Dashboard",   icon: <LayoutDashboard size={18} />, href: "/sub-district-admin/dashboard",            color: "text-[var(--color-text-muted)]" },
+  { label: "Complaints",  icon: <FileWarning size={18} />,     href: "/sub-district-admin/dashboard/complaints", color: "text-[var(--color-text-muted)]" },
+  { label: "Tickets",     icon: <ClipboardCheck size={18} />,  href: "/sub-district-admin/dashboard/tickets",    color: "text-[var(--color-text-muted)]" },
+  { label: "Clarifications", icon: <MessageSquare size={18} />, href: "/sub-district-admin/dashboard/clarifications", color: "text-[var(--color-text-muted)]" },
+  { label: "Budget Status",icon: <IndianRupee size={18} />,    href: "/sub-district-admin/dashboard/budget",     color: "text-[var(--color-text-muted)]" },
+  { label: "Map View",    icon: <MapPinned size={18} />,       href: "/sub-district-admin/dashboard/map",        color: "text-[var(--color-text-muted)]" },
+  { label: "Leaderboard", icon: <Trophy size={18} />,          href: "/sub-district-admin/dashboard/leaderboard",color: "text-[var(--color-text-muted)]" },
+  { label: "Achievements",icon: <Award size={18} />,           href: "/sub-district-admin/dashboard/achievements",color: "text-[var(--color-text-muted)]" },
+  { label: "Profile",     icon: <UserCircle size={18} />,      href: "/sub-district-admin/dashboard/profile",    color: "text-[var(--color-text-muted)]" },
 ];
 
 interface SidebarProps { activePath?: string; }
@@ -66,7 +70,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
   const sidebarContent = useMemo(() => (
     <div className="flex h-full flex-col">
       {/* Brand */}
-      <div className="flex items-center gap-3.5 px-4 py-4 border-b border-[var(--color-border)]">
+      <div className="flex items-center gap-3.5 px-4 py-4">
         <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
           <div className="pointer-events-none absolute inset-0 rounded-xl bg-amber-400/10 blur-md" aria-hidden />
           <Flame size={18} className="relative text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />

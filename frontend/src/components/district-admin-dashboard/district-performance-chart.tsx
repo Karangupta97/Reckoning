@@ -13,15 +13,7 @@ import {
 } from "recharts";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useIsClient } from "@/hooks/useIsClient";
-
-const data = [
-  { sub: "Mehrauli", score: 88 },
-  { sub: "Vasant Kunj", score: 74 },
-  { sub: "Dwarka", score: 91 },
-  { sub: "Rohini", score: 62 },
-  { sub: "Shahdara", score: 79 },
-  { sub: "Najafgarh", score: 55 },
-];
+import { useDistrictAnalyticsMetrics } from "@/hooks/use-analytics-metrics";
 
 function getBarColor(score: number) {
   if (score >= 85) return "#14b8a6"; // teal
@@ -38,6 +30,12 @@ function DistrictPerformanceChart({
   tall?: boolean;
 }) {
   const isClient = useIsClient();
+  const { subDistrictScores } = useDistrictAnalyticsMetrics();
+  const data = subDistrictScores;
+  const avgScore = data.length > 0
+    ? (data.reduce((s, d) => s + d.score, 0) / data.length).toFixed(1)
+    : "0";
+  const belowTarget = data.filter((d) => d.score < 70).length;
   const tickSize = compact ? 10 : 12;
 
   return (
@@ -68,11 +66,11 @@ function DistrictPerformanceChart({
         <div className="mb-3 grid grid-cols-2 gap-2">
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
             <p className="text-[10px] text-[var(--color-text-muted)]">Avg Score</p>
-            <p className="text-sm font-bold text-teal-400">74.8</p>
+            <p className="text-sm font-bold text-teal-400">{avgScore}</p>
           </div>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-2">
             <p className="text-[10px] text-[var(--color-text-muted)]">Below Target</p>
-            <p className="text-sm font-bold text-red-400">2</p>
+            <p className="text-sm font-bold text-red-400">{belowTarget}</p>
           </div>
         </div>
       )}

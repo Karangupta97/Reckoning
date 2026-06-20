@@ -12,6 +12,7 @@ import { SafetyMapPreview } from "@/components/dashboard/SafetyMapPreview";
 import { Achievements } from "@/components/dashboard/Achievements";
 import { EmergencyContacts } from "@/components/dashboard/EmergencyContacts";
 import { useMyReports } from "@/hooks/useMyReports";
+import { CommunityImpact } from "@/components/citizen/CommunityImpact";
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
@@ -31,9 +32,12 @@ export default function DashboardPage() {
         {/* Overview stats cards */}
         <OverviewCards stats={stats} isLoading={isLoading} />
 
+        {/* Community Impact */}
+        <CommunityImpact />
+
         {/* My Reports (left) + Recent Activity (right) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <MyReports reports={reports} isLoading={isLoading} />
+          <MyReports reports={Array.isArray(reports) ? reports : []} isLoading={isLoading} />
           <RecentActivity activities={stats.recentActivity} isLoading={isLoading} />
         </div>
 

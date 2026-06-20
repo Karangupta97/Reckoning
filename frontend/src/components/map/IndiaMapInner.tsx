@@ -119,13 +119,20 @@ export default function IndiaMapInner({
       .catch(() => {});
   }, []);
 
-  // Lock map to India bounds after mount — via whenReady callback, not a ref effect
+  // Lock map to India bounds after mount
   const handleMapReady = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
     map.setMaxBounds(INDIA_BOUNDS);
     map.fitBounds(INDIA_FIT_BOUNDS);
   }, []);
+
+  // Fire bounds setup once mapRef is available (after first render of MapContainer)
+  useEffect(() => {
+    // Small delay ensures the ref is populated after MapContainer mounts
+    const t = setTimeout(() => handleMapReady(), 100);
+    return () => clearTimeout(t);
+  }, [handleMapReady]);
 
   // Check if we can drill deeper
   const canDrillDown = useCallback((currentLevel: MapLevel): boolean => {
@@ -331,7 +338,6 @@ export default function IndiaMapInner({
         attributionControl={false}
         className="h-full w-full"
         ref={mapRef}
-        whenReady={handleMapReady}
         style={{
           background: isDark ? '#1A1F2E' : '#EFF2F9',
           cursor: canDrillDown(drillState.level) ? 'pointer' : 'default',
@@ -387,7 +393,7 @@ export default function IndiaMapInner({
           className="absolute inset-0 z-[1001] flex flex-col items-center justify-center pointer-events-none"
           style={{ background: isDark ? 'rgba(34,40,56,0.6)' : 'rgba(255,255,255,0.6)', backdropFilter: 'blur(1px)' }}
         >
-          <div className="flex flex-col items-center gap-2.5 rounded-xl px-5 py-4" style={{ background: isDark ? 'rgba(26,31,46,0.92)' : 'rgba(255,255,255,0.92)', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+          <div className="flex flex-col items-center gap-2.5 rounded-xl px-5 py-4" style={{ background: isDark ? 'rgba(26,31,46,0.92)' : 'rgba(255,255,255,0.92)' }}>
             <div className="h-7 w-7 animate-spin rounded-full border-[3px] border-[var(--color-border)] border-t-[var(--color-amber)]" />
             <p className="text-xs font-medium text-[var(--color-text-muted)]">
               {drillState.level === 'national' ? 'Loading districts…' : drillState.level === 'state' ? 'Loading sub-districts…' : 'Loading…'}

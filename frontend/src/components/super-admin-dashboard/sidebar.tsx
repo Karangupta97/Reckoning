@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   Hexagon,
+  MessageSquare,
 } from "lucide-react";
 
 interface SubNavItem {
@@ -71,6 +72,12 @@ const navItems: NavItem[] = [
     label: "Evidence Review",
     icon: <FileText size={18} />,
     href: "/super-admin/evidence",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Clarifications",
+    icon: <MessageSquare size={18} />,
+    href: "/super-admin/clarifications",
     color: "text-[var(--color-text-muted)]",
   },
   {
@@ -239,7 +246,7 @@ export default function Sidebar({ activePath = "/super-admin/dashboard" }: Sideb
   const sidebarContent = useMemo(
     () => (
       <div className="flex h-full flex-col">
-        <div className="flex items-center gap-3.5 px-4 py-5 border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-3.5 px-4 py-5">
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 shadow-[0_0_24px_rgba(34,211,238,0.22)]">
             <div
               className="pointer-events-none absolute inset-0 rounded-xl bg-cyan-400/15 blur-md"

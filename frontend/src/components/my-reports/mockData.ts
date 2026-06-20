@@ -26,13 +26,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=85",
     photoCount: 2,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=85&w=850",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "pothole", severity: "critical", confidence: 96, riskScore: 92 },
-    riskScore: 92,
     upvotes: 247,
     hasUpvoted: true,
     comments: 43,
@@ -86,14 +79,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=85",
     photoCount: 3,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=85&w=850",
-      "https://images.unsplash.com/photo-1547683905-f686c993aae5?auto=format&fit=crop&w=800&q=85&w=900",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "flooding", severity: "high", confidence: 89, riskScore: 78 },
-    riskScore: 78,
     upvotes: 189,
     hasUpvoted: false,
     comments: 31,
@@ -137,12 +122,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1504222490345-c075b6008014?auto=format&fit=crop&w=800&q=85",
     photoCount: 1,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1504222490345-c075b6008014?auto=format&fit=crop&w=800&q=85&w=800",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "signal_malfunction", severity: "medium", confidence: 82, riskScore: 48 },
-    riskScore: 48,
     upvotes: 134,
     hasUpvoted: true,
     comments: 22,
@@ -194,8 +173,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     },
     hasPhoto: false,
     photoCount: 0,
-    evidenceUrls: [],
-    riskScore: 24,
     upvotes: 23,
     hasUpvoted: false,
     comments: 5,
@@ -239,13 +216,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1590004987778-bece5c9adab6?auto=format&fit=crop&w=800&q=85",
     photoCount: 2,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1590004987778-bece5c9adab6?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1590004987778-bece5c9adab6?auto=format&fit=crop&w=800&q=85&w=850",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "accident_zone", severity: "critical", confidence: 94, riskScore: 88 },
-    riskScore: 88,
     upvotes: 312,
     hasUpvoted: true,
     comments: 56,
@@ -293,15 +263,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1601001815894-4bb6ce59aa1b?auto=format&fit=crop&w=800&q=85",
     photoCount: 4,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1601001815894-4bb6ce59aa1b?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1601001815894-4bb6ce59aa1b?auto=format&fit=crop&w=800&q=85&w=850",
-      "https://images.unsplash.com/photo-1601001815894-4bb6ce59aa1b?auto=format&fit=crop&w=800&q=85&w=900",
-      "https://images.unsplash.com/photo-1601001815894-4bb6ce59aa1b?auto=format&fit=crop&w=800&q=85&w=950",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "pothole", severity: "high", confidence: 91, riskScore: 72 },
-    riskScore: 72,
     upvotes: 98,
     hasUpvoted: false,
     comments: 19,
@@ -354,13 +315,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1559060017-445fb9722f2a?auto=format&fit=crop&w=800&q=85",
     photoCount: 2,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1559060017-445fb9722f2a?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1559060017-445fb9722f2a?auto=format&fit=crop&w=800&q=85&w=850",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "flooding", severity: "high", confidence: 87, riskScore: 76 },
-    riskScore: 76,
     upvotes: 156,
     hasUpvoted: true,
     comments: 28,
@@ -414,13 +368,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=85",
     photoCount: 3,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=85&w=850",
-      "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=85&w=900",
-    ],
-    aiDetection: { hazardType: "road_debris", severity: "critical", confidence: 93, riskScore: 85 },
-    riskScore: 85,
     upvotes: 67,
     hasUpvoted: false,
     comments: 12,
@@ -460,8 +407,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     },
     hasPhoto: false,
     photoCount: 0,
-    evidenceUrls: [],
-    riskScore: 22,
     upvotes: 45,
     hasUpvoted: false,
     comments: 8,
@@ -505,14 +450,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1621600411688-4f25d62be4ce?auto=format&fit=crop&w=800&q=85",
     photoCount: 3,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1621600411688-4f25d62be4ce?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1621600411688-4f25d62be4ce?auto=format&fit=crop&w=800&q=85&w=850",
-      "https://images.unsplash.com/photo-1621600411688-4f25d62be4ce?auto=format&fit=crop&w=800&q=85&w=900",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "pothole", severity: "critical", confidence: 95, riskScore: 90 },
-    riskScore: 90,
     upvotes: 201,
     hasUpvoted: true,
     comments: 38,
@@ -566,13 +503,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1611348586804-61bf6c080437?auto=format&fit=crop&w=800&q=85",
     photoCount: 2,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1611348586804-61bf6c080437?auto=format&fit=crop&w=800&q=85&w=800",
-      "https://images.unsplash.com/photo-1611348586804-61bf6c080437?auto=format&fit=crop&w=800&q=85&w=850",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "pothole", severity: "high", confidence: 85, riskScore: 68 },
-    riskScore: 68,
     upvotes: 34,
     hasUpvoted: false,
     comments: 7,
@@ -616,12 +546,6 @@ export const MOCK_MY_REPORTS: MyReport[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1596394723269-e1e8a86d3fd3?auto=format&fit=crop&w=800&q=85",
     photoCount: 1,
-    evidenceUrls: [
-      "https://images.unsplash.com/photo-1596394723269-e1e8a86d3fd3?auto=format&fit=crop&w=800&q=85&w=800",
-    ],
-    annotatedImageUrl: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=800&q=85",
-    aiDetection: { hazardType: "flooding", severity: "medium", confidence: 80, riskScore: 45 },
-    riskScore: 45,
     upvotes: 76,
     hasUpvoted: true,
     comments: 14,

@@ -7,6 +7,7 @@ import { persist } from "zustand/middleware";
 import { useAuditLogStore } from "@/store/auditLogStore";
 import { useAdminNotificationStore } from "@/store/adminNotificationStore";
 import { adminPersistOptions } from "@/lib/store-persist";
+import { awardXP, incrementBadgeProgress } from "@/lib/xp-dispatcher";
 import { districtLabel } from "@/lib/district-config";
 
 export type GovernanceRequestStatus =
@@ -194,6 +195,9 @@ export const useGovernanceRequestStore = create<GovernanceState>()(
     });
     logGovAudit(id, "Governance request approved", prev, "Approved");
     notifyDistrictDecision(id, "Governance request approved", `${id} has been approved`);
+    // Award XP for governance processing
+    awardXP("district", "governance_processed", `Governance ${id} approved`);
+    incrementBadgeProgress("district", "db7"); // Governance Pro badge
   },
 
   rejectRequest: (id, reason, note) => {

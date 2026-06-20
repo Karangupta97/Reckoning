@@ -21,6 +21,9 @@ import {
   Bell,
   Zap,
   MapPin,
+  Trophy,
+  Award,
+  MessageSquare,
 } from "lucide-react";
 import { districtSidebarSubtitle, DISTRICT_CONFIG } from "@/lib/district-config";
 
@@ -49,6 +52,12 @@ const navItems: NavItem[] = [
     label: "Escalations",
     icon: <ShieldAlert size={18} />,
     href: "/district-admin/dashboard/escalation",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Clarifications",
+    icon: <MessageSquare size={18} />,
+    href: "/district-admin/clarifications",
     color: "text-[var(--color-text-muted)]",
   },
   {
@@ -102,6 +111,18 @@ const navItems: NavItem[] = [
     label: "Alerts",
     icon: <Bell size={18} />,
     href: "/district-admin/alerts",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Leaderboard",
+    icon: <Trophy size={18} />,
+    href: "/district-admin/leaderboard",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Achievements",
+    icon: <Award size={18} />,
+    href: "/district-admin/achievements",
     color: "text-[var(--color-text-muted)]",
   },
   {
@@ -190,6 +211,8 @@ export default function DistrictAdminSidebar({
         "/district-admin/reports",
         "/district-admin/alerts",
         "/district-admin/profile",
+        "/district-admin/leaderboard",
+        "/district-admin/achievements",
       ];
       if (nonDashboardPrefixes.includes(href) && activePath.startsWith(href + "/")) {
         return true;
@@ -215,7 +238,7 @@ export default function DistrictAdminSidebar({
     () => (
       <div className="flex h-full flex-col">
         {/* Brand */}
-        <div className="flex items-center gap-3.5 px-4 py-5 border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-3.5 px-4 py-5">
           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/10 border border-teal-500/20 shadow-[0_0_24px_rgba(20,184,166,0.22)]">
             <div
               className="pointer-events-none absolute inset-0 rounded-xl bg-teal-400/15 blur-md"

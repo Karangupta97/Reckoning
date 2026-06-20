@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock3,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -55,6 +56,8 @@ function getSlaTextClass(sla: number) {
 export default function SubDistrictsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OfficerStatus | "All">("All");
+  const [toast, setToast] = useState<string | null>(null);
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
   const filtered = DATA.filter((d) => {
     const matchSearch =
@@ -248,8 +251,8 @@ export default function SubDistrictsPage() {
                           <Link href={`/district-admin/sub-districts/${d.id}`} title="View">
                             <ActionButton label="View" icon={Eye} />
                           </Link>
-                          <ActionButton label="Edit" icon={Edit2} color="emerald" />
-                          <ActionButton label="Suspend" icon={ShieldOff} color="amber" />
+                          <ActionButton label="Edit" icon={Edit2} color="emerald" onClick={() => showToast(`Editing ${d.name} — feature available in production`)} />
+                          <ActionButton label="Suspend" icon={ShieldOff} color="amber" onClick={() => showToast(`${d.name} suspension initiated`)} />
                         </div>
                       </td>
                     </motion.tr>
@@ -260,6 +263,18 @@ export default function SubDistrictsPage() {
           </table>
         </div>
       </DashboardCard>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-xl border px-4 py-3 shadow-lg text-sm font-medium"
+            style={{ background: "var(--color-card)", borderColor: "rgba(20,184,166,0.35)", color: "#14b8a6" }}>
+            <Check size={15} /> {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -268,10 +283,12 @@ function ActionButton({
   label,
   icon: Icon,
   color = "teal",
+  onClick,
 }: {
   label: string;
   icon: typeof Eye;
   color?: "teal" | "emerald" | "amber";
+  onClick?: () => void;
 }) {
   const colorMap = {
     teal: "border-teal-500/30 bg-teal-500/10 text-teal-400 hover:bg-teal-500/20",
@@ -285,6 +302,7 @@ function ActionButton({
       whileTap={{ scale: 0.96 }}
       title={label}
       aria-label={label}
+      onClick={onClick}
       className={`flex h-7 w-7 items-center justify-center rounded-md border transition-colors ${colorMap[color]}`}
     >
       <Icon size={13} />

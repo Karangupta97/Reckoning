@@ -3,8 +3,17 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import type { MyReport } from "./types";
-import type { AIDetectionResultView } from "@/lib/api/citizenApi";
 import { useAuthStore } from "@/stores/authStore";
+
+/** Shape returned by the AI detection endpoint */
+interface AIDetectionResultView {
+  suggestedCategory?: string | null;
+  suggestedSeverity?: string | null;
+  confidence?: number | null;
+  totalDetected?: number | null;
+  message?: string | null;
+  annotatedImage?: { url: string; expiresIn: number; s3Key: string } | null;
+}
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 

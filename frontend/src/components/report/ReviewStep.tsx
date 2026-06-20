@@ -149,14 +149,17 @@ export function ReviewStep({
           </div>
         </div>
         {aiResult?.annotatedImage?.url && (
-          <div className="mt-4">
-            <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">AI Annotated Detection</p>
-            <div className="overflow-hidden rounded-2xl border border-[color-mix(in_srgb,var(--color-amber)_18%,transparent)]">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+            <div className="relative aspect-video max-h-72 w-full flex justify-center bg-black/5">
               <img
                 src={aiResult.annotatedImage.url}
-                alt="AI annotated detection showing identified hazards"
-                className="h-auto w-full object-contain"
+                alt="AI Annotated Detection"
+                className="h-full w-full object-contain"
               />
+              <div className="absolute bottom-2 left-2 rounded-lg bg-black/50 px-2 py-1 text-[10px] text-white backdrop-blur-sm flex items-center gap-1">
+                <Sparkles size={10} className="text-[var(--color-amber)] animate-pulse" />
+                AI Annotated Result
+              </div>
             </div>
           </div>
         )}

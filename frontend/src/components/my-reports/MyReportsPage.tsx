@@ -13,6 +13,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  LayoutGrid,
+  List,
+  CircleDot,
+  Droplets,
+  TrafficCone,
+  TreePine,
 } from "lucide-react";
 import type { MyReport, FilterTab, SortOption, HazardType, Severity } from "./types";
 import { ReportSidebar } from "./ReportSidebar";
@@ -309,6 +315,70 @@ function FilterPopover({
   );
 }
 
+const HAZARD_ICONS: Record<string, React.ReactNode> = {
+  pothole: <CircleDot size={13} />,
+  flooding: <Droplets size={13} />,
+  accident: <AlertTriangle size={13} />,
+  signal: <TrafficCone size={13} />,
+  debris: <TreePine size={13} />,
+};
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "var(--color-danger)",
+  high: "#F97316",
+  medium: "var(--color-amber)",
+  low: "var(--color-success)",
+};
+
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; color: string; bg: string }
+> = {
+  submitted: {
+    label: "Submitted",
+    color: "var(--color-text-muted)",
+    bg: "color-mix(in srgb, var(--color-text-muted) 12%, transparent)",
+  },
+  verified: {
+    label: "Verified",
+    color: "var(--color-info)",
+    bg: "color-mix(in srgb, var(--color-info) 12%, transparent)",
+  },
+  assigned: {
+    label: "Assigned",
+    color: "var(--color-amber)",
+    bg: "color-mix(in srgb, var(--color-amber) 12%, transparent)",
+  },
+  in_progress: {
+    label: "In Progress",
+    color: "var(--color-info)",
+    bg: "color-mix(in srgb, var(--color-info) 12%, transparent)",
+  },
+  resolved: {
+    label: "Resolved",
+    color: "var(--color-success)",
+    bg: "color-mix(in srgb, var(--color-success) 12%, transparent)",
+  },
+  rejected: {
+    label: "Rejected",
+    color: "var(--color-danger)",
+    bg: "color-mix(in srgb, var(--color-danger) 12%, transparent)",
+  },
+};
+
+function formatTimeAgo(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+}
+
 /* ─── Main Component ──────────────────────────────────────────── */
 export function MyReportsPage() {
   const user = useAuthStore((state) => state.user);
@@ -323,6 +393,7 @@ export function MyReportsPage() {
 
   // Detail panel
   const [selectedReport, setSelectedReport] = useState<MyReport | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Optimistic local mutations
   const [localReports, setLocalReports] = useState<MyReport[] | null>(null);
@@ -582,6 +653,24 @@ export function MyReportsPage() {
                 setSeverityFilter("all");
               }}
             />
+
+            {/* Layout Toggle Segmented Control */}
+            <div className="flex items-center gap-1 border border-[var(--color-border)] bg-[var(--color-surface)] p-1 rounded-xl">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === "grid" ? "bg-[var(--color-amber)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"}`}
+                title="Grid View"
+              >
+                <LayoutGrid size={14} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === "list" ? "bg-[var(--color-amber)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"}`}
+                title="List View"
+              >
+                <List size={14} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -600,9 +689,9 @@ export function MyReportsPage() {
             </div>
           ) : filteredReports.length === 0 ? (
             <EmptyState hasFilters={hasFilters} onClearFilters={handleClearFilters} />
-          ) : (
+          ) : viewMode === "grid" ? (
             <motion.div
-              className="grid grid-cols-1 gap-4 mt-2"
+              className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"
               initial="hidden"
               animate="visible"
               variants={{
@@ -619,6 +708,96 @@ export function MyReportsPage() {
                     onDelete={handleDelete}
                   />
                 ))}
+              </AnimatePresence>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="flex flex-col gap-3 mt-2"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: 0.05 } },
+              }}
+            >
+              <AnimatePresence mode="popLayout">
+                {filteredReports.map((report) => {
+                  const statusCfg = STATUS_CONFIG[report.status] ?? STATUS_CONFIG.submitted;
+                  const severityColor = SEVERITY_COLORS[report.severity] ?? "var(--color-amber)";
+                  const hazardIcon = HAZARD_ICONS[report.hazardType] || <CircleDot size={13} />;
+
+                  return (
+                    <motion.div
+                      key={report.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      onClick={() => handleSelectReport(report)}
+                      className="flex items-center justify-between p-3.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] hover:border-[var(--color-amber)] hover:shadow-sm cursor-pointer transition-all duration-200"
+                      style={{ borderLeft: `3px solid ${statusCfg.color || "var(--color-border)"}` }}
+                    >
+                      {/* Left Info Section */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Compact Thumbnail or Icon */}
+                        <div className="flex-shrink-0 w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center bg-[var(--color-surface)] border border-[var(--color-border)]">
+                          {report.hasPhoto && report.photoUrl ? (
+                            <img src={report.photoUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span style={{ color: severityColor }} className="scale-110">
+                              {hazardIcon}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Title, ID & Location */}
+                        <div className="min-w-0 flex-1 pr-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono text-[var(--color-text-muted)] font-semibold uppercase">{report.reportId}</span>
+                            <span className="text-[10px] text-[var(--color-text-muted)]">• {formatTimeAgo(report.createdAt)}</span>
+                            <span className="text-[10px] text-[var(--color-text-muted)] font-medium">• {report.location.name}</span>
+                          </div>
+                          <h4 className="text-xs sm:text-sm font-bold text-[var(--color-text-primary)] truncate mt-1">
+                            {report.title}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Right Meta Section */}
+                      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                        {/* Category Chip */}
+                        <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-medium bg-[var(--color-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)]">
+                          {hazardIcon}
+                          <span className="capitalize">{report.hazardType}</span>
+                        </span>
+
+                        {/* Severity Pill */}
+                        <span
+                          className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-semibold capitalize border"
+                          style={{
+                            backgroundColor: `color-mix(in srgb, ${severityColor} 12%, transparent)`,
+                            borderColor: `color-mix(in srgb, ${severityColor} 24%, transparent)`,
+                            color: severityColor,
+                          }}
+                        >
+                          {report.severity}
+                        </span>
+
+                        {/* Status Badge */}
+                        <span
+                          className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border"
+                          style={{ 
+                            backgroundColor: statusCfg.bg, 
+                            borderColor: `color-mix(in srgb, ${statusCfg.color} 24%, transparent)`,
+                            color: statusCfg.color 
+                          }}
+                        >
+                          {statusCfg.label}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </motion.div>
           )}

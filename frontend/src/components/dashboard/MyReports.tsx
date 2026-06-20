@@ -43,21 +43,24 @@ const rowVariants = {
 };
 
 interface MyReportsProps {
-  reports: MyReport[];
+  reports?: MyReport[] | null;
   isLoading?: boolean;
 }
 
-export function MyReports({ reports, isLoading = false }: MyReportsProps) {
+export function MyReports({ reports = [], isLoading = false }: MyReportsProps) {
   const t = useTranslations("dashboard.myReports");
   const router = useRouter();
 
-  const rows = reports.slice(0, 5).map((report) => ({
-    id: report.reportId || report.id,
-    typeKey: mapTypeKey(report.hazardType),
-    location: report.location.name,
-    status: mapStatus(report.status),
-    dateLabel: report.createdAt,
-  }));
+  const safeReports: MyReport[] = Array.isArray(reports) ? reports : [];
+  const rows = safeReports.length > 0
+    ? safeReports.slice(0, 5).map((report) => ({
+        id: report.reportId || report.id,
+        typeKey: mapTypeKey(report.hazardType),
+        location: report.location?.name ?? "Unknown",
+        status: mapStatus(report.status),
+        dateLabel: report.createdAt,
+      }))
+    : [];
 
   return (
     <div className="neu-card p-5 flex flex-col">

@@ -35,6 +35,9 @@ export function SafetyMapPreview() {
     const mapboxgl = (await import("mapbox-gl")).default;
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
+    // Re-check after async import — component may have unmounted
+    if (!mapContainer.current) return;
+
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/light-v11",

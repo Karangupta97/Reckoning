@@ -8,6 +8,7 @@ import {
   MessageSquare, Camera, CheckCircle2, Clock, Timer,
   X, Check, ChevronDown, Download, UserCheck, Search,
   ClipboardCheck, Eye, ArrowUpRight, XCircle,
+  ShieldAlert, IndianRupee, Shield,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import IndiaMap from "@/components/map/IndiaMap";
@@ -242,22 +243,12 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const canUseMock = shouldUseMock(email);
   const base = canUseMock ? SA_COMPLAINT_MAP[id] : undefined;
 
-  if (!base) {
-    return (
-      <div className="flex flex-col gap-3 pb-6">
-        <nav className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)]">
-          <Link href="/super-admin/complaints/citizen-complaints" className="hover:text-[var(--color-text-secondary)] transition-colors">Complaints</Link>
-          <span className="opacity-40">›</span>
-          <span className="text-[var(--color-text-secondary)] font-medium font-mono">{id}</span>
-        </nav>
-        <DashboardCard className="p-5">
-          <p className="text-sm text-[var(--color-text-secondary)]">Live complaint details are not available yet for this record.</p>
-        </DashboardCard>
-      </div>
-    );
-  }
-
-  const complaint = base;
+  const complaint = (base ?? {
+    id: "", title: "", description: "", status: "Open" as SAStatus, priority: "Medium" as SAPriority,
+    assignedTo: "", reportedBy: "", reportedOn: "", updatedOn: "", state: "", district: "",
+    project: "", category: "", coordinates: "", slaStatus: "On Track", slaLabel: "",
+    evidence: [], activityLog: [],
+  }) as NonNullable<typeof base>;
 
   const [status,      setStatus]      = useState<SAStatus>(complaint.status);
   const [assignedTo,  setAssignedTo]  = useState(complaint.assignedTo);
@@ -316,6 +307,23 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const isResolved = status === "Resolved" || status === "Closed";
   const slaColor = slaBadgeColor[complaint.slaStatus] ?? "#94a3b8";
 
+  // Early return for missing data — placed AFTER all hooks to respect Rules of Hooks
+  if (!base) {
+    return (
+      <div className="flex flex-col gap-3 pb-6">
+        <nav className="flex items-center gap-1.5 text-[11px] text-[var(--color-text-muted)]">
+          <Link href="/super-admin/complaints/citizen-complaints" className="hover:text-[var(--color-text-secondary)] transition-colors">Complaints</Link>
+          <span className="opacity-40">›</span>
+          <span className="text-[var(--color-text-secondary)] font-medium font-mono">{id}</span>
+        </nav>
+        <DashboardCard className="p-5">
+          <p className="text-sm text-[var(--color-text-secondary)]">Live complaint details are not available yet for this record.</p>
+        </DashboardCard>
+      </div>
+    );
+  }
+
+  // After the guard, base is guaranteed to exist
   return (
     <div className="flex flex-col gap-3 pb-6">
       {/* Breadcrumb */}
@@ -497,48 +505,83 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
         {/* ── Right 1/3 ── */}
         <div className="flex flex-col gap-3">
 
-          {/* Case Actions */}
+          {/* Case Actions / Governance Ownership */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <DashboardCard className="p-4 flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Case Actions</p>
+              {status === "Escalated" ? (
+                <>
+                  {/* Governance Ownership Card — case owned by District */}
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Governance Ownership</p>
+                  <div className="rounded-lg border p-3 flex flex-col gap-2" style={{ borderColor: "rgba(249,115,22,0.25)", background: "rgba(249,115,22,0.04)" }}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Current Owner</span>
+                      <span className="text-xs font-bold text-orange-400">District Admin</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Complaint</span>
+                      <span className="text-[10px] font-mono font-bold text-[var(--color-text-primary)]">{complaint.id}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[var(--color-text-muted)]">Workflow Stage</span>
+                      <span className="text-[10px] font-medium text-amber-400">Under District Review</span>
+                    </div>
+                  </div>
 
-              {[
-                { label: "Update Status",        icon: ClipboardCheck, color: "#22d3ee", border: "rgba(34,211,238,0.3)",  bg: "rgba(34,211,238,0.08)",  onClick: () => setStatusOpen(true),   disabled: false         },
-                { label: "Reassign Case",         icon: UserCheck,     color: "#3b82f6", border: "rgba(59,130,246,0.3)",  bg: "rgba(59,130,246,0.08)",  onClick: () => setReassignOpen(true), disabled: isResolved     },
-                { label: "Request Clarification", icon: MessageSquare, color: "#a78bfa", border: "rgba(167,139,250,0.3)", bg: "rgba(167,139,250,0.08)", onClick: () => setClarifyOpen(true),  disabled: isResolved     },
-              ].map(({ label, icon: Icon, color, border, bg, onClick, disabled }) => (
-                <motion.button key={label} type="button" whileHover={{ x: disabled ? 0 : 2 }} whileTap={{ scale: disabled ? 1 : 0.97 }}
-                  disabled={disabled} onClick={onClick}
-                  className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ borderColor: border, background: bg, color }}>
-                  <Icon size={14} /> {label}
-                </motion.button>
-              ))}
+                  <div className="my-1 border-t border-[var(--color-border)]" />
+                  <p className="text-[10px] text-[var(--color-text-muted)] mb-1">Navigate to linked records:</p>
 
-              <div className="my-1 border-t border-[var(--color-border)]" />
+                  {/* Navigation Actions */}
+                  <Link href="/super-admin/complaints/escalated-cases">
+                    <motion.button type="button" whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full"
+                      style={{ borderColor: "rgba(249,115,22,0.3)", background: "rgba(249,115,22,0.08)", color: "#f97316" }}>
+                      <ShieldAlert size={14} /> Open Escalation
+                    </motion.button>
+                  </Link>
+                  <Link href="/super-admin/governance/approvals">
+                    <motion.button type="button" whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full"
+                      style={{ borderColor: "rgba(34,211,238,0.3)", background: "rgba(34,211,238,0.08)", color: "#22d3ee" }}>
+                      <IndianRupee size={14} /> Open Budget Requests
+                    </motion.button>
+                  </Link>
+                  <Link href="/super-admin/complaints/resolution-tracker">
+                    <motion.button type="button" whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full"
+                      style={{ borderColor: "rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.08)", color: "#10b981" }}>
+                      <CheckCircle2 size={14} /> Open Resolution Tracker
+                    </motion.button>
+                  </Link>
+                  <Link href="/super-admin/audit">
+                    <motion.button type="button" whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }}
+                      className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full"
+                      style={{ borderColor: "rgba(100,116,139,0.3)", background: "rgba(100,116,139,0.08)", color: "#94a3b8" }}>
+                      <Shield size={14} /> Open Audit Trail
+                    </motion.button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  {/* Non-escalated complaints — limited oversight actions */}
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Oversight Actions</p>
 
-              <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
-                disabled={isResolved} onClick={() => setClosureOpen(true)}
-                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ borderColor: "rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.08)", color: "#10b981" }}>
-                <CheckCircle2 size={14} /> Approve Closure
-              </motion.button>
+                  <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
+                    disabled={isResolved} onClick={() => setClarifyOpen(true)}
+                    className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.08)", color: "#a78bfa" }}>
+                    <MessageSquare size={14} /> Request Clarification
+                  </motion.button>
 
-              <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
-                disabled={isResolved}
-                onClick={() => { setStatus("Escalated"); log("Super Admin", "Escalated for national-level review"); showToast("Escalated for review"); }}
-                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ borderColor: "rgba(249,115,22,0.3)", background: "rgba(249,115,22,0.08)", color: "#f97316" }}>
-                <ArrowUpRight size={14} /> Escalate Further
-              </motion.button>
+                  <div className="my-1 border-t border-[var(--color-border)]" />
 
-              <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
-                disabled={isResolved}
-                onClick={() => { setStatus("Closed"); log("Super Admin", "Complaint rejected and closed"); showToast("Complaint rejected"); }}
-                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "#ef4444" }}>
-                <XCircle size={14} /> Reject
-              </motion.button>
+                  <motion.button type="button" whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
+                    disabled={isResolved} onClick={() => setClosureOpen(true)}
+                    className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ borderColor: "rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.08)", color: "#10b981" }}>
+                    <CheckCircle2 size={14} /> Approve Closure
+                  </motion.button>
+                </>
+              )}
             </DashboardCard>
           </motion.div>
 

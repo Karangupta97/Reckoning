@@ -57,10 +57,10 @@ export function useMyReports(): UseMyReportsResult {
     setError(null);
     try {
       const [fetchedReports, fetchedStats] = await Promise.all([
-        getMyComplaints(undefined, email),
+        getMyComplaints(email),
         getMyStats(email),
       ]);
-      setReports(fetchedReports);
+      setReports(Array.isArray(fetchedReports) ? fetchedReports : []);
       setStats(fetchedStats);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load your reports.";

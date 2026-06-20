@@ -11,7 +11,7 @@ import {
   ChevronRight, Download, X, ExternalLink, Map,
   Activity, MessageSquare, TrendingUp, ArrowUpRight,
   ClipboardCheck, Wrench, Search, CircleDot, Check,
-  ChevronDown,
+  ChevronDown, Share2,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useEscalationStore } from "@/store/escalationStore";
@@ -25,7 +25,14 @@ import {
   type ComplaintStatus,
 } from "@/store/complaintStore";
 import { SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
+import { useAdminNotificationStore } from "@/store/adminNotificationStore";
 import IndiaMap from "@/components/map/IndiaMap";
+import { RelatedRecordsPanel } from "@/components/admin/RelatedRecordsPanel";
+import { CaseJourneyTimeline } from "@/components/admin/CaseJourneyTimeline";
+import { ClarificationThread, parseNotesToThread, ClarificationRequiredBadge } from "@/components/admin/ClarificationThread";
+import { getRelatedRecordsForComplaint, buildCaseJourney } from "@/lib/case-traceability";
+import { ImpactCard } from "@/components/citizen/ImpactCard";
+import { CitizenTransparencyTimeline } from "@/components/citizen/CitizenTransparencyTimeline";
 
 type SLAStatus = ComplaintSLAStatus;
 type ComplaintDetail = ComplaintDetailView;
@@ -356,13 +363,15 @@ function UpdateStatusDialog({
 // Lightweight dialog collecting reason / priority / notes before pushing
 // to the shared escalationStore so district-admin sees it immediately.
 const ESCALATION_REASONS = [
-  "SLA breach imminent",
-  "Critical safety hazard",
-  "Requires district-level resources",
-  "Repeated citizen complaints",
-  "Officer unable to resolve",
-  "Political / media sensitivity",
-  "Other",
+  "Funding Required",
+  "Technical Expertise Required",
+  "Emergency Intervention",
+  "Multi-Zone Impact",
+  "Policy Approval Required",
+  "SLA Breach — Needs District Resources",
+  "Critical Safety Hazard",
+  "Repeated Citizen Complaints",
+  "Officer Unable to Resolve",
 ];
 
 const ESCALATION_CATEGORIES: EscalationCategory[] = [
@@ -388,6 +397,10 @@ function EscalateDialog({
   const [submitting, setSubmitting] = useState(false);
   const [done,     setDone]     = useState(false);
   const [escId,    setEscId]    = useState("");
+  const [estimatedCost, setEstimatedCost] = useState("");
+  const [fundingReason, setFundingReason] = useState("");
+
+  const isFundingRequired = reason === "Funding Required";
 
   // Map complaint category to escalation category
   const mapCategory = (cat: string): EscalationCategory => {
@@ -417,10 +430,24 @@ function EscalateDialog({
         priority,
         reason,
         notes: notes.trim() || undefined,
+        fundingRequired: isFundingRequired || undefined,
+        estimatedCost: isFundingRequired && estimatedCost ? parseFloat(estimatedCost) : undefined,
+        fundingReason: isFundingRequired && fundingReason ? fundingReason : undefined,
       });
       setEscId(id);
       setDone(true);
       setSubmitting(false);
+      // Notify district about funding requirement
+      if (isFundingRequired) {
+        useAdminNotificationStore.getState().push({
+          portal: "district",
+          type: "escalation_update",
+          title: "Funding requirement identified",
+          message: `${id} — Est. ₹${estimatedCost || "TBD"} Lakhs — ${fundingReason || reason}`,
+          entityId: id,
+          href: `/district-admin/dashboard/escalation/${id}`,
+        });
+      }
       setTimeout(() => onSubmit(id, priority, reason), 1200);
     }, 600);
   };
@@ -525,6 +552,39 @@ function EscalateDialog({
               placeholder="Describe why this needs district-level attention…"
               className="w-full rounded-lg border px-3 py-2 text-xs text-[var(--color-text-secondary)] bg-[var(--color-surface)] border-[var(--color-border)] resize-none focus:outline-none focus:border-orange-500/40 transition-colors" />
           </div>
+
+          {/* Funding fields — shown when "Funding Required" reason selected */}
+          {isFundingRequired && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+              className="overflow-hidden flex flex-col gap-3 rounded-lg border p-3"
+              style={{ borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.05)" }}>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-400">Funding Details</p>
+              <div>
+                <label className="text-[11px] font-medium text-[var(--color-text-secondary)] block mb-1">
+                  Estimated Cost (₹ Lakhs)
+                </label>
+                <input type="number" value={estimatedCost} onChange={(e) => setEstimatedCost(e.target.value)}
+                  placeholder="e.g. 25"
+                  className="w-full h-9 rounded-lg border px-3 text-xs bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-amber-500/40" />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-[var(--color-text-secondary)] block mb-1">
+                  Funding Reason
+                </label>
+                <select value={fundingReason} onChange={(e) => setFundingReason(e.target.value)}
+                  className="w-full h-9 appearance-none rounded-lg border pl-3 pr-8 text-xs bg-[var(--color-surface)] border-[var(--color-border)] text-[var(--color-text-secondary)] focus:outline-none">
+                  <option value="">Select reason…</option>
+                  <option value="Bridge reconstruction">Bridge reconstruction</option>
+                  <option value="Road resurfacing">Road resurfacing</option>
+                  <option value="Drainage repair">Drainage repair</option>
+                  <option value="Emergency flood restoration">Emergency flood restoration</option>
+                  <option value="Traffic signal replacement">Traffic signal replacement</option>
+                  <option value="Structural reinforcement">Structural reinforcement</option>
+                  <option value="Other infrastructure repair">Other infrastructure repair</option>
+                </select>
+              </div>
+            </motion.div>
+          )}
 
           {/* District target info */}
           <div className="rounded-lg border px-3 py-2 flex items-center gap-2"
@@ -709,6 +769,7 @@ function StickyActions({
   const isResolved   = status === "Resolved"  || status === "Rejected";
   const isEscalated  = status === "Escalated";
   const isInProgress = status === "In Progress";
+  const isOwnedByDistrict = isEscalated; // Case ownership transferred
 
   return (
     <div className="lg:sticky lg:top-4">
@@ -717,10 +778,19 @@ function StickyActions({
           Case Actions
         </p>
 
+        {/* Awaiting District Action banner */}
+        {isOwnedByDistrict && !isResolved && (
+          <div className="rounded-lg border px-3 py-2 mb-1 flex items-center gap-2"
+            style={{ borderColor: "rgba(249,115,22,0.3)", background: "rgba(249,115,22,0.06)" }}>
+            <ShieldAlert size={12} className="text-orange-400 shrink-0" />
+            <span className="text-[11px] text-orange-400 font-medium">Awaiting District Action</span>
+          </div>
+        )}
+
         {/* Assign Officer — opens AssignModal (existing component from list page) */}
         <motion.button
-          whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
-          disabled={isResolved}
+          whileHover={{ x: isResolved || isOwnedByDistrict ? 0 : 2 }} whileTap={{ scale: isResolved || isOwnedByDistrict ? 1 : 0.97 }}
+          disabled={isResolved || isOwnedByDistrict}
           onClick={() => setAssignOpen(true)}
           className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ borderColor: "rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)", color: "var(--color-info)" }}>
@@ -729,9 +799,9 @@ function StickyActions({
 
         {/* Mark In Progress — local state update (no dedicated page exists) */}
         <motion.button
-          whileHover={{ x: isResolved || isInProgress ? 0 : 2 }}
-          whileTap={{ scale: isResolved || isInProgress ? 1 : 0.97 }}
-          disabled={isResolved || isInProgress}
+          whileHover={{ x: isResolved || isInProgress || isOwnedByDistrict ? 0 : 2 }}
+          whileTap={{ scale: isResolved || isInProgress || isOwnedByDistrict ? 1 : 0.97 }}
+          disabled={isResolved || isInProgress || isOwnedByDistrict}
           onClick={onMarkInProgress}
           className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 8%, transparent)", color: "var(--sda-amber)" }}>
@@ -754,20 +824,20 @@ function StickyActions({
 
         {/* Resolve Complaint — existing /resolve route */}
         <Link href={`/sub-district-admin/dashboard/complaints/${id}/resolve`}
-          className={`block ${isResolved ? "pointer-events-none opacity-40" : ""}`}>
+          className={`block ${isResolved || isOwnedByDistrict ? "pointer-events-none opacity-40" : ""}`}>
           <motion.button
-            whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
-            disabled={isResolved}
+            whileHover={{ x: isResolved || isOwnedByDistrict ? 0 : 2 }} whileTap={{ scale: isResolved || isOwnedByDistrict ? 1 : 0.97 }}
+            disabled={isResolved || isOwnedByDistrict}
             className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full"
             style={{ borderColor: "rgba(34,197,94,0.35)", background: "rgba(34,197,94,0.1)", color: "var(--color-success)" }}>
             <CheckCircle2 size={14} /> Resolve Complaint
           </motion.button>
         </Link>
 
-        {/* Reject — local status state update */}
+        {/* Reject — disabled when escalated (district owns it) */}
         <motion.button
-          whileHover={{ x: isResolved ? 0 : 2 }} whileTap={{ scale: isResolved ? 1 : 0.97 }}
-          disabled={isResolved}
+          whileHover={{ x: isResolved || isOwnedByDistrict ? 0 : 2 }} whileTap={{ scale: isResolved || isOwnedByDistrict ? 1 : 0.97 }}
+          disabled={isResolved || isOwnedByDistrict}
           onClick={onReject}
           className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "var(--color-danger)" }}>
@@ -837,6 +907,7 @@ export default function ComplaintDetailPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [updateStatusOpen, setUpdateStatusOpen] = useState(false);
   const [escalateOpen2, setEscalateOpen2] = useState(false);
+  const [impactCardOpen, setImpactCardOpen] = useState(false);
 
   const c = useMemo(() => toComplaintDetailView(record), [record]);
   const escId = record.escalationId ?? linkedEsc?.id ?? null;
@@ -1141,6 +1212,27 @@ export default function ComplaintDetailPage() {
             />
           </motion.div>
 
+          {/* Impact Card — shown when complaint is resolved */}
+          {c.status === "Resolved" && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }}>
+              <DashboardCard className="p-4">
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => setImpactCardOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 h-10 rounded-lg border text-xs font-semibold"
+                  style={{ borderColor: "rgba(59,130,246,0.35)", background: "rgba(59,130,246,0.08)", color: "#3b82f6" }}>
+                  <Share2 size={14} /> Generate Impact Card
+                </motion.button>
+              </DashboardCard>
+            </motion.div>
+          )}
+
+          {/* Citizen Transparency Timeline */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <DashboardCard className="p-4">
+              <CitizenTransparencyTimeline complaintId={complaintId} />
+            </DashboardCard>
+          </motion.div>
+
           {/* Complaint Progress & SLA */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <DashboardCard className="p-4 flex flex-col gap-4">
@@ -1295,14 +1387,14 @@ export default function ComplaintDetailPage() {
               <div className="flex gap-2 pt-1 border-t border-[var(--color-border)]">
                 <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                   onClick={() => setUpdateStatusOpen(true)}
-                  disabled={status === "Resolved" || status === "Rejected"}
+                  disabled={c.status === "Resolved" || c.status === "Rejected"}
                   className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg border text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 10%, transparent)", color: "var(--sda-amber)" }}>
                   <CheckCircle2 size={12} /> Update Status
                 </motion.button>
                 <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                   onClick={() => setEscalateOpen2(true)}
-                  disabled={status === "Resolved" || status === "Rejected" || status === "Escalated" || escalated}
+                  disabled={c.status === "Resolved" || c.status === "Rejected" || c.status === "Escalated" || escalated}
                   className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg border text-[11px] font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ borderColor: "rgba(249,115,22,0.3)", background: "rgba(249,115,22,0.08)", color: "#f97316" }}>
                   <ArrowUpRight size={12} /> {escalated ? "Escalated ✓" : "Escalate"}
@@ -1372,6 +1464,59 @@ export default function ComplaintDetailPage() {
               ))}
             </DashboardCard>
           </motion.div>
+
+          {/* Related Records — full traceability */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <DashboardCard className="p-4">
+              <RelatedRecordsPanel
+                records={getRelatedRecordsForComplaint(complaintId, "sub-district")}
+                title="Related Records"
+              />
+            </DashboardCard>
+          </motion.div>
+
+          {/* Clarification Thread — visible when clarification exists */}
+          {linkedEsc && (parseNotesToThread(linkedEsc.notes, linkedEsc.activityLog).length > 0 || record.resolutionStatus === "Clarification Requested") && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.21 }}>
+              <DashboardCard className="p-4 flex flex-col gap-3">
+                <ClarificationRequiredBadge show={
+                  record.resolutionStatus === "Clarification Requested" ||
+                  (linkedEsc.activityLog ?? []).some((a) => a.action.toLowerCase().includes("clarification requested") && a.actor.includes("District"))
+                } />
+                <ClarificationThread
+                  messages={parseNotesToThread(linkedEsc.notes, linkedEsc.activityLog)}
+                  viewerRole="sub-district"
+                  complaintId={complaintId}
+                  escalationId={linkedEsc.id}
+                  onReply={(msg) => {
+                    useEscalationStore.getState().appendActivity(linkedEsc.id, "Sub-District Officer", `Clarification reply — ${msg}`);
+                    useEscalationStore.getState().updateEscalation(linkedEsc.id, {
+                      notes: (linkedEsc.notes ?? "") + `\n[Sub-District] ${msg}`,
+                    });
+                    useAdminNotificationStore.getState().push({
+                      portal: "district",
+                      type: "clarification_request",
+                      title: "Clarification response received",
+                      message: `${complaintId} — ${msg.substring(0, 80)}`,
+                      entityId: linkedEsc.id,
+                      href: `/district-admin/dashboard/escalation/${linkedEsc.id}`,
+                    });
+                  }}
+                />
+              </DashboardCard>
+            </motion.div>
+          )}
+
+          {/* Case Journey — complete lifecycle */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+            <DashboardCard className="p-4">
+              <CaseJourneyTimeline
+                steps={buildCaseJourney(complaintId)}
+                title="Case Journey"
+                accentColor="#f59e0b"
+              />
+            </DashboardCard>
+          </motion.div>
         </div>
       </div>
 
@@ -1398,6 +1543,23 @@ export default function ComplaintDetailPage() {
               handleEscalate(newEscId, priority, reason);
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Impact Card Modal */}
+      <AnimatePresence>
+        {impactCardOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+            onClick={() => setImpactCardOpen(false)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border p-5"
+              style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
+              <ImpactCard complaintId={complaintId} onClose={() => setImpactCardOpen(false)} />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
