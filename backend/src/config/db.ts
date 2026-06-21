@@ -23,7 +23,7 @@ export const pool = new Pool({
   max: 20,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
-  ssl: isProduction ? { rejectUnauthorized: true } : false,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
   // Cap any individual statement at 15 s so a single slow PostGIS query can
   // never hold a connection (or an HTTP request) hostage beyond this window.
   statement_timeout: 15_000,
