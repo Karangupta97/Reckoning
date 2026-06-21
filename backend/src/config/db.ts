@@ -12,6 +12,15 @@ import { env, isProduction } from "./env.js";
 
 const { Pool } = pg;
 
+// Parse and clean database URL to handle custom SSL configuration.
+// node-postgres parses sslmode query parameters into config.ssl, which takes precedence
+// and overrides options.ssl. We clean sslmode from the URL and control it explicitly.
+const parsedDbUrl = new URL(env.DATABASE_URL);
+const hasSslMode =
+  parsedDbUrl.searchParams.has("sslmode") &&
+  parsedDbUrl.searchParams.get("sslmode") !== "disable";
+parsedDbUrl.searchParams.delete("sslmode");
+
 /**
  * Shared `pg` Pool instance.
  *
@@ -19,11 +28,11 @@ const { Pool } = pg;
  * after measuring; Supabase has its own connection limits.
  */
 export const pool = new Pool({
-  connectionString: env.DATABASE_URL,
+  connectionString: parsedDbUrl.toString(),
   max: 20,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  ssl: isProduction || hasSslMode ? { rejectUnauthorized: false } : false,
   // Cap any individual statement at 15 s so a single slow PostGIS query can
   // never hold a connection (or an HTTP request) hostage beyond this window.
   statement_timeout: 15_000,
