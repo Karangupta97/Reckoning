@@ -30,7 +30,7 @@ export default function SubDistrictAdminLayout({
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
+    <div className="sub-district-admin-shell h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
       <div className="flex h-full">
         {/* Desktop Sidebar */}
         <div className="hidden lg:block lg:w-[250px] lg:flex-shrink-0">

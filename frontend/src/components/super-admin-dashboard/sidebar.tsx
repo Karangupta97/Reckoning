@@ -285,24 +285,14 @@ export default function Sidebar({ activePath = "/super-admin/dashboard" }: Sideb
                   whileHover={{ x: 2 }}
                   whileTap={{ scale: 0.98 }}
                   className={`
-                    w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-[13px] font-medium
-                    transition-all duration-200 border
-                    ${
-                      active
-                        ? `
-                            bg-cyan-500/10 text-cyan-300 border-cyan-500/20
-                            shadow-[0_0_16px_rgba(34,211,238,0.1)]
-                          `
-                        : `
-                            text-[var(--color-text-secondary)] border-transparent
-                            hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]
-                          `
-                    }
+                    w-full flex items-center gap-3.5 px-4 py-3 rounded-lg text-[13px]
+                    transition-all duration-200
+                    ${active ? "admin-nav-active" : "admin-nav-item"}
                   `}
                 >
                   <span
-                    className={`shrink-0 transition-colors duration-200 ${
-                      active ? "text-cyan-300" : item.color
+                    className={`shrink-0 ${
+                      active ? "admin-nav-active-icon" : "admin-nav-item-icon"
                     }`}
                   >
                     {item.icon}
@@ -312,9 +302,7 @@ export default function Sidebar({ activePath = "/super-admin/dashboard" }: Sideb
                     <motion.span
                       animate={{ rotate: expanded ? 180 : 0 }}
                       transition={{ duration: 0.2 }}
-                      className={`shrink-0 ${
-                        active ? "text-cyan-400/60" : "text-[var(--color-text-muted)]"
-                      }`}
+                      className="shrink-0 admin-nav-chevron"
                     >
                       <ChevronDown size={14} />
                     </motion.span>
@@ -343,25 +331,13 @@ export default function Sidebar({ activePath = "/super-admin/dashboard" }: Sideb
                               className={`
                                 w-full flex items-center gap-2 px-3 py-2 rounded-md text-[11px]
                                 transition-all duration-200
-                                ${
-                                  subActive
-                                    ? `
-                                        text-cyan-300 bg-cyan-500/10
-                                        shadow-[0_0_10px_rgba(34,211,238,0.1)]
-                                      `
-                                    : `
-                                        text-[var(--color-text-muted)]
-                                        hover:text-cyan-600 hover:bg-cyan-500/[0.08]
-                                        dark:hover:text-cyan-300 dark:hover:bg-cyan-500/[0.06]
-                                        hover:shadow-[0_0_8px_rgba(34,211,238,0.08)]
-                                      `
-                                }
+                                ${subActive ? "admin-nav-active admin-nav-nested" : "admin-nav-item admin-nav-nested"}
                               `}
                             >
                               <ChevronRight
                                 size={11}
                                 className={
-                                  subActive ? "text-cyan-400" : "text-[var(--color-text-muted)]"
+                                  subActive ? "admin-nav-active-icon shrink-0" : "admin-nav-item-icon shrink-0"
                                 }
                               />
                               <span className="truncate">{sub.label}</span>

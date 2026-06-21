@@ -61,10 +61,10 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-function InputField({ defaultValue, placeholder, type = "text", readOnly }:
-  { defaultValue?: string; placeholder?: string; type?: string; readOnly?: boolean }) {
+function InputField({ defaultValue, value, placeholder, type = "text", readOnly }:
+  { defaultValue?: string; value?: string; placeholder?: string; type?: string; readOnly?: boolean }) {
   return (
-    <input type={type} defaultValue={defaultValue} placeholder={placeholder} readOnly={readOnly}
+    <input type={type} defaultValue={value ?? defaultValue} placeholder={placeholder} readOnly={readOnly}
       className={`w-full h-10 rounded-lg border px-3 text-sm text-[var(--color-text-secondary)] bg-[var(--color-surface)] border-[var(--color-border)] focus:outline-none focus:border-amber-500/40 transition-colors ${readOnly ? "opacity-60 cursor-not-allowed" : ""}`}
     />
   );
@@ -130,7 +130,7 @@ function PersonalInfoTab() {
           <span className="text-xs font-semibold text-green-400">Account Active</span>
         </div>
         <div className="h-3 w-px bg-[var(--color-border)] hidden sm:block" />
-        <span className="text-xs text-[var(--color-text-muted)]">Role: <span className="font-medium text-[var(--color-text-secondary)]">Sub-District Administrator</span></span>
+        <span className="text-xs text-[var(--color-text-muted)]">Role: <span className="font-medium text-[var(--color-text-secondary)]">Sub-District Infrastructure Officer</span></span>
         <div className="h-3 w-px bg-[var(--color-border)] hidden sm:block" />
         <span className="text-xs text-[var(--color-text-muted)]">Last login: <span className="font-medium text-[var(--color-text-secondary)]">Today, 08:14 AM</span></span>
         <div className="h-3 w-px bg-[var(--color-border)] hidden sm:block" />
@@ -148,7 +148,7 @@ function PersonalInfoTab() {
             </div>
             <div>
               <p className="text-sm font-bold text-[var(--color-text-primary)]">Suresh Ambulkar</p>
-              <p className="text-xs text-[var(--color-text-muted)]">Sub-District Administrator · Panvel Taluka</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Sub-District Infrastructure Officer · Panvel Taluka</p>
               <button className="mt-1 text-xs font-medium hover:underline transition-colors" style={{ color: "var(--sda-amber)" }}>
                 Change Photo
               </button>
@@ -159,7 +159,7 @@ function PersonalInfoTab() {
             <FieldRow label="Full Name"><InputField defaultValue="Suresh Ambulkar" /></FieldRow>
             <FieldRow label="Email Address"><InputField defaultValue="suresh.ambulkar@raigad.gov.in" type="email" /></FieldRow>
             <FieldRow label="Phone Number"><InputField defaultValue="+91 97632 11890" type="tel" /></FieldRow>
-            <FieldRow label="Designation"><InputField defaultValue="Sub-District Administrator" /></FieldRow>
+            <FieldRow label="Designation"><InputField value="Sub-District Infrastructure Officer" /></FieldRow>
           </div>
 
           <div className="flex justify-end pt-1">

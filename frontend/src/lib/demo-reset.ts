@@ -14,6 +14,8 @@ const STORE_KEYS = [
   "reckoning-achievements",
   "reckoning-leaderboard",
   "reckoning-admin-notifications",
+  "reckoning-admin-users",
+  "reckoning-date-range",
 ];
 
 /**

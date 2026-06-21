@@ -66,23 +66,7 @@ function todayDate(): string {
   return new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(",", "");
 }
 
-const D = districtLabel;
-const S = "Maharashtra";
-
-const SEED: Escalation[] = [
-  { id: "ESC-4021", title: "Sewage overflow — Alibag Main Road", subDistrict: "Alibag", district: D, state: S, category: "Sanitation", priority: "Critical", status: "Pending Review", slaStatus: "Breached", slaLabel: "BREACHED", slaHours: -18, assignedTo: "R. Sharma", escalatedOn: "28 May 2026", daysOpen: 7, tier: "district", submittedBy: "Sub-District Officer", activityLog: [{ time: "28 May 09:30", actor: "Sub-District", action: "Escalated to district" }] },
-  { id: "ESC-4022", title: "Bridge structural crack report", subDistrict: "Panvel", district: D, state: S, category: "Infrastructure", priority: "Critical", status: "Investigating", slaStatus: "At Risk", slaLabel: "2h Left", slaHours: 2, assignedTo: "A. Singh", escalatedOn: "01 Jun 2026", daysOpen: 3, tier: "district" },
-  { id: "ESC-4023", title: "Waterlogging — Karjat sector", subDistrict: "Karjat", district: D, state: S, category: "Flooding", priority: "High", status: "Assigned", slaStatus: "At Risk", slaLabel: "6h Left", slaHours: 6, assignedTo: "S. Gupta", escalatedOn: "30 May 2026", daysOpen: 5, tier: "district" },
-  { id: "ESC-4024", title: "Road pothole cluster — NH-66", subDistrict: "Mahad", district: D, state: S, category: "Road Damage", priority: "High", status: "Pending Review", slaStatus: "Breached", slaLabel: "BREACHED", slaHours: -30, assignedTo: "P. Iyer", escalatedOn: "26 May 2026", daysOpen: 9, tier: "district" },
-  { id: "ESC-4025", title: "Street light outage — Mangaon", subDistrict: "Mangaon", district: D, state: S, category: "Utilities", priority: "Medium", status: "Investigating", slaStatus: "On Track", slaLabel: "14h Left", slaHours: 14, assignedTo: "M. Khan", escalatedOn: "03 Jun 2026", daysOpen: 2, tier: "district" },
-  { id: "ESC-4026", title: "Illegal construction complaint", subDistrict: "Murud", district: D, state: S, category: "Civic", priority: "Low", status: "Resolved", slaStatus: "On Track", slaLabel: "Resolved", slaHours: 99, assignedTo: "T. Verma", escalatedOn: "02 Jun 2026", daysOpen: 0, tier: "district" },
-  { id: "ESC-4027", title: "Broken water main — Ward 4", subDistrict: "Alibag", district: D, state: S, category: "Infrastructure", priority: "Critical", status: "Investigating", slaStatus: "At Risk", slaLabel: "4h Left", slaHours: 4, assignedTo: "R. Sharma", escalatedOn: "31 May 2026", daysOpen: 4, tier: "district" },
-  { id: "ESC-4028", title: "Garbage dump — Market area", subDistrict: "Panvel", district: D, state: S, category: "Sanitation", priority: "High", status: "Assigned", slaStatus: "Breached", slaLabel: "BREACHED", slaHours: -6, assignedTo: "M. Khan", escalatedOn: "29 May 2026", daysOpen: 6, tier: "district" },
-  { id: "ESC-4029", title: "Footpath encroachment report", subDistrict: "Karjat", district: D, state: S, category: "Civic", priority: "Medium", status: "Closed", slaStatus: "On Track", slaLabel: "Closed", slaHours: 99, assignedTo: "P. Iyer", escalatedOn: "04 Jun 2026", daysOpen: 0, tier: "district" },
-  { id: "ESC-4030", title: "Road accident black spot", subDistrict: "Panvel", district: D, state: S, category: "Safety", priority: "Critical", status: "Pending Review", slaStatus: "At Risk", slaLabel: "1h Left", slaHours: 1, assignedTo: "A. Singh", escalatedOn: "03 Jun 2026", daysOpen: 2, tier: "super", parentEscalationId: "ESC-4022", submittedBy: "District Admin", reason: "Requires state-level intervention" },
-  { id: "ESC-4031", title: "Collapsed boundary wall — Park", subDistrict: "Mahad", district: D, state: S, category: "Infrastructure", priority: "High", status: "Pending Review", slaStatus: "On Track", slaLabel: "20h Left", slaHours: 20, assignedTo: "S. Gupta", escalatedOn: "04 Jun 2026", daysOpen: 1, tier: "district" },
-  { id: "ESC-4032", title: "Open drain near school", subDistrict: "Alibag", district: D, state: S, category: "Sanitation", priority: "Critical", status: "Assigned", slaStatus: "At Risk", slaLabel: "3h Left", slaHours: 3, assignedTo: "R. Sharma", escalatedOn: "04 Jun 2026", daysOpen: 1, tier: "district" },
-];
+import { GOVERNANCE_ESCALATIONS } from "@/lib/governance/seeds";
 
 function logEscalationAudit(entityId: string, action: string, prev: string, next: string, role: string) {
   useAuditLogStore.getState().addEntry({
@@ -146,8 +130,8 @@ interface EscalationState {
 export const useEscalationStore = create<EscalationState>()(
   persist(
     (set, get) => ({
-  escalations: SEED,
-  nextId: 4033,
+  escalations: GOVERNANCE_ESCALATIONS,
+  nextId: 4100,
 
   addEscalation: (entry) => {
     const id = `ESC-${get().nextId}`;
@@ -252,7 +236,7 @@ export const useEscalationStore = create<EscalationState>()(
       sourceComplaintId: parent.sourceComplaintId,
       tier: "super",
       district: params.district ?? parent.district ?? districtLabel,
-      state: params.state ?? parent.state ?? S,
+      state: params.state ?? parent.state ?? "Maharashtra",
       submittedBy: params.submittedBy ?? "District Admin",
       title: parent.title,
       subDistrict: parent.subDistrict,
@@ -345,7 +329,7 @@ export const useEscalationStore = create<EscalationState>()(
   findByComplaintId: (complaintId) =>
     get().escalations.find((e) => e.sourceComplaintId === complaintId),
 }),
-    adminPersistOptions("escalation", (s) => ({ escalations: s.escalations, nextId: s.nextId }))
+    adminPersistOptions("escalation-v2", (s) => ({ escalations: s.escalations, nextId: s.nextId }))
   )
 );
 

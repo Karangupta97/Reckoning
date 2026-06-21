@@ -69,11 +69,13 @@ const stagger = (i: number) => ({
    PAGE COMPONENT
 ═══════════════════════════════════════════════════════════════ */
 export default function EscalationsPage() {
-  const ALL = filterByDistrictScope(
+  const _raw = filterByDistrictScope(
     useEscalationStore((s) => s.escalations),
     (e) => e.district,
     (e) => e.state
   );
+  // Deduplicate by ID — guards against store/seed ID collision after hot reload
+  const ALL = _raw.filter((e, idx, arr) => arr.findIndex((x) => x.id === e.id) === idx);
   const [search,      setSearch]      = useState("");
   const [priority,    setPriority]    = useState<Priority | "All">("All");
   const [status,      setStatus]      = useState<Status | "All">("All");
@@ -83,18 +85,23 @@ export default function EscalationsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const filtered = useMemo(() => ALL.filter(e => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || e.id.toLowerCase().includes(q) ||
-      e.title.toLowerCase().includes(q) ||
-      e.subDistrict.toLowerCase().includes(q);
-    return matchSearch &&
-      (priority    === "All" || e.priority    === priority)    &&
-      (status      === "All" || e.status      === status)      &&
-      (category    === "All" || e.category    === category)    &&
-      (subDistrict === "All" || e.subDistrict === subDistrict) &&
-      (slaFilter   === "All" || e.slaStatus   === slaFilter);
-  }), [ALL, search, priority, status, category, subDistrict, slaFilter]);
+  const filtered = useMemo(() => {
+    const seen = new Set<string>();
+    return ALL.filter(e => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      const q = search.toLowerCase();
+      const matchSearch = !q || e.id.toLowerCase().includes(q) ||
+        e.title.toLowerCase().includes(q) ||
+        e.subDistrict.toLowerCase().includes(q);
+      return matchSearch &&
+        (priority    === "All" || e.priority    === priority)    &&
+        (status      === "All" || e.status      === status)      &&
+        (category    === "All" || e.category    === category)    &&
+        (subDistrict === "All" || e.subDistrict === subDistrict) &&
+        (slaFilter   === "All" || e.slaStatus   === slaFilter);
+    });
+  }, [ALL, search, priority, status, category, subDistrict, slaFilter]);
 
   const resetFilters = () => {
     setSearch(""); setPriority("All"); setStatus("All");
@@ -656,11 +663,14 @@ function EmptyState() {
 
 /* ── Right Sidebar Panel ── */
 function SidebarPanel() {
-  const ALL = filterByDistrictScope(
+  const raw = filterByDistrictScope(
     useEscalationStore((s) => s.escalations),
     (e) => e.district,
     (e) => e.state
   );
+  // Deduplicate by ID — guard against store/seed collision after hot reload
+  const seen = new Set<string>();
+  const ALL = raw.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
   const critical = ALL.filter(e => e.priority === "Critical" && e.status !== "Resolved" && e.status !== "Closed");
   const slaRisk  = ALL.filter(e => e.slaStatus === "At Risk").length;
   const breached = ALL.filter(e => e.slaStatus === "Breached").length;

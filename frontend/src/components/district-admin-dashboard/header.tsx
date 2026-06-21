@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { districtLabel, districtLocationLabel } from "@/lib/district-config";
+import { useAdminDateRange } from "@/hooks/useAdminDateRange";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -26,12 +27,7 @@ interface HeaderProps {
   subtitle?: string;
 }
 
-const DATE_OPTIONS = [
-  "Today",
-  "This Week",
-  "This Month",
-  "This Quarter",
-] as const;
+const DATE_OPTIONS = ["Today", "This Week", "This Month", "This Quarter", "This Year"] as const;
 
 const SETTINGS_ITEMS: {
   label: string;
@@ -63,8 +59,7 @@ export default function DistrictAdminHeader({
   const { logout } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDate, setSelectedDate] =
-    useState<(typeof DATE_OPTIONS)[number]>("This Month");
+  const { period: selectedDate, setPeriod: setSelectedDate } = useAdminDateRange();
   const [showSettings, setShowSettings] = useState(false);
   const [showDateDropdown, setShowDateDropdown] = useState(false);
 
@@ -221,7 +216,7 @@ export default function DistrictAdminHeader({
           </div>
           <div className="min-w-0 text-left">
             <p className="text-primary truncate text-xs font-semibold leading-tight">
-              District Administrator
+              District Infrastructure Commissioner
             </p>
             <p className="text-muted truncate text-[10px] leading-tight">
               {districtLocationLabel}

@@ -11,7 +11,8 @@ export type AuditCategory =
   | "Approval Actions"
   | "Escalations"
   | "Budget Decisions"
-  | "Evidence Decisions";
+  | "Evidence Decisions"
+  | "Governance";
 
 export interface AuditLogEntry {
   id: string;
@@ -82,6 +83,7 @@ export const AUDIT_CATEGORIES: AuditCategory[] = [
   "Escalations",
   "Budget Decisions",
   "Evidence Decisions",
+  "Governance",
 ];
 
 export const AUDIT_CATEGORY_CLS: Record<AuditCategory, string> = {
@@ -90,6 +92,7 @@ export const AUDIT_CATEGORY_CLS: Record<AuditCategory, string> = {
   Escalations: "dashboard-table-badge-status-escalated",
   "Budget Decisions": "dashboard-table-badge-status-open",
   "Evidence Decisions": "dashboard-table-badge-status-review",
+  Governance: "dashboard-table-badge-status-resolved",
 };
 
 export const AUDIT_CATEGORY_COLOR: Record<AuditCategory, string> = {
@@ -98,4 +101,5 @@ export const AUDIT_CATEGORY_COLOR: Record<AuditCategory, string> = {
   Escalations: "text-orange-400",
   "Budget Decisions": "text-amber-400",
   "Evidence Decisions": "text-purple-400",
+  Governance: "text-teal-400",
 };

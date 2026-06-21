@@ -74,7 +74,7 @@ function ProfileContent() {
       >
         <UserCircle size={20} className="text-teal-400 shrink-0" />
         <h1 className="text-lg font-bold text-[var(--color-text-primary)]">
-          District Administrator Profile
+          District Infrastructure Commissioner
         </h1>
       </motion.div>
 
@@ -127,7 +127,7 @@ function ProfileContent() {
                 D
               </div>
               <div>
-                <p className="font-semibold text-[var(--color-text-primary)]">District Administrator</p>
+                <p className="font-semibold text-[var(--color-text-primary)]">District Infrastructure Commissioner</p>
                 <p className="text-xs text-[var(--color-text-muted)]">DA-2026-DCO</p>
                 <button type="button" className="mt-1 text-xs text-teal-400 hover:text-teal-300">
                   Change avatar
@@ -137,18 +137,19 @@ function ProfileContent() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
-                { label: "Full Name", placeholder: "District Administrator", value: "District Administrator" },
+                { label: "Full Name", placeholder: "District Infrastructure Commissioner", value: "District Infrastructure Commissioner" },
                 { label: "Employee ID", placeholder: "DA-2026-DCO", value: "DA-2026-DCO" },
                 { label: "Official Email", placeholder: "admin@district.gov.in", value: "admin@district.gov.in", type: "email" },
                 { label: "Phone", placeholder: "+91 98765 00000", value: "+91 98765 00000", type: "tel" },
                 { label: "District", placeholder: "Raigad District", value: "Raigad District" },
-                { label: "Designation", placeholder: "District Collector", value: "District Collector" },
+                { label: "Designation", placeholder: "District Infrastructure Commissioner", value: "District Infrastructure Commissioner" },
               ].map((f) => (
                 <div key={f.label} className="flex flex-col gap-1.5">
                   <label className="text-xs font-medium text-[var(--color-text-secondary)]">{f.label}</label>
                   <input
                     type={f.type || "text"}
-                    defaultValue={f.value}
+                    readOnly
+                    value={f.value}
                     className="h-10 rounded-lg border px-3 text-sm outline-none focus:border-teal-500/40 transition-colors"
                     style={{
                       borderColor: "var(--color-border)",

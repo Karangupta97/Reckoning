@@ -28,6 +28,7 @@ export default function EscalationsTable() {
   const router = useRouter();
   const all = useEscalationStore((s) => s.escalations);
   const escalations = filterByDistrictScope(all, (e) => e.district, (e) => e.state)
+    .filter((e, idx, arr) => arr.findIndex((x) => x.id === e.id) === idx) // deduplicate
     .filter((e) => !["Resolved", "Closed"].includes(e.status))
     .slice(0, 8);
 

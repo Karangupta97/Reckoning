@@ -9,6 +9,7 @@ import {
   TrendingUp, ShieldCheck, Clock, Trophy, Award, IndianRupee, MessageSquare,
 } from "lucide-react";
 import { subDistrictSidebarSubtitle, SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
+import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 
 interface NavItem {
   label: string;
@@ -45,6 +46,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
   const router   = useRouter();
   const pathname = usePathname();
   const activePath = activePathProp ?? pathname ?? "/sub-district-admin/dashboard";
+  const metrics = useSubDistrictDashboardMetrics();
   const [isOpen,  setIsOpen]  = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -94,13 +96,11 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
               onClick={() => router.push(item.href)}
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.98 }}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-200 border ${
-                active
-                  ? "bg-amber-500/10 text-amber-300 border-amber-500/20 shadow-[0_0_14px_rgba(245,158,11,0.1)]"
-                  : "text-[var(--color-text-secondary)] border-transparent hover:bg-[var(--color-surface)] hover:text-[var(--color-text-primary)]"
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-[13px] transition-all duration-200 ${
+                active ? "admin-nav-active" : "admin-nav-item"
               }`}
             >
-              <span className={`shrink-0 transition-colors duration-200 ${active ? "text-amber-300" : item.color}`}>
+              <span className={`shrink-0 ${active ? "admin-nav-active-icon" : "admin-nav-item-icon"}`}>
                 {item.icon}
               </span>
               <span className="flex-1 text-left truncate">{item.label}</span>
@@ -131,10 +131,10 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-px border-t border-amber-500/10">
             {[
-              { label: "SLA Health",  value: "87%",  icon: ShieldCheck, color: "text-green-400" },
-              { label: "Open Cases",  value: String(SUB_DISTRICT_CONFIG.openComplaints), icon: FileWarning, color: "text-amber-400" },
-              { label: "Avg Resolve", value: "2.4d", icon: Clock,        color: "text-blue-400" },
-              { label: "This Week",   value: "+24",  icon: TrendingUp,   color: "text-teal-400" },
+              { label: "SLA Health",  value: `${metrics.zoneHealth}%`,  icon: ShieldCheck, color: "text-green-400" },
+              { label: "Open Cases",  value: String(metrics.open), icon: FileWarning, color: "text-amber-400" },
+              { label: "Avg Resolve", value: `${metrics.resolved > 0 ? "2.4" : "0"}d`, icon: Clock, color: "text-blue-400" },
+              { label: "Resolved", value: String(metrics.resolved), icon: TrendingUp, color: "text-teal-400" },
             ].map((s) => (
               <div key={s.label} className="flex flex-col gap-0.5 px-2.5 py-2" style={{ background: "color-mix(in srgb, var(--color-card) 50%, transparent)" }}>
                 <div className="flex items-center gap-1">
@@ -148,7 +148,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
         </div>
       </div>
     </div>
-  ), [isActive, router]);
+  ), [isActive, router, metrics]);
 
   return (
     <>

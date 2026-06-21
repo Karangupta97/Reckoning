@@ -8,6 +8,16 @@ import { useEvidenceStore } from "@/store/evidenceStore";
 import { useBudgetApprovalStore } from "@/store/budgetApprovalStore";
 import { useGovernanceRequestStore } from "@/store/governanceRequestStore";
 import { useLeaderboardStore } from "@/store/leaderboardStore";
+import { useDateRangeStore } from "@/store/dateRangeStore";
+import {
+  filterComplaintsByPeriod,
+  filterEscalationsByPeriod,
+  filterEvidenceByPeriod,
+  filterBudgetsByPeriod,
+  filterGovernanceByPeriod,
+} from "@/lib/governance/record-filters";
+import { RAIGAD_SUB_DISTRICTS } from "@/lib/governance/district-structure";
+import { parseRecordDate } from "@/lib/governance/date-range";
 import {
   filterSubDistrictComplaints,
   filterSubDistrictEscalations,
@@ -50,6 +60,7 @@ export interface ExecutiveInsight {
 // ─── District Analytics Hook ──────────────────────────────────────────────────
 
 export function useDistrictAnalyticsMetrics() {
+  const period = useDateRangeStore((s) => s.period);
   const complaints = useComplaintStore((s) => s.complaints);
   const escalations = useEscalationStore((s) => s.escalations);
   const evidence = useEvidenceStore((s) => s.records);
@@ -58,37 +69,44 @@ export function useDistrictAnalyticsMetrics() {
   const tickets = useComplaintWorkflowStore((s) => s.tickets);
 
   return useMemo(() => {
-    const distEscalations = filterDistrictEscalations(escalations);
-    const resolved = countResolvedComplaints(complaints);
-    const total = complaints.length;
-    const open = countOpenComplaints(complaints);
+    const complaintsScoped = filterComplaintsByPeriod(complaints, period);
+    const escalationsScoped = filterDistrictEscalations(
+      filterEscalationsByPeriod(escalations, period)
+    );
+    const evidenceScoped = filterEvidenceByPeriod(evidence, period);
+    const budgetsScoped = filterBudgetsByPeriod(budgets, period);
+    const governanceScoped = filterGovernanceByPeriod(governance, period);
+
+    const resolved = countResolvedComplaints(complaintsScoped);
+    const total = complaintsScoped.length;
+    const open = countOpenComplaints(complaintsScoped);
 
     // KPI metrics
-    const escalationsReceived = distEscalations.length;
-    const escalationsClosed = distEscalations.filter(
+    const escalationsReceived = escalationsScoped.length;
+    const escalationsClosed = escalationsScoped.filter(
       (e) => e.status === "Resolved" || e.status === "Closed"
     ).length;
-    const activeEsc = distEscalations.filter(
+    const activeEsc = escalationsScoped.filter(
       (e) => e.status !== "Resolved" && e.status !== "Closed"
     );
     const onTrackEsc = activeEsc.filter((e) => e.slaStatus === "On Track").length;
     const slaCompliance = activeEsc.length > 0
       ? Math.round((onTrackEsc / activeEsc.length) * 100)
       : 100;
-    const evidenceReviewed = evidence.filter((e) => e.status === "Approved").length;
-    const budgetSubmitted = budgets.length;
-    const budgetApproved = budgets.filter((b) => b.status === "Approved").length;
+    const evidenceReviewed = evidenceScoped.filter((e) => e.status === "Approved").length;
+    const budgetSubmitted = budgetsScoped.length;
+    const budgetApproved = budgetsScoped.filter((b) => b.status === "Approved").length;
     const budgetApprovalRate = budgetSubmitted > 0
       ? Math.round((budgetApproved / budgetSubmitted) * 100)
       : 0;
-    const govSubmitted = governance.length;
-    const govApproved = governance.filter((g) => g.status === "Approved").length;
+    const govSubmitted = governanceScoped.length;
+    const govApproved = governanceScoped.filter((g) => g.status === "Approved").length;
     const govApprovalRate = govSubmitted > 0
       ? Math.round((govApproved / govSubmitted) * 100)
       : 0;
 
     // Avg resolution time (simulated from SLA hours)
-    const resolvedComplaints = complaints.filter((c) => c.status === "Resolved");
+    const resolvedComplaints = complaintsScoped.filter((c) => c.status === "Resolved");
     const avgResolutionDays = resolvedComplaints.length > 0
       ? (resolvedComplaints.reduce((sum, c) => sum + c.slaTargetHours, 0) / resolvedComplaints.length / 24).toFixed(1)
       : "0";
@@ -98,16 +116,15 @@ export function useDistrictAnalyticsMetrics() {
 
     // Escalation rate
     const escalationRate = total > 0
-      ? ((complaints.filter((c) => c.status === "Escalated").length / total) * 100).toFixed(1)
+      ? ((complaintsScoped.filter((c) => c.status === "Escalated").length / total) * 100).toFixed(1)
       : "0";
 
-    // Complaint trend data — derive from actual complaint statuses
-    const trendData: TrendDataPoint[] = generateTrendFromComplaints(complaints);
+    const trendData: TrendDataPoint[] = generateTrendFromComplaints(complaintsScoped);
 
     // Resolution breakdown (percentage-based)
-    const inProgress = complaints.filter((c) => c.status === "In Progress" || c.status === "Assigned").length;
-    const escalated = complaints.filter((c) => c.status === "Escalated").length;
-    const overdue = complaints.filter((c) => c.slaStatus === "Breached" && c.status !== "Resolved").length;
+    const inProgress = complaintsScoped.filter((c) => c.status === "In Progress" || c.status === "Assigned").length;
+    const escalated = complaintsScoped.filter((c) => c.status === "Escalated").length;
+    const overdue = complaintsScoped.filter((c) => c.slaStatus === "Breached" && c.status !== "Resolved").length;
     const resolvedPct = total > 0 ? Math.round((resolved / total) * 100) : 0;
     const inProgressPct = total > 0 ? Math.round((inProgress / total) * 100) : 0;
     const escalatedPct = total > 0 ? Math.round((escalated / total) * 100) : 0;
@@ -121,7 +138,7 @@ export function useDistrictAnalyticsMetrics() {
     ];
 
     // Sub-district performance scores
-    const subDistrictScores = computeSubDistrictScores(complaints, escalations);
+    const subDistrictScores = computeSubDistrictScores(complaintsScoped, escalationsScoped);
 
     return {
       // KPIs
@@ -146,27 +163,36 @@ export function useDistrictAnalyticsMetrics() {
       resolvedCount: resolved,
       overdueCount: overdue,
       subDistrictScores,
+      period,
     };
-  }, [complaints, escalations, evidence, budgets, governance, tickets]);
+  }, [complaints, escalations, evidence, budgets, governance, tickets, period]);
 }
 
 // ─── Sub-District Analytics Hook ──────────────────────────────────────────────
 
 export function useSubDistrictAnalyticsMetrics() {
+  const period = useDateRangeStore((s) => s.period);
   const complaints = useComplaintStore((s) => s.complaints);
   const escalations = useEscalationStore((s) => s.escalations);
   const tickets = useComplaintWorkflowStore((s) => s.tickets);
   const evidence = useEvidenceStore((s) => s.records);
 
   return useMemo(() => {
-    const subComplaints = filterSubDistrictComplaints(complaints);
-    const subEscalations = filterSubDistrictEscalations(escalations);
+    const subComplaints = filterSubDistrictComplaints(
+      filterComplaintsByPeriod(complaints, period)
+    );
+    const subEscalations = filterSubDistrictEscalations(
+      filterEscalationsByPeriod(escalations, period)
+    );
+    const evidenceScoped = filterEvidenceByPeriod(evidence, period);
 
     const total = subComplaints.length;
     const open = countOpenComplaints(subComplaints);
     const resolved = countResolvedComplaints(subComplaints);
     const ticketsCompleted = tickets.filter((t) => t.status === "Completed").length;
-    const evidenceSubmitted = evidence.filter((e) => e.uploadedBy.includes("Sub-District")).length;
+    const evidenceSubmitted = evidenceScoped.filter((e) =>
+      e.uploadedBy.includes("Sub-District") || e.uploadedBy.includes("R.") || e.uploadedBy.includes("P.")
+    ).length;
     const escalationsRaised = subEscalations.length;
     const avgResolutionDays = resolved > 0
       ? (subComplaints.filter((c) => c.status === "Resolved")
@@ -184,13 +210,13 @@ export function useSubDistrictAnalyticsMetrics() {
       ticketsCompleted,
       escalationsRaised,
       trendData,
+      period,
     };
-  }, [complaints, escalations, tickets, evidence]);
+  }, [complaints, escalations, tickets, evidence, period]);
 }
 
-// ─── Super Admin Analytics Hook ───────────────────────────────────────────────
-
 export function useSuperAdminAnalyticsMetrics() {
+  const period = useDateRangeStore((s) => s.period);
   const complaints = useComplaintStore((s) => s.complaints);
   const escalations = useEscalationStore((s) => s.escalations);
   const evidence = useEvidenceStore((s) => s.records);
@@ -199,35 +225,45 @@ export function useSuperAdminAnalyticsMetrics() {
   const { districtOfficers } = useLeaderboardStore();
 
   return useMemo(() => {
-    const totalComplaints = complaints.length;
-    const activeEscalations = escalations.filter(
+    const complaintsScoped = filterComplaintsByPeriod(complaints, period);
+    const escalationsScoped = filterEscalationsByPeriod(escalations, period);
+    const evidenceScoped = filterEvidenceByPeriod(evidence, period);
+    const budgetsScoped = filterBudgetsByPeriod(budgets, period);
+    const governanceScoped = filterGovernanceByPeriod(governance, period);
+
+    const totalComplaints = complaintsScoped.length;
+    const activeEscalations = escalationsScoped.filter(
       (e) => e.status !== "Resolved" && e.status !== "Closed"
     ).length;
-    const pendingEvidence = evidence.filter(
+    const pendingEvidence = evidenceScoped.filter(
       (e) => e.status === "Pending Review" || e.status === "Additional Requested"
     ).length;
-    const pendingBudgets = budgets.filter(
+    const pendingBudgets = budgetsScoped.filter(
       (b) => b.status === "Pending Approval" || b.status === "Clarification Requested"
     ).length;
-    const releasedFunds = budgets
+    const releasedFunds = budgetsScoped
       .filter((b) => b.releasedAmount)
       .reduce((sum, b) => sum + (b.releasedAmount ?? 0), 0);
-    const govRequests = governance.length;
-    const resolved = countResolvedComplaints(complaints);
+    const govRequests = governanceScoped.length;
+    const resolved = countResolvedComplaints(complaintsScoped);
     const resolutionRate = totalComplaints > 0
       ? Math.round((resolved / totalComplaints) * 100)
       : 0;
-    const slaBreachCount = escalations.filter((e) => e.slaStatus === "Breached").length +
-      complaints.filter((c) => c.slaStatus === "Breached").length;
+    const slaBreachCount = escalationsScoped.filter((e) => e.slaStatus === "Breached").length +
+      complaintsScoped.filter((c) => c.slaStatus === "Breached").length;
 
-    // Fund utilization by district
-    const fundUtilization: FundUtilization[] = computeFundUtilization(budgets);
+    const fundUtilization: FundUtilization[] = computeFundUtilization(budgetsScoped);
 
     // Top performers from leaderboard
     const topDistricts = districtOfficers.slice(0, 5);
 
     // Executive insights
-    const insights = computeExecutiveInsights(complaints, escalations, budgets, evidence);
+    const insights = computeExecutiveInsights(
+      complaintsScoped,
+      escalationsScoped,
+      budgetsScoped,
+      evidenceScoped
+    );
 
     return {
       totalComplaints,
@@ -241,29 +277,43 @@ export function useSuperAdminAnalyticsMetrics() {
       fundUtilization,
       topDistricts,
       insights,
+      period,
     };
-  }, [complaints, escalations, evidence, budgets, governance, districtOfficers]);
+  }, [complaints, escalations, evidence, budgets, governance, districtOfficers, period]);
 }
 
 // ─── Helper: Generate trend data from complaints ──────────────────────────────
 
-function generateTrendFromComplaints(complaints: { status: string; createdDate: string }[]): TrendDataPoint[] {
-  // Build monthly trend from seed data dates
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"];
-  const total = complaints.length;
-  const resolved = complaints.filter((c) => c.status === "Resolved").length;
+function generateTrendFromComplaints(
+  complaints: { status: string; date?: string; createdDate: string }[]
+): TrendDataPoint[] {
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const buckets = new Map<string, { complaints: number; resolved: number }>();
 
-  // Distribute proportionally over months with growth curve
-  return months.map((month, i) => {
-    const factor = 0.6 + (i / months.length) * 0.5;
-    const base = Math.round((total / months.length) * factor);
-    const res = Math.round((resolved / months.length) * factor * 0.85);
-    return {
-      month,
-      complaints: Math.max(1, base + (i % 3) * 2),
-      resolved: Math.max(1, res + (i % 2) * 2),
-    };
-  });
+  for (const c of complaints) {
+    const parsed = parseRecordDate(c.date) ?? parseRecordDate(c.createdDate);
+    if (!parsed) continue;
+    const key = `${parsed.getFullYear()}-${parsed.getMonth()}`;
+    const cur = buckets.get(key) ?? { complaints: 0, resolved: 0 };
+    cur.complaints += 1;
+    if (c.status === "Resolved") cur.resolved += 1;
+    buckets.set(key, cur);
+  }
+
+  const now = new Date();
+  const points: TrendDataPoint[] = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const bucket = buckets.get(key) ?? { complaints: 0, resolved: 0 };
+    points.push({
+      month: monthLabels[d.getMonth()],
+      complaints: bucket.complaints,
+      resolved: bucket.resolved,
+    });
+  }
+
+  return points;
 }
 
 // ─── Helper: Compute sub-district performance scores ──────────────────────────
@@ -272,26 +322,27 @@ function computeSubDistrictScores(
   complaints: { subDistrict: string; status: string; slaStatus: string }[],
   escalations: { subDistrict: string; status: string }[]
 ): SubDistrictScore[] {
-  const subDistricts = new Map<string, { total: number; resolved: number; onTrack: number }>();
+  return RAIGAD_SUB_DISTRICTS.map((sd) => {
+    const taluka = sd.taluka;
+    const short = sd.name;
+    const subComplaints = complaints.filter(
+      (c) => c.subDistrict === taluka || c.subDistrict.includes(short)
+    );
+    const subEsc = escalations.filter(
+      (e) => e.subDistrict === short || e.subDistrict.includes(short)
+    );
+    const total = subComplaints.length;
+    const resolved = subComplaints.filter((c) => c.status === "Resolved").length;
+    const onTrack = subComplaints.filter((c) => c.slaStatus === "On Track").length;
+    const openEsc = subEsc.filter((e) => e.status !== "Resolved" && e.status !== "Closed").length;
 
-  for (const c of complaints) {
-    const sd = c.subDistrict || "Unknown";
-    const cur = subDistricts.get(sd) ?? { total: 0, resolved: 0, onTrack: 0 };
-    cur.total++;
-    if (c.status === "Resolved") cur.resolved++;
-    if (c.slaStatus === "On Track") cur.onTrack++;
-    subDistricts.set(sd, cur);
-  }
+    const resRate = total > 0 ? resolved / total : 0;
+    const slaRate = total > 0 ? onTrack / total : 0;
+    const escPenalty = Math.min(15, openEsc * 2);
+    const score = Math.round(resRate * 55 + slaRate * 35 + Math.max(0, 10 - escPenalty));
 
-  return [...subDistricts.entries()]
-    .map(([sub, data]) => {
-      const resRate = data.total > 0 ? data.resolved / data.total : 0;
-      const slaRate = data.total > 0 ? data.onTrack / data.total : 0;
-      const score = Math.round((resRate * 60 + slaRate * 40) * 100);
-      return { sub: sub.replace(" Taluka", ""), score: Math.min(100, Math.max(0, score)) };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    return { sub: short, score: Math.min(100, Math.max(0, score)) };
+  }).sort((a, b) => b.score - a.score);
 }
 
 // ─── Helper: Fund utilization per district ────────────────────────────────────

@@ -5,6 +5,12 @@ import { useComplaintStore } from "@/store/complaintStore";
 import { useEscalationStore } from "@/store/escalationStore";
 import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
 import { useEvidenceStore } from "@/store/evidenceStore";
+import { useDateRangeStore } from "@/store/dateRangeStore";
+import {
+  filterComplaintsByPeriod,
+  filterEscalationsByPeriod,
+  filterEvidenceByPeriod,
+} from "@/lib/governance/record-filters";
 import {
   countActiveTickets,
   countCriticalEscalations,
@@ -31,24 +37,29 @@ import {
 } from "@/lib/dashboard-metrics";
 
 export function useSubDistrictDashboardMetrics() {
+  const period = useDateRangeStore((s) => s.period);
   const complaints = useComplaintStore((s) => s.complaints);
   const escalations = useEscalationStore((s) => s.escalations);
   const tickets = useComplaintWorkflowStore((s) => s.tickets);
   const resolutions = useComplaintWorkflowStore((s) => s.resolutions);
 
   return useMemo(() => {
-    const subComplaints = filterSubDistrictComplaints(complaints);
-    const subEscalations = filterSubDistrictEscalations(escalations);
-    const open = countOpenComplaints(subComplaints);
-    const escalated = countEscalatedCases(subComplaints, subEscalations);
+    const scopedComplaints = filterSubDistrictComplaints(
+      filterComplaintsByPeriod(complaints, period)
+    );
+    const subEscalations = filterSubDistrictEscalations(
+      filterEscalationsByPeriod(escalations, period)
+    );
+    const open = countOpenComplaints(scopedComplaints);
+    const escalated = countEscalatedCases(scopedComplaints, subEscalations);
     const pendingResolutions = countPendingResolutions(resolutions);
-    const slaWarning = countSlaWarnings(subComplaints, subEscalations);
-    const sla = slaBuckets(subComplaints);
+    const slaWarning = countSlaWarnings(scopedComplaints, subEscalations);
+    const sla = slaBuckets(scopedComplaints);
     const activeTickets = countActiveTickets(tickets);
-    const workload = workloadStats(subComplaints, resolutions);
+    const workload = workloadStats(scopedComplaints, resolutions);
 
     return {
-      complaints: subComplaints,
+      complaints: scopedComplaints,
       open,
       escalated,
       pendingResolutions,
@@ -57,19 +68,21 @@ export function useSubDistrictDashboardMetrics() {
       activeTickets,
       openTickets: countOpenTickets(tickets),
       overdueTickets: countOverdueTickets(tickets),
-      resolved: countResolvedComplaints(subComplaints),
+      resolved: countResolvedComplaints(scopedComplaints),
       workload,
-      zoneHealth: zoneHealthScore(subComplaints),
-      urgent: urgentComplaints(subComplaints),
-      upcomingSla: upcomingSlaBreaches(subComplaints),
-      recentResolved: recentResolutions(subComplaints),
-      officers: officerWorkload(subComplaints),
-      totalComplaints: subComplaints.length,
+      zoneHealth: zoneHealthScore(scopedComplaints),
+      urgent: urgentComplaints(scopedComplaints),
+      upcomingSla: upcomingSlaBreaches(scopedComplaints),
+      recentResolved: recentResolutions(scopedComplaints),
+      officers: officerWorkload(scopedComplaints),
+      totalComplaints: scopedComplaints.length,
+      period,
     };
-  }, [complaints, escalations, tickets, resolutions]);
+  }, [complaints, escalations, tickets, resolutions, period]);
 }
 
 export function useDistrictDashboardMetrics() {
+  const period = useDateRangeStore((s) => s.period);
   const complaints = useComplaintStore((s) => s.complaints);
   const escalations = useEscalationStore((s) => s.escalations);
   const tickets = useComplaintWorkflowStore((s) => s.tickets);
@@ -77,23 +90,28 @@ export function useDistrictDashboardMetrics() {
   const evidence = useEvidenceStore((s) => s.records);
 
   return useMemo(() => {
-    const incomingEscalations = countIncomingEscalations(escalations);
-    const openEscalations = countDistrictOpenEscalations(escalations);
+    const filteredComplaints = filterComplaintsByPeriod(complaints, period);
+    const filteredEscalations = filterEscalationsByPeriod(escalations, period);
+    const filteredEvidence = filterEvidenceByPeriod(evidence, period);
+
+    const incomingEscalations = countIncomingEscalations(filteredEscalations);
+    const openEscalations = countDistrictOpenEscalations(filteredEscalations);
     const resolutionRequests = countPendingResolutions(resolutions);
     const newTickets = countOpenTickets(tickets);
-    const evidenceReviews = countEvidencePendingReview(evidence);
+    const evidenceReviews = countEvidencePendingReview(filteredEvidence);
 
     return {
-      totalComplaints: complaints.length,
-      openComplaints: countOpenComplaints(complaints),
-      resolvedComplaints: countResolvedComplaints(complaints),
+      totalComplaints: filteredComplaints.length,
+      openComplaints: countOpenComplaints(filteredComplaints),
+      resolvedComplaints: countResolvedComplaints(filteredComplaints),
       escalatedCases: openEscalations,
       incomingEscalations,
       resolutionRequests,
       newTickets,
       evidenceReviews,
-      criticalEscalations: countCriticalEscalations(escalations),
-      slaCompliance: districtSlaCompliance(escalations, complaints),
+      criticalEscalations: countCriticalEscalations(filteredEscalations),
+      slaCompliance: districtSlaCompliance(filteredEscalations, filteredComplaints),
+      period,
     };
-  }, [complaints, escalations, tickets, resolutions, evidence]);
+  }, [complaints, escalations, tickets, resolutions, evidence, period]);
 }

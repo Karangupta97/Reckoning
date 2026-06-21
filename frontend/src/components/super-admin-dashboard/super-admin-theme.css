@@ -1,5 +1,78 @@
 /* Super-admin: tie dashboard UI tokens to html.light / html.dark theme classes */
 
+/* Cyan accent — matches super-admin dashboard, stat cards, and links */
+.super-admin-shell {
+  --admin-nav-active-bg: #ECFEFF;
+  --admin-nav-active-text: #111827;
+  --admin-nav-active-icon: #06B6D4;
+  --admin-nav-active-border: #06B6D4;
+  --admin-nav-inactive-text: #64748B;
+  --admin-nav-inactive-icon: #94A3B8;
+  --admin-nav-hover-bg: rgba(148, 163, 184, 0.08);
+  --admin-nav-hover-text: #334155;
+  --admin-nav-hover-icon: #475569;
+}
+
+/* ─── Sidebar navigation (accessible active state) ─────────── */
+.admin-nav-item {
+  color: var(--admin-nav-inactive-text);
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-left: 4px solid transparent;
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.admin-nav-item:hover {
+  background: var(--admin-nav-hover-bg);
+  color: var(--admin-nav-hover-text);
+}
+
+.admin-nav-item-icon {
+  color: var(--admin-nav-inactive-icon);
+  transition: color 200ms ease;
+}
+
+.admin-nav-item:hover .admin-nav-item-icon,
+.admin-nav-item:hover .admin-nav-chevron {
+  color: var(--admin-nav-hover-icon);
+}
+
+.admin-nav-active {
+  background: var(--admin-nav-active-bg) !important;
+  color: var(--admin-nav-active-text) !important;
+  font-weight: 700 !important;
+  border-color: transparent !important;
+  border-left: 4px solid var(--admin-nav-active-border) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.admin-nav-active:hover {
+  background: var(--admin-nav-active-bg) !important;
+  color: var(--admin-nav-active-text) !important;
+}
+
+.admin-nav-active-icon {
+  color: var(--admin-nav-active-icon) !important;
+}
+
+.admin-nav-chevron {
+  color: var(--admin-nav-inactive-icon);
+  transition: color 200ms ease;
+}
+
+.admin-nav-active .admin-nav-chevron {
+  color: var(--admin-nav-active-icon);
+  opacity: 0.75;
+}
+
+.admin-nav-nested.admin-nav-active {
+  border-left-width: 3px;
+}
+
 /* Globals .text-* use fixed --dash-* (light gray for dark UI) — remap for both themes */
 .text-primary {
   color: var(--color-text-primary);

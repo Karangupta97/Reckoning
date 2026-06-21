@@ -1,8 +1,9 @@
 /**
  * Sub-District configuration object.
- * All sub-district-specific labels across the dashboard read from here.
- * To deploy for a different sub-district, only this file needs to change.
+ * Active portal sub-district — metrics are computed from stores at runtime.
  */
+
+import { DEFAULT_SUB_DISTRICT, RAIGAD_DISTRICT } from "@/lib/governance/district-structure";
 
 export interface SubDistrictConfig {
   name: string;
@@ -10,28 +11,17 @@ export interface SubDistrictConfig {
   state: string;
   zone: string;
   activeOfficers: number;
-  openComplaints: number;
 }
 
 export const SUB_DISTRICT_CONFIG: SubDistrictConfig = {
-  name: "Panvel Taluka",
-  district: "Raigad",
-  state: "Maharashtra",
-  zone: "Zone A",
-  activeOfficers: 8,
-  openComplaints: 84,
+  name: DEFAULT_SUB_DISTRICT.taluka,
+  district: RAIGAD_DISTRICT.name,
+  state: RAIGAD_DISTRICT.state,
+  zone: DEFAULT_SUB_DISTRICT.zone,
+  activeOfficers: DEFAULT_SUB_DISTRICT.officers.length,
 };
 
-/* ─── Derived labels (computed once, reused everywhere) ──── */
-
-/** "Panvel Taluka" */
-export const subDistrictLabel = `${SUB_DISTRICT_CONFIG.name}`;
-
-/** "Panvel Taluka Operations Desk" */
-export const subDistrictOpsLabel = `${SUB_DISTRICT_CONFIG.name} Operations Desk`;
-
-/** "Raigad • Panvel Taluka" */
-export const subDistrictLocationLabel = `${SUB_DISTRICT_CONFIG.district} • ${SUB_DISTRICT_CONFIG.name}`;
-
-/** "Panvel Taluka Operations Desk" — compact sidebar variant */
-export const subDistrictSidebarSubtitle = `${SUB_DISTRICT_CONFIG.name} Operations Desk`;
+export const subDistrictLabel = DEFAULT_SUB_DISTRICT.name;
+export const subDistrictOpsLabel = `${DEFAULT_SUB_DISTRICT.taluka} Operations Desk`;
+export const subDistrictLocationLabel = `${RAIGAD_DISTRICT.name} • ${DEFAULT_SUB_DISTRICT.name}`;
+export const subDistrictSidebarSubtitle = `${DEFAULT_SUB_DISTRICT.taluka} Operations Desk`;

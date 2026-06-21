@@ -35,14 +35,16 @@ export default function EscalatedCasesPage() {
   const [statusF,    setStatusF]   = useState("");
   const [slaF,       setSlaF]      = useState("");
 
-  const filtered = escalations.filter((e) => {
-    const q = search.toLowerCase();
-    const matchQ = !q || e.id.toLowerCase().includes(q) || e.title.toLowerCase().includes(q) || e.subDistrict.toLowerCase().includes(q);
-    return matchQ
-      && (!priorityF || e.priority === priorityF)
-      && (!statusF   || e.status   === statusF)
-      && (!slaF      || e.slaStatus === slaF);
-  });
+  const filtered = escalations
+    .filter((e, idx, arr) => arr.findIndex((x) => x.id === e.id) === idx) // deduplicate
+    .filter((e) => {
+      const q = search.toLowerCase();
+      const matchQ = !q || e.id.toLowerCase().includes(q) || e.title.toLowerCase().includes(q) || e.subDistrict.toLowerCase().includes(q);
+      return matchQ
+        && (!priorityF || e.priority === priorityF)
+        && (!statusF   || e.status   === statusF)
+        && (!slaF      || e.slaStatus === slaF);
+    });
 
   return (
     <div className="flex flex-col gap-4">

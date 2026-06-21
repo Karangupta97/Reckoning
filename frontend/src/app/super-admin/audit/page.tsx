@@ -31,6 +31,7 @@ const CAT_ICON: Record<AuditCategory, typeof User> = {
   Escalations: AlertTriangle,
   "Budget Decisions": IndianRupee,
   "Evidence Decisions": Camera,
+  Governance: Shield,
 };
 
 const CAT_PARAM: Record<string, AuditCategory> = {

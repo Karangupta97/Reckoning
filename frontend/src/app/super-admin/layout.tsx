@@ -29,7 +29,7 @@ export default function SuperAdminLayout({
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
+    <div className="super-admin-shell h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
       <div className="flex h-full">
         <div className="hidden lg:block lg:w-[250px] lg:flex-shrink-0">
           <Sidebar activePath={pathname} />

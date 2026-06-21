@@ -30,7 +30,7 @@ export default function DistrictAdminLayout({
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
+    <div className="district-admin-shell h-screen overflow-hidden bg-[var(--color-page)] text-[var(--color-text-primary)]">
       <div className="flex h-full">
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex lg:flex-shrink-0">
