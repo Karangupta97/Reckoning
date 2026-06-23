@@ -106,13 +106,34 @@ export function LiveCameraCapture({
       streamRef.current = null;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: mode === "video",
-      });
+      // Try with ideal constraints first (rear camera, high resolution)
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: mode === "video",
+        });
+      } catch {
+        // Fallback: simpler constraints for older/budget phones
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode },
+            audio: mode === "video",
+          });
+        } catch {
+          // Last resort: any camera
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: mode === "video",
+          });
+        }
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        // Ensure playsinline for iOS Safari
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.setAttribute("webkit-playsinline", "true");
         await videoRef.current.play();
       }
       const videoTrack = stream.getVideoTracks()[0];
@@ -124,10 +145,14 @@ export function LiveCameraCapture({
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
         setError("Camera access denied. Please allow camera permissions in your browser settings.");
-      } else if (err.name === "NotFoundError") {
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
         setError("No camera found on this device.");
+      } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+        setError("Camera is in use by another app. Please close other camera apps and try again.");
+      } else if (err.name === "OverconstrainedError") {
+        setError("Camera does not support the requested settings. Please try again.");
       } else {
-        setError("Unable to access camera. Please try again.");
+        setError("Unable to access camera. Make sure you're using HTTPS and have granted camera permissions.");
       }
     }
   }, [facingMode, flash, mode]);
@@ -174,17 +199,34 @@ export function LiveCameraCapture({
   const startRecording = useCallback(() => {
     if (!streamRef.current || remainingSlots <= 0) return;
     chunksRef.current = [];
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
+    // Determine best available recording format — iOS Safari only supports mp4
+    let mimeType = "";
+    const candidates = [
+      "video/mp4",
+      "video/webm;codecs=vp9,opus",
+      "video/webm;codecs=vp8,opus",
+      "video/webm",
+    ];
+    for (const candidate of candidates) {
+      if (MediaRecorder.isTypeSupported(candidate)) {
+        mimeType = candidate;
+        break;
+      }
+    }
+    if (!mimeType) {
+      // Last resort: let the browser pick
+      mimeType = "";
+    }
     try {
-      const rec = new MediaRecorder(streamRef.current, { mimeType });
+      const recOptions: MediaRecorderOptions = mimeType ? { mimeType } : {};
+      const rec = new MediaRecorder(streamRef.current, recOptions);
       mediaRecorderRef.current = rec;
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       rec.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
-        const file = new File([blob], `video_${Date.now()}.${ext}`, { type: mimeType });
+        const actualType = rec.mimeType || mimeType || "video/mp4";
+        const blob = new Blob(chunksRef.current, { type: actualType });
+        const ext = actualType.includes("mp4") ? "mp4" : "webm";
+        const file = new File([blob], `video_${Date.now()}.${ext}`, { type: actualType });
         setCapturedFiles((p) => [...p, { file, previewUrl: URL.createObjectURL(blob) }]);
         chunksRef.current = [];
       };
@@ -290,6 +332,8 @@ export function LiveCameraCapture({
             autoPlay
             playsInline
             muted
+            // @ts-expect-error — webkit-playsinline is a non-standard iOS attribute
+            webkit-playsinline="true"
             style={{
               position: "absolute",
               inset: 0,
