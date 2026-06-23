@@ -21,6 +21,10 @@ import DelayedProjectsChart from "@/components/super-admin-dashboard/delayed-pro
 
 import { useSuperAdminAnalyticsMetrics } from "@/hooks/use-analytics-metrics";
 import { PendingClarificationsWidget } from "@/components/admin/PendingClarificationsWidget";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
 
 // Lazy load the map component with no server-side rendering
 const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), {
@@ -48,42 +52,75 @@ function CardSlot({ children }: { children: ReactNode }) {
 }
 
 export default function SuperAdminDashboard() {
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
+  const { data: dbMetrics, isLoading } = useQuery({
+    queryKey: ["super-admin-dashboard-stats"],
+    queryFn: async () => {
+      const res = await api.get("/api/super-admin/dashboard/stats");
+      return res.data?.data;
+    },
+    enabled: !isMock,
+  });
+
   const saMetrics = useSuperAdminAnalyticsMetrics();
+
+  const metrics = isMock
+    ? saMetrics
+    : {
+        totalComplaints: dbMetrics?.totalComplaints ?? 0,
+        activeEscalations: dbMetrics?.activeEscalations ?? 0,
+        pendingEvidence: dbMetrics?.pendingEvidence ?? 0,
+        pendingBudgets: dbMetrics?.pendingBudgets ?? 0,
+        releasedFunds: dbMetrics?.releasedFunds ?? 0,
+        govRequests: dbMetrics?.govRequests ?? 0,
+        resolutionRate: dbMetrics?.resolutionRate ?? 0,
+        slaBreachCount: dbMetrics?.slaBreachCount ?? 0,
+      };
 
   const kpiData = [
     {
       title: "Total Complaints",
-      value: String(saMetrics.totalComplaints),
-      change: `${saMetrics.resolutionRate}% resolved`,
+      value: String(metrics.totalComplaints),
+      change: `${metrics.resolutionRate}% resolved`,
       icon: <Route size={20} />,
       trend: "up" as const,
       iconColor: "text-cyan-400",
     },
     {
       title: "Active Escalations",
-      value: String(saMetrics.activeEscalations),
-      change: `${saMetrics.slaBreachCount} SLA breaches`,
+      value: String(metrics.activeEscalations),
+      change: `${metrics.slaBreachCount} SLA breaches`,
       icon: <AlertTriangle size={20} />,
       trend: "up" as const,
       iconColor: "text-amber-400",
     },
     {
       title: "Pending Reviews",
-      value: String(saMetrics.pendingEvidence + saMetrics.pendingBudgets),
-      change: `${saMetrics.pendingEvidence} evidence, ${saMetrics.pendingBudgets} budget`,
+      value: String(metrics.pendingEvidence + metrics.pendingBudgets),
+      change: `${metrics.pendingEvidence} evidence, ${metrics.pendingBudgets} budget`,
       icon: <ShieldAlert size={20} />,
       trend: "up" as const,
       iconColor: "text-red-400",
     },
     {
       title: "Funds Released",
-      value: `₹${saMetrics.releasedFunds.toFixed(1)} Cr`,
-      change: `${saMetrics.govRequests} governance requests`,
+      value: `₹${metrics.releasedFunds.toFixed(1)} Cr`,
+      change: `${metrics.govRequests} governance requests`,
       icon: <Clock size={20} />,
       trend: "down" as const,
       iconColor: "text-cyan-400",
     },
   ];
+
+  if (isLoading && !isMock) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-cyan-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">

@@ -66,6 +66,19 @@ model PendingVerification {
   @@schema("public")
 }
 
+/// A token created when a user requests a password reset. Hashed for security.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("password_reset_tokens")
+  @@schema("public")
+}
+
 /// A persisted refresh-token handle. Only the SHA-256 `tokenHash` is stored,
 /// never the raw JWT. Revoke by setting `revoked = true`.
 model RefreshToken {
@@ -119,6 +132,7 @@ model AdminUser {
   district            District?           @relation(fields: [districtId], references: [id])
   subDistrict         SubDistrict?        @relation(fields: [subDistrictId], references: [id])
   invitationsSent     AdminInvitation[]   @relation("InvitedByRelation")
+  superAdminSessions  SuperAdminSession[]
 
   @@index([role])
   @@index([districtId])
@@ -573,3 +587,29 @@ model TicketStatusHistory {
   @@map("ticket_status_history")
   @@schema("public")
 }
+
+model SuperAdminSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  adminId   String    @db.Uuid
+  isActive  Boolean   @default(true)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  adminUser AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("super_admin_sessions")
+  @@schema("public")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  target    String?
+  ipAddress String
+  userAgent String?
+  timestamp DateTime @default(now())
+
+  @@map("audit_logs")
+  @@schema("public")
+}
+

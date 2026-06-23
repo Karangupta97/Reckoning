@@ -32,9 +32,13 @@ export default async function LocaleLayout({
 
   const messages = await getMessages();
 
+  const QueryProvider = (await import("../query-provider")).default;
+
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      {children}
+      <QueryProvider>
+        {children}
+      </QueryProvider>
     </NextIntlClientProvider>
   );
 }

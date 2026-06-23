@@ -171,10 +171,25 @@ export function AnalyticsMap() {
         setStatus("ready");
       });
 
-      map.on("error", (e) => {
-        console.error("[AnalyticsMap] Mapbox error:", e);
-        setErrorMsg(`Mapbox runtime error: ${e.error?.message ?? "unknown"}`);
-        setStatus("error");
+      map.on("error", (e: any) => {
+        const msg = e.error?.message ?? e.message ?? "unknown";
+        const httpStatus = e.status ?? "";
+        const url = e.url ?? "";
+        console.error("[AnalyticsMap] Mapbox error:", { message: msg, status: httpStatus, url });
+
+        // Ignore non-fatal tile loading errors (e.g. a single tile 404/403)
+        // Only treat as fatal if the style or token itself fails
+        const isFatal =
+          msg.includes("access token") ||
+          msg.includes("Not Found") ||
+          msg.includes("Unauthorized") ||
+          httpStatus === 401 ||
+          httpStatus === 403;
+
+        if (isFatal) {
+          setErrorMsg(`Mapbox runtime error: ${msg}${httpStatus ? ` (HTTP ${httpStatus})` : ""}`);
+          setStatus("error");
+        }
       });
 
       // Cleanup on unmount.
@@ -195,17 +210,28 @@ export function AnalyticsMap() {
 
   if (status === "error") {
     return (
-      <div className="flex min-h-[400px] w-full items-center justify-center rounded-2xl border-2 border-dashed border-[var(--color-danger)] bg-[var(--color-card)] p-8 text-center">
-        <div className="max-w-lg">
-          <p className="text-lg font-semibold text-[var(--color-danger)]">
-            Map failed to load
+      <div
+        className="relative flex min-h-[400px] w-full items-center justify-center overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]"
+        style={{ height: "60vh", minHeight: "400px" }}
+      >
+        {/* Static gradient heatmap fallback */}
+        <div className="absolute inset-0 opacity-40" style={{
+          background: `
+            radial-gradient(ellipse 35% 40% at 55% 45%, rgba(239,68,68,0.5) 0%, transparent 70%),
+            radial-gradient(ellipse 25% 30% at 35% 55%, rgba(245,158,11,0.4) 0%, transparent 65%),
+            radial-gradient(ellipse 20% 25% at 70% 30%, rgba(59,130,246,0.35) 0%, transparent 60%),
+            radial-gradient(ellipse 22% 28% at 45% 70%, rgba(34,197,94,0.3) 0%, transparent 60%)
+          `,
+        }} />
+        <div className="relative z-10 max-w-lg p-8 text-center">
+          <p className="text-lg font-semibold text-[var(--color-text-primary)]">
+            Map unavailable
           </p>
           <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-            {errorMsg}
+            {errorMsg || "The interactive map could not be loaded. Showing static overview."}
           </p>
           <p className="mt-4 font-mono text-xs text-[var(--color-text-muted)]">
-            Token present: {MAPBOX_TOKEN ? "yes" : "no"} | Length: {MAPBOX_TOKEN.length} |
-            Starts with pk.: {String(MAPBOX_TOKEN.startsWith("pk."))}
+            Token present: {MAPBOX_TOKEN ? "yes" : "no"} | Starts with pk.: {String(MAPBOX_TOKEN.startsWith("pk."))}
           </p>
         </div>
       </div>

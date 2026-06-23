@@ -19,7 +19,9 @@ import { complaintRouter } from "./modules/complaints/complaint.routes.js";
 import { aiRouter } from "./modules/ai/ai.routes.js";
 import { adminAuthRouter } from "./routes/adminAuth.js";
 import { adminInvitationsRouter } from "./routes/adminInvitations.js";
+import { superAdminRouter, superAdminCorsOptions } from "./routes/superAdmin.js";
 import { ticketRouter, citizenTicketRouter, superAdminTicketRouter } from "./modules/tickets/tickets.routes.js";
+import { managementRouter } from "./modules/admin/management/management.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
 import { verifyEmailTransport } from "./services/email.service.js";
@@ -134,6 +136,12 @@ app.use("/api/admin", adminRateLimiter);
 app.use("/api/admin/auth", adminAuthRouter);
 app.use("/api/admin/invitations", adminInvitationsRouter);
 app.use("/api/admin/tickets", superAdminTicketRouter);
+app.use("/api/admin", managementRouter);
+
+
+// Register super-admin routes
+app.use("/api/super-admin", cors(superAdminCorsOptions));
+app.use("/api/super-admin", superAdminRouter);
 
 // 404 + global error handler must come AFTER all routes.
 app.use(notFoundHandler);

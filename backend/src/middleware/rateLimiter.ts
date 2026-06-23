@@ -142,6 +142,12 @@ export const verifyOtpLimiter: RateLimitRequestHandler = makeLimiter(15 * MINUTE
 /** `POST /api/auth/resend-otp` → 3 requests / 60 minutes / IP. */
 export const resendOtpLimiter: RateLimitRequestHandler = makeLimiter(60 * MINUTES, 3);
 
+/** `POST /api/auth/forgot-password` → 5 requests / 60 minutes / IP. */
+export const forgotPasswordLimiter: RateLimitRequestHandler = makeLimiter(60 * MINUTES, 5);
+
+/** `POST /api/auth/reset-password` → 5 requests / 60 minutes / IP. */
+export const resetPasswordLimiter: RateLimitRequestHandler = makeLimiter(60 * MINUTES, 5);
+
 /**
  * Derive a stable rate-limit key combining client IP and the login email.
  *

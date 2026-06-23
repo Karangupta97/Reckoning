@@ -15,7 +15,7 @@
  */
 
 import bcrypt from "bcryptjs";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
 import { env } from "../../config/env.js";
@@ -36,7 +36,7 @@ import {
   type UserCountry,
   type UserRole,
 } from "../../utils/jwt.js";
-import { sendVerificationEmail, sendWelcomeEmail } from "../../services/email.service.js";
+import { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail } from "../../services/email.service.js";
 import type {
   AuthResult,
   AuthUser,
@@ -134,6 +134,13 @@ async function issueOtp(
   // Send only after hashing so an email failure doesn't persist a code we
   // never delivered (the caller persists after this resolves).
   await sendVerificationEmail(email, fullName, otp, country);
+
+  // In development, log the OTP to the console for easy testing
+  if (env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.log(`\n🔑 [DEVELOPMENT] Verification OTP for ${email}:\n🔢 ${otp}\n`);
+  }
+
   return { otpHash, expiresAt };
 }
 
@@ -554,10 +561,12 @@ export async function login(
   ) as Awaited<ReturnType<typeof prisma.user.findUnique>> | null;
 
   // Unknown email: burn the equivalent time on a dummy compare, then fail with
-  // the SAME generic error so existence can't be inferred from timing/message.
+  // a specific error indicating there is no account.
   if (!user) {
     await bcrypt.compare(password, env.DUMMY_HASH);
-    throw invalidCredentials();
+    throw new AppError("There is no account with this email.", 404, {
+      code: "USER_NOT_FOUND",
+    });
   }
 
   // Account currently locked? Report remaining minutes (this is acceptable to
@@ -833,4 +842,134 @@ export async function updateMe(userId: string, input: UpdateProfileInput): Promi
   );
 
   return updated as AuthUser;
+}
+
+/**
+ * Initiate password reset for a user email.
+ *
+ * Prevents user enumeration by returning success regardless of user existence.
+ *
+ * @param email User email address.
+ * @returns Generic success message.
+ */
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const user = await dbGuard(
+    () => prisma.user.findUnique({ where: { email }, select: { id: true, fullName: true } }),
+    "forgotPassword:findUser",
+  );
+
+  // If user does not exist, return generic success to prevent email enumeration
+  if (!user) {
+    return { message: "If an account exists with that email, a password reset link has been sent." };
+  }
+
+  // Generate secure random token
+  const rawToken = randomBytes(32).toString("hex");
+  const tokenHash = sha256(rawToken);
+
+  // Set 15-minute token expiry
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  // Clean up any existing reset tokens for this email and save the new one
+  await dbGuard(
+    () =>
+      prisma.$transaction([
+        prisma.passwordResetToken.deleteMany({ where: { email } }),
+        prisma.passwordResetToken.create({
+          data: {
+            email,
+            tokenHash,
+            expiresAt,
+          },
+        }),
+      ]),
+    "forgotPassword:saveToken",
+  );
+
+  // Build reset link URL
+  const resetUrl = `${env.APP_BASE_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+
+  // Send the reset email
+  await sendPasswordResetEmail(email, user.fullName, resetUrl, 15);
+
+  // In development, log the link to the console for easy testing
+  if (env.NODE_ENV === "development") {
+    // eslint-disable-next-line no-console
+    console.log(`\n🔑 [DEVELOPMENT] Password Reset Link for ${email}:\n🔗 ${resetUrl}\n`);
+  }
+
+  return { message: "If an account exists with that email, a password reset link has been sent." };
+}
+
+/**
+ * Complete password reset using a valid token and email.
+ *
+ * Invalidates the reset token on success and revokes all user active refresh tokens.
+ *
+ * @param email    User email.
+ * @param token    Raw password reset token.
+ * @param password New password.
+ */
+export async function resetPassword(
+  email: string,
+  token: string,
+  password: string,
+): Promise<{ message: string }> {
+  const tokenHash = sha256(token);
+
+  const resetTokenRecord = await dbGuard(
+    () =>
+      prisma.passwordResetToken.findUnique({
+        where: { tokenHash },
+      }),
+    "resetPassword:findToken",
+  );
+
+  if (!resetTokenRecord || resetTokenRecord.email !== email) {
+    throw new AppError("Invalid or expired password reset link.", 400);
+  }
+
+  if (resetTokenRecord.expiresAt.getTime() < Date.now()) {
+    // Clean up expired token
+    await dbGuard(
+      () => prisma.passwordResetToken.delete({ where: { id: resetTokenRecord.id } }),
+      "resetPassword:deleteExpiredToken",
+    );
+    throw new AppError("Invalid or expired password reset link.", 400);
+  }
+
+  // Hash new password using bcrypt
+  const passwordHash = await bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+
+  // Atomic password update + token deletion + refresh tokens revocation (logout everywhere)
+  await dbGuard(
+    () =>
+      prisma.$transaction(async (tx) => {
+        // Update user password
+        await tx.user.update({
+          where: { email },
+          data: { passwordHash, loginAttempts: 0, lockedUntil: null },
+        });
+
+        // Delete reset token
+        await tx.passwordResetToken.delete({
+          where: { id: resetTokenRecord.id },
+        });
+
+        // Revoke all refresh tokens for this user
+        const userRecord = await tx.user.findUnique({
+          where: { email },
+          select: { id: true },
+        });
+        if (userRecord) {
+          await tx.refreshToken.updateMany({
+            where: { userId: userRecord.id, revoked: false },
+            data: { revoked: true, revokedAt: new Date() },
+          });
+        }
+      }),
+    "resetPassword:saveNewPassword",
+  );
+
+  return { message: "Password updated successfully." };
 }

@@ -111,11 +111,13 @@ export async function login(
     "adminLogin:findAdmin",
   );
 
-  // Unknown email: burn equivalent time on a dummy compare, then fail with the
-  // SAME generic error so existence can't be inferred from timing/message.
+  // Unknown email: burn equivalent time on a dummy compare, then fail with a
+  // specific error indicating there is no account.
   if (!admin || !admin.passwordHash) {
     await bcrypt.compare(password, env.DUMMY_HASH);
-    throw invalidCredentials();
+    throw new AppError("There is no account with this email.", 404, {
+      code: "USER_NOT_FOUND",
+    });
   }
 
   // Lockout check (acceptable to expose — the email was already proven known).

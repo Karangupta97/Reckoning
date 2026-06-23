@@ -265,12 +265,40 @@ export function useAuth() {
     router.push("/logout");
   }, [router]);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    const payload = await runRequest<{ message: string }>(
+      () =>
+        fetch(authUrl("/forgot-password"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }),
+      "Unable to send password reset link. Please try again.",
+    );
+    return payload;
+  }, [runRequest]);
+
+  const resetPassword = useCallback(async (email: string, token: string, password: string) => {
+    const payload = await runRequest<{ message: string }>(
+      () =>
+        fetch(authUrl("/reset-password"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, token, password }),
+        }),
+      "Unable to reset password. Please try again.",
+    );
+    return payload;
+  }, [runRequest]);
+
   return {
     login,
     logout,
     register,
     resendOtp,
     verifyOtp,
+    forgotPassword,
+    resetPassword,
     isAuthenticated,
     hasHydrated,
     user,

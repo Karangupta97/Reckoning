@@ -166,3 +166,24 @@ export type RefreshBody = z.infer<typeof refreshSchema>;
 export type LogoutBody = z.infer<typeof logoutSchema>;
 /** Inferred type for the profile update body. */
 export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
+
+/** `POST /api/auth/forgot-password` body schema. */
+export const forgotPasswordSchema = z
+  .object({
+    email: emailSchema,
+  })
+  .strict();
+
+/** `POST /api/auth/reset-password` body schema. */
+export const resetPasswordSchema = z
+  .object({
+    email: emailSchema,
+    token: z.string().trim().min(1, "Reset token is required."),
+    password: passwordSchema,
+  })
+  .strict();
+
+/** Inferred type for the forgot-password body. */
+export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
+/** Inferred type for the reset-password body. */
+export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;

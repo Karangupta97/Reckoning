@@ -12,17 +12,57 @@ import { useAdminUserStore } from "@/store/adminUserStore";
 import { DISTRICT_CONFIG } from "@/lib/district-config";
 import type { AdminUser } from "@/store/adminUserStore";
 
+import { useMutation } from "@tanstack/react-query";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
+import { api } from "@/lib/api";
+
 const SUB_DISTRICTS = ["Panvel", "Alibag", "Karjat", "Mahad", "Murud", "Mangaon", "Pen", "Khalapur"];
 
 interface FormData { email: string; subDistrict: string; }
 interface FormErrors { email?: string; subDistrict?: string; }
 
 export default function NewSubDistrictAdminPage() {
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
   const createSubDistrictAdmin = useAdminUserStore((s) => s.createSubDistrictAdmin);
   const [form, setForm] = useState<FormData>({ email: "", subDistrict: "" });
   const [errors, setErrors] = useState<FormErrors>({});
   const [createdUser, setCreatedUser] = useState<AdminUser | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const inviteMutation = useMutation({
+    mutationFn: async (data: { email: string; subDistrict: string }) => {
+      const res = await api.post("/api/admin/invitations/send", {
+        email: data.email,
+        role: "SUB_DISTRICT_ADMIN",
+        districtId: currentAdmin?.districtId || null,
+        subDistrictId: data.subDistrict.toLowerCase(),
+      });
+      return res.data?.data;
+    },
+    onSuccess: (data) => {
+      setCreatedUser({
+        id: data.invitationId ? `INV-${data.invitationId.substring(0, 8)}` : "N/A",
+        email: data.email,
+        role: "Sub-District Admin",
+        subDistrict: form.subDistrict,
+        status: "Pending Onboarding",
+        tempPassword: "Sent via activation email link",
+        passwordChanged: false,
+        createdBy: currentAdmin?.id || "",
+        createdDate: new Date().toLocaleDateString(),
+        parentAuthority: "District Admin",
+        designation: "Sub-District Officer",
+        department: "Road Safety Operations",
+        district: "",
+      });
+    },
+    onError: (err: any) => {
+      setErrors({ email: err.response?.data?.error?.message || "Failed to invite sub-district admin" });
+    },
+  });
 
   const validate = (): FormErrors => {
     const e: FormErrors = {};
@@ -37,21 +77,29 @@ export default function NewSubDistrictAdminPage() {
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
-    const user = createSubDistrictAdmin({
-      email: form.email, designation: "Sub-District Officer",
-      subDistrict: form.subDistrict, department: "Road Safety Operations",
-      district: DISTRICT_CONFIG.name,
-    });
-    setCreatedUser(user);
+
+    if (isMock) {
+      const user = createSubDistrictAdmin({
+        email: form.email, designation: "Sub-District Officer",
+        subDistrict: form.subDistrict, department: "Road Safety Operations",
+        district: DISTRICT_CONFIG.name,
+      });
+      setCreatedUser(user);
+    } else {
+      inviteMutation.mutate({ email: form.email, subDistrict: form.subDistrict });
+    }
   };
 
   const handleCopy = () => {
     if (!createdUser) return;
-    const text = `User ID: ${createdUser.id}\nEmail: ${createdUser.email}\nRole: ${createdUser.role}\nSub-District: ${createdUser.subDistrict}\nTemporary Password: ${createdUser.tempPassword}`;
+    const text = isMock
+      ? `User ID: ${createdUser.id}\nEmail: ${createdUser.email}\nRole: ${createdUser.role}\nSub-District: ${createdUser.subDistrict}\nTemporary Password: ${createdUser.tempPassword}`
+      : `Invitation ID: ${createdUser.id}\nEmail: ${createdUser.email}\nRole: ${createdUser.role}\nSub-District: ${createdUser.subDistrict}\nActivation Link: Sent to user email`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
 
   /* ── Success Modal ── */
   if (createdUser) {

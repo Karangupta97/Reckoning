@@ -15,6 +15,8 @@ import {
   resendOtpSchema,
   updateProfileSchema,
   verifyOtpSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "./auth.validation.js";
 import { validate } from "../../middleware/validate.js";
 import { requireAuth } from "../../middleware/requireAuth.js";
@@ -26,6 +28,8 @@ import {
   registerLimiter,
   resendOtpLimiter,
   verifyOtpLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter,
 } from "../../middleware/rateLimiter.js";
 
 /**
@@ -77,6 +81,20 @@ authRouter.post(
   refreshLimiter,
   validate({ body: refreshSchema }),
   authController.refresh,
+);
+
+authRouter.post(
+  "/forgot-password",
+  forgotPasswordLimiter,
+  validate({ body: forgotPasswordSchema }),
+  authController.forgotPassword,
+);
+
+authRouter.post(
+  "/reset-password",
+  resetPasswordLimiter,
+  validate({ body: resetPasswordSchema }),
+  authController.resetPassword,
 );
 
 authRouter.post(

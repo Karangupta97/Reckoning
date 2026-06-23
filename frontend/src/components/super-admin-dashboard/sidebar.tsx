@@ -19,9 +19,9 @@ import {
   ChevronRight,
   Menu,
   X,
-  Hexagon,
   MessageSquare,
 } from "lucide-react";
+import { LogoMark } from "@/components/ui/Logo";
 
 interface SubNavItem {
   label: string;
@@ -132,6 +132,7 @@ const navItems: NavItem[] = [
       { label: "Approval Queue",    href: "/super-admin/governance/approvals"        },
       { label: "District Requests", href: "/super-admin/governance/district-requests"  },
       { label: "User Roles",        href: "/super-admin/governance/user-roles"       },
+      { label: "Manage Citizens",   href: "/super-admin/governance/manage-users"      },
       { label: "Access Control",    href: "/super-admin/governance/access-control"   },
       { label: "Compliance Review", href: "/super-admin/governance/compliance-review"},
     ],
@@ -247,22 +248,13 @@ export default function Sidebar({ activePath = "/super-admin/dashboard" }: Sideb
     () => (
       <div className="flex h-full flex-col">
         <div className="flex items-center gap-3.5 px-4 py-5">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 shadow-[0_0_24px_rgba(34,211,238,0.22)]">
-            <div
-              className="pointer-events-none absolute inset-0 rounded-xl bg-cyan-400/15 blur-md"
-              aria-hidden
-            />
-            <Hexagon
-              size={22}
-              className="relative text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.55)]"
-            />
-          </div>
+          <LogoMark size={36} className="shrink-0" />
           <div className="min-w-0 flex flex-col gap-0.5">
             <span className="text-base font-bold tracking-wide text-[var(--color-text-primary)] truncate">
               RECKONING
             </span>
             <span className="text-[10px] leading-snug text-[var(--color-text-muted)] line-clamp-2">
-              Infrastructure Transparency Platform
+              Super Admin
             </span>
           </div>
         </div>

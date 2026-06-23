@@ -1,0 +1,6 @@
+{
+  "defaultDateRange": "This Month",
+  "rowsPerPage": "10",
+  "mapZoom": "National",
+  "slaAlertThreshold": "24"
+}

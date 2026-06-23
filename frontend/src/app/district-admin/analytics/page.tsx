@@ -1,15 +1,20 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
-import { BarChart3, TrendingUp, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { BarChart3, TrendingUp, ShieldCheck, CheckCircle2, Map } from "lucide-react";
 import ComplaintTrendChart from "@/components/district-admin-dashboard/complaint-trend-chart";
 import ResolutionRateChart from "@/components/district-admin-dashboard/resolution-rate-chart";
 import DistrictPerformanceChart from "@/components/district-admin-dashboard/district-performance-chart";
 import SubDistrictPerformance from "@/components/district-admin-dashboard/sub-district-performance";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useDistrictAnalyticsMetrics } from "@/hooks/use-analytics-metrics";
+import { MapLoadingSkeleton } from "@/components/map/map-loading-skeleton";
+import type { RegionStats } from "@/lib/map/types";
+
+const IndiaMap = dynamic(() => import("@/components/map/IndiaMap"), { ssr: false });
 
 const TABS = [
   { id: "complaint", label: "Complaint Trends",  icon: TrendingUp,   param: "" },
@@ -23,6 +28,7 @@ function AnalyticsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const metrics = useDistrictAnalyticsMetrics();
+  const [selectedRegion, setSelectedRegion] = useState<RegionStats | null>(null);
 
   const KPI = [
     { label: "Avg Resolution Time", value: `${metrics.avgResolutionDays}d`, color: "text-teal-400" },
@@ -119,6 +125,66 @@ function AnalyticsContent() {
           <SubDistrictPerformance />
         </motion.div>
       )}
+
+      {/* Geographic Overview Map with Hover Overlay */}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <DashboardCard className="flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 px-5 pt-4 pb-3">
+            <Map size={16} className="text-teal-400" />
+            <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Geographic Overview</h2>
+            <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">
+              Hover on regions to view stats
+            </span>
+          </div>
+          <div className="relative w-full" style={{ height: "480px" }}>
+            <Suspense fallback={<MapLoadingSkeleton />}>
+              <IndiaMap
+                adminRole="district_admin"
+                height="100%"
+                showBreadcrumb={true}
+                showControls={true}
+                showLegend={true}
+                showSidebar={true}
+                onRegionSelect={(stats) => setSelectedRegion(stats)}
+              />
+            </Suspense>
+          </div>
+
+          {/* Selected Region Summary Strip */}
+          {selectedRegion && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="border-t border-[var(--color-border)] px-5 py-3"
+            >
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <p className="text-xs font-bold text-[var(--color-text-primary)]">{selectedRegion.name}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)] capitalize">{selectedRegion.level}</p>
+                </div>
+                <div className="flex items-center gap-4 text-[11px]">
+                  <span className="text-[var(--color-text-secondary)]">
+                    📊 <strong>{selectedRegion.totalReports}</strong> Reports
+                  </span>
+                  <span className="text-red-400">
+                    🔴 <strong>{selectedRegion.criticalCount}</strong> Critical
+                  </span>
+                  <span className="text-amber-400">
+                    🟡 <strong>{selectedRegion.highCount}</strong> High
+                  </span>
+                  <span className="text-emerald-400">
+                    🟢 <strong>{selectedRegion.resolvedReports}</strong> Resolved
+                  </span>
+                  <span className="text-cyan-400">
+                    ⏱ <strong>{selectedRegion.avgResolutionDays}d</strong> Avg
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </DashboardCard>
+      </motion.div>
     </div>
   );
 }

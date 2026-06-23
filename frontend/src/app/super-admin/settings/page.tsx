@@ -1,14 +1,17 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Settings, User, Shield, Bell, Sliders, HelpCircle, Save, CheckCircle2, Eye, EyeOff, Check } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useThemeStore } from "@/stores/theme-store";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { DemoResetButton } from "@/components/admin/DemoResetButton";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
 
 type TabId = "profile" | "security" | "notifications" | "system" | "help";
 
@@ -24,7 +27,17 @@ function SaveButton({ saved, onClick, disabled }: { saved: boolean; onClick: () 
   return (
     <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
       onClick={onClick} disabled={disabled || saved}
-      className="btn-primary flex items-center gap-2 mt-4 disabled:opacity-50">
+      className="btn-primary flex items-center gap-2 mt-4 disabled:opacity-50"
+      style={{
+        background: "rgba(20,184,166,0.1)",
+        border: "1px solid rgba(20,184,166,0.3)",
+        color: "#14b8a6",
+        padding: "8px 16px",
+        borderRadius: "8px",
+        fontSize: "12px",
+        fontWeight: "600",
+      }}
+    >
       {saved ? <CheckCircle2 size={15} /> : <Save size={15} />}
       {saved ? "Saved!" : "Save Changes"}
     </motion.button>
@@ -39,8 +52,79 @@ function SettingsContent() {
   const [saved, setSaved] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const { mode, setMode } = useThemeStore();
+  const queryClient = useQueryClient();
 
-  const handleSave = () => { setSaved(true); setTimeout(() => setSaved(false), 2500); };
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
+  // Live data hooks
+  const { data: profile } = useQuery({
+    queryKey: ["super-admin-profile"],
+    queryFn: async () => {
+      const res = await api.get("/api/super-admin/auth/me");
+      return res.data?.data;
+    },
+    enabled: !isMock,
+  });
+
+  const { data: serverSettings } = useQuery({
+    queryKey: ["super-admin-settings"],
+    queryFn: async () => {
+      const res = await api.get("/api/super-admin/settings");
+      return res.data?.data;
+    },
+    enabled: !isMock,
+  });
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (settings: any) => {
+      await api.post("/api/super-admin/settings", settings);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["super-admin-settings"] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
+  // Local Form states (with mock fallback values)
+  const [settingsForm, setSettingsForm] = useState({
+    defaultDateRange: "This Month",
+    rowsPerPage: "10",
+    mapZoom: "National",
+    slaAlertThreshold: "24",
+  });
+
+  useEffect(() => {
+    if (serverSettings) {
+      setSettingsForm(serverSettings);
+    }
+  }, [serverSettings]);
+
+  const handleSaveSettings = () => {
+    if (isMock) {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } else {
+      updateSettingsMutation.mutate(settingsForm);
+    }
+  };
+
+  const activeProfile = isMock
+    ? {
+        fullName: "Super Administrator",
+        email: "super@infrastructure.gov.in",
+        phone: "+91 11 2345 6789",
+        designation: "National Infrastructure Authority",
+        department: "Road Safety & Infrastructure",
+      }
+    : {
+        fullName: profile?.fullName || "Super Administrator",
+        email: profile?.email || "",
+        phone: profile?.phone || "+91 11 2345 6789",
+        designation: profile?.designation || "National Infrastructure Authority",
+        department: profile?.department || "Road Safety & Infrastructure",
+      };
 
   const inputCls = "h-10 rounded-lg border px-3 text-sm outline-none focus:border-cyan-500/40 transition-colors w-full";
   const inputStyle = { borderColor: "var(--color-border)", background: "var(--color-surface)", color: "var(--color-text-primary)" };
@@ -76,27 +160,33 @@ function SettingsContent() {
               <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 text-2xl font-bold"
                 style={{ borderColor: "rgba(34,211,238,0.4)", background: "rgba(34,211,238,0.1)", color: "#22d3ee" }}>S</div>
               <div>
-                <p className="font-semibold text-[var(--color-text-primary)]">Super Admin</p>
+                <p className="font-semibold text-[var(--color-text-primary)]">{activeProfile.fullName}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">SA-2026-INFRA</p>
                 <button type="button" className="mt-1 text-xs text-cyan-400 hover:text-cyan-300">Change avatar</button>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {[
-                { label: "Full Name",       value: "Super Administrator"        },
-                { label: "Employee ID",     value: "SA-2026-INFRA"              },
-                { label: "Official Email",  value: "super@infrastructure.gov.in", type: "email" },
-                { label: "Phone",           value: "+91 11 2345 6789",           type: "tel"   },
-                { label: "Organisation",    value: "Ministry of Road Transport" },
-                { label: "Designation",     value: "National Infrastructure Authority" },
-              ].map((f) => (
-                <div key={f.label} className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[var(--color-text-secondary)]">{f.label}</label>
-                  <input type={f.type || "text"} defaultValue={f.value} className={inputCls} style={inputStyle} />
-                </div>
-              ))}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Full Name</label>
+                <input type="text" readOnly defaultValue={activeProfile.fullName} className={inputCls} style={inputStyle} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Official Email</label>
+                <input type="email" readOnly defaultValue={activeProfile.email} className={inputCls} style={inputStyle} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Phone</label>
+                <input type="tel" readOnly defaultValue={activeProfile.phone} className={inputCls} style={inputStyle} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Designation</label>
+                <input type="text" readOnly defaultValue={activeProfile.designation} className={inputCls} style={inputStyle} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Department</label>
+                <input type="text" readOnly defaultValue={activeProfile.department} className={inputCls} style={inputStyle} />
+              </div>
             </div>
-            <SaveButton saved={saved} onClick={handleSave} />
           </DashboardCard>
         )}
 
@@ -127,7 +217,7 @@ function SettingsContent() {
                   <span className="h-5 w-5 translate-x-5 rounded-full bg-cyan-400 transition-transform" />
                 </div>
               </div>
-              <SaveButton saved={saved} onClick={handleSave} />
+              <SaveButton saved={saved} onClick={handleSaveSettings} />
             </div>
           </DashboardCard>
         )}
@@ -154,7 +244,7 @@ function SettingsContent() {
                   </div>
                 </div>
               ))}
-              <SaveButton saved={saved} onClick={handleSave} />
+              <SaveButton saved={saved} onClick={handleSaveSettings} />
             </div>
           </DashboardCard>
         )}
@@ -184,20 +274,36 @@ function SettingsContent() {
                   ))}
                 </div>
               </div>
-              {[
-                { label: "Default Date Range",      options: ["Today","This Week","This Month","This Quarter"] },
-                { label: "Table Rows Per Page",     options: ["10","25","50","100"]                            },
-                { label: "Map Default Zoom Level",  options: ["National","State","District"]                   },
-                { label: "SLA Alert Threshold (h)", options: ["6","12","24","48"]                              },
-              ].map((p) => (
-                <div key={p.label} className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[var(--color-text-secondary)]">{p.label}</label>
-                  <select className={inputCls} style={inputStyle}>
-                    {p.options.map(o => <option key={o} style={{ background: "var(--color-card)" }}>{o}</option>)}
-                  </select>
-                </div>
-              ))}
-              <SaveButton saved={saved} onClick={handleSave} />
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Default Date Range</label>
+                <select value={settingsForm.defaultDateRange} onChange={(e) => setSettingsForm({ ...settingsForm, defaultDateRange: e.target.value })} className={inputCls} style={inputStyle}>
+                  {["Today","This Week","This Month","This Quarter"].map(o => <option key={o} style={{ background: "var(--color-card)" }}>{o}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Table Rows Per Page</label>
+                <select value={settingsForm.rowsPerPage} onChange={(e) => setSettingsForm({ ...settingsForm, rowsPerPage: e.target.value })} className={inputCls} style={inputStyle}>
+                  {["10","25","50","100"].map(o => <option key={o} style={{ background: "var(--color-card)" }}>{o}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">Map Default Zoom Level</label>
+                <select value={settingsForm.mapZoom} onChange={(e) => setSettingsForm({ ...settingsForm, mapZoom: e.target.value })} className={inputCls} style={inputStyle}>
+                  {["National","State","District"].map(o => <option key={o} style={{ background: "var(--color-card)" }}>{o}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--color-text-secondary)]">SLA Alert Threshold (h)</label>
+                <select value={settingsForm.slaAlertThreshold} onChange={(e) => setSettingsForm({ ...settingsForm, slaAlertThreshold: e.target.value })} className={inputCls} style={inputStyle}>
+                  {["6","12","24","48"].map(o => <option key={o} style={{ background: "var(--color-card)" }}>{o}</option>)}
+                </select>
+              </div>
+
+              <SaveButton saved={saved} onClick={handleSaveSettings} />
             </div>
           </DashboardCard>
         )}

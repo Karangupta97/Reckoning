@@ -2,21 +2,33 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, CheckCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token') ?? '';
+  const email = searchParams.get('email') ?? '';
+
+  const { resetPassword, error: apiError, clearError, isLoading } = useAuth();
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    clearError();
 
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
@@ -28,13 +40,16 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    setLoading(true);
+    if (!token || !email) {
+      setError('Invalid reset link. Please check your email and try again.');
+      return;
+    }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await resetPassword(email, token, password);
       setSuccess(true);
-    } finally {
-      setLoading(false);
+    } catch {
+      // Error message is exposed from useAuth
     }
   };
 
@@ -74,7 +89,11 @@ export default function ResetPasswordPage() {
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (error) setError('');
+                        if (apiError) clearError();
+                      }}
                       placeholder="Enter new password"
                       className="w-full h-11 px-4 pr-11 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-amber)] transition-shadow"
                     />
@@ -97,7 +116,11 @@ export default function ResetPasswordPage() {
                       type={showConfirmPassword ? 'text' : 'password'}
                       required
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (error) setError('');
+                        if (apiError) clearError();
+                      }}
                       placeholder="Confirm new password"
                       className="w-full h-11 px-4 pr-11 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-amber)] transition-shadow"
                     />
@@ -111,18 +134,18 @@ export default function ResetPasswordPage() {
                   </div>
                 </div>
 
-                {error && (
+                {(error || apiError) && (
                   <p className="text-sm text-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] px-3 py-2 rounded-lg border border-[color-mix(in_srgb,var(--color-danger)_20%,transparent)]">
-                    {error}
+                    {error || apiError}
                   </p>
                 )}
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isLoading}
                   className="btn-amber w-full h-11 flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                 >
-                  {loading ? 'Resetting...' : (
+                  {isLoading ? 'Resetting...' : (
                     <>Reset Password <ArrowRight size={16} /></>
                   )}
                 </button>
@@ -158,5 +181,19 @@ export default function ResetPasswordPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[var(--color-page)] flex items-center justify-center px-4 py-8 sm:px-6">
+        <div className="w-full max-w-md text-center text-sm text-[var(--color-text-secondary)]">
+          Loading reset password page...
+        </div>
+      </main>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

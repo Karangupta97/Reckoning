@@ -31,6 +31,7 @@ import {
   processAuthorityNotification,
   processAdminNotification,
 } from "../jobs/handlers.js";
+import { processAuthorityAssignment } from "../workers/authorityAssignment.worker.js";
 import { prisma } from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
 import type { Queue } from "bullmq";
@@ -222,5 +223,6 @@ export async function enqueueAuthorityAssignment(
     authorityAssignmentQueue,
     QUEUE_NAMES.authorityAssignment,
     { complaintId },
+    () => processAuthorityAssignment(complaintId),
   );
 }

@@ -154,7 +154,7 @@ async function transitionAdminStatus(
   }
 
   const target = await adminDbGuard(
-    () => prisma.adminUser.findUnique({ where: { id: targetId }, select: { id: true, role: true, status: true } }),
+    () => prisma.adminUser.findUnique({ where: { id: targetId }, select: { id: true, role: true, isActive: true } }),
     "transitionAdminStatus:find",
   );
   if (!target) {
@@ -168,7 +168,7 @@ async function transitionAdminStatus(
     );
   }
 
-  if (next === "ACTIVE" && target.status !== "SUSPENDED") {
+  if (next === "ACTIVE" && target.isActive) {
     throw new AppError("Only suspended accounts can be reactivated.", 400, {
       code: "INVALID_TRANSITION",
     });
@@ -179,9 +179,9 @@ async function transitionAdminStatus(
       prisma.adminUser.update({
         where: { id: targetId },
         data: {
-          status: next,
+          isActive: next === "ACTIVE",
           // Reactivation clears any lockout/failed-attempt state.
-          ...(next === "ACTIVE" ? { loginAttempts: 0, lockedUntil: null } : {}),
+          ...(next === "ACTIVE" ? { failedLoginAttempts: 0, lockedUntil: null } : {}),
         },
         select: ADMIN_PROFILE_SELECT,
       }),
@@ -193,12 +193,13 @@ async function transitionAdminStatus(
     await adminDbGuard(
       () =>
         prisma.adminRefreshToken.updateMany({
-          where: { adminId: targetId, revoked: false },
-          data: { revoked: true, revokedAt: new Date() },
+          where: { adminUserId: targetId, revokedAt: null },
+          data: { revokedAt: new Date() },
         }),
       "transitionAdminStatus:revokeSessions",
     );
   }
+
 
   return toAdminProfile(updated);
 }
@@ -450,7 +451,7 @@ export async function suspendMySubAdmin(
     () =>
       prisma.adminUser.update({
         where: { id: targetId },
-        data: { status: "SUSPENDED" },
+        data: { isActive: false },
         select: ADMIN_PROFILE_SELECT,
       }),
     "suspendMySubAdmin:update",
@@ -459,14 +460,75 @@ export async function suspendMySubAdmin(
   await adminDbGuard(
     () =>
       prisma.adminRefreshToken.updateMany({
-        where: { adminId: targetId, revoked: false },
-        data: { revoked: true, revokedAt: new Date() },
+        where: { adminUserId: targetId, revokedAt: null },
+        data: { revokedAt: new Date() },
       }),
     "suspendMySubAdmin:revoke",
   );
 
   return toAdminProfile(updated);
 }
+
+/**
+ * Reactivate a suspended sub-district admin that belongs to the acting District Admin.
+ *
+ * @param districtId The acting admin's district id.
+ * @param targetId   The sub-district admin to reactivate.
+ * @returns The updated profile.
+ * @throws {AppError} 400 unassigned, 404 not found/out-of-district, 400 not suspended.
+ */
+export async function reactivateMySubAdmin(
+  districtId: string | null,
+  targetId: string,
+): Promise<AdminProfile> {
+  if (!districtId) {
+    throw new AppError("Your account is not assigned to a district.", 400, {
+      code: "NO_DISTRICT",
+    });
+  }
+
+  const target = await adminDbGuard(
+    () =>
+      prisma.adminUser.findUnique({
+        where: { id: targetId },
+        select: { id: true, role: true, districtId: true, isActive: true },
+      }),
+    "reactivateMySubAdmin:find",
+  );
+  if (
+    !target ||
+    target.role !== "SUB_DISTRICT_ADMIN" ||
+    target.districtId !== districtId
+  ) {
+    throw new AppError("Sub-district admin not found in your district.", 404, {
+      code: "NOT_FOUND",
+    });
+  }
+
+  if (target.isActive) {
+    throw new AppError("Only suspended accounts can be reactivated.", 400, {
+      code: "INVALID_TRANSITION",
+    });
+  }
+
+  const updated = await adminDbGuard(
+    () =>
+      prisma.adminUser.update({
+        where: { id: targetId },
+        data: {
+          isActive: true,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+        select: ADMIN_PROFILE_SELECT,
+      }),
+    "reactivateMySubAdmin:update",
+  );
+
+  return toAdminProfile(updated);
+}
+
+
 
 /** A complaint row shaped for an admin surface (no citizen identity). */
 export interface AdminComplaintView {

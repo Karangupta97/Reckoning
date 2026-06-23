@@ -4,21 +4,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import { ArrowLeft, CheckCircle, Send } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { forgotPassword, error, clearError, isLoading } = useAuth();
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
+    clearError();
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      await forgotPassword(email.trim());
       setSent(true);
-    } finally {
-      setLoading(false);
+    } catch {
+      // Error message is exposed from useAuth
     }
   };
 
@@ -65,18 +66,27 @@ export default function ForgotPasswordPage() {
                     type="email"
                     required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (error) clearError();
+                    }}
                     placeholder="you@example.com"
                     className="w-full h-11 px-4 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] outline-none focus:ring-2 focus:ring-[var(--color-amber)] transition-shadow"
                   />
                 </div>
 
+                {error && (
+                  <p className="text-sm text-[var(--color-danger)] bg-[color-mix(in_srgb,var(--color-danger)_10%,transparent)] px-3 py-2 rounded-lg border border-[color-mix(in_srgb,var(--color-danger)_20%,transparent)]">
+                    {error}
+                  </p>
+                )}
+
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isLoading}
                   className="btn-amber w-full h-11 flex items-center justify-center gap-2 text-sm disabled:opacity-60"
                 >
-                  {loading ? 'Sending...' : (
+                  {isLoading ? 'Sending...' : (
                     <>Send Reset Link <Send size={15} /></>
                   )}
                 </button>

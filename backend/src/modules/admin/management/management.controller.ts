@@ -149,7 +149,7 @@ export async function getMyDistrict(
 ): Promise<void> {
   try {
     const admin = requireAdmin(req);
-    const result = await managementService.getMyDistrict(admin.districtId);
+    const result = await managementService.getMyDistrict(admin.districtId ?? null);
     res.status(200).json({ success: true, data: { district: result } });
   } catch (error) {
     next(error);
@@ -166,7 +166,7 @@ export async function getMySubAdmins(
     const admin = requireAdmin(req);
     const q = req.query as unknown as PaginationQuery;
     const result = await managementService.getMySubAdmins(
-      admin.districtId,
+      admin.districtId ?? null,
       q.page,
       q.limit,
     );
@@ -185,7 +185,7 @@ export async function suspendMySubAdmin(
   try {
     const admin = requireAdmin(req);
     const result = await managementService.suspendMySubAdmin(
-      admin.districtId,
+      admin.districtId ?? null,
       req.params.id as string,
     );
     res.status(200).json({ success: true, data: { admin: result } });
@@ -193,6 +193,25 @@ export async function suspendMySubAdmin(
     next(error);
   }
 }
+
+/** `PATCH /api/admin/sub-admins/:id/reactivate` — reactivate their sub-district admin. */
+export async function reactivateMySubAdmin(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const admin = requireAdmin(req);
+    const result = await managementService.reactivateMySubAdmin(
+      admin.districtId ?? null,
+      req.params.id as string,
+    );
+    res.status(200).json({ success: true, data: { admin: result } });
+  } catch (error) {
+    next(error);
+  }
+}
+
 
 /** `GET /api/admin/my-district/escalations` — ONLY escalated complaints. */
 export async function getMyEscalations(
@@ -204,7 +223,7 @@ export async function getMyEscalations(
     const admin = requireAdmin(req);
     const q = req.query as unknown as PaginationQuery;
     const result = await managementService.getDistrictEscalations(
-      admin.districtId,
+      admin.districtId ?? null,
       q.page,
       q.limit,
     );
@@ -222,7 +241,7 @@ export async function getMyDistrictStats(
 ): Promise<void> {
   try {
     const admin = requireAdmin(req);
-    const result = await managementService.getDistrictStats(admin.districtId);
+    const result = await managementService.getDistrictStats(admin.districtId ?? null);
     res.status(200).json({ success: true, data: { stats: result } });
   } catch (error) {
     next(error);
@@ -241,7 +260,7 @@ export async function getZoneComplaints(
     const admin = requireAdmin(req);
     const q = req.query as unknown as PaginationQuery;
     const result = await managementService.getZoneComplaints(
-      admin.subDistrictId,
+      admin.subDistrictId ?? null,
       q.page,
       q.limit,
     );
@@ -261,7 +280,7 @@ export async function getZoneTickets(
     const admin = requireAdmin(req);
     const q = req.query as unknown as PaginationQuery;
     const result = await managementService.getZoneTickets(
-      admin.subDistrictId,
+      admin.subDistrictId ?? null,
       q.page,
       q.limit,
     );
@@ -279,7 +298,7 @@ export async function getZoneStats(
 ): Promise<void> {
   try {
     const admin = requireAdmin(req);
-    const result = await managementService.getZoneStats(admin.subDistrictId);
+    const result = await managementService.getZoneStats(admin.subDistrictId ?? null);
     res.status(200).json({ success: true, data: { stats: result } });
   } catch (error) {
     next(error);
@@ -296,7 +315,7 @@ export async function updateTicketStatus(
     const admin = requireAdmin(req);
     const body = req.body as UpdateTicketStatusBody;
     const result = await managementService.updateTicketStatus(
-      admin.subDistrictId,
+      admin.subDistrictId ?? null,
       admin.id,
       req.params.id as string,
       { status: body.status, ...(body.note !== undefined ? { note: body.note } : {}) },
@@ -317,7 +336,7 @@ export async function addNote(
     const admin = requireAdmin(req);
     const body = req.body as AddNoteBody;
     const result = await managementService.addResolutionNote(
-      admin.subDistrictId,
+      admin.subDistrictId ?? null,
       admin.id,
       req.params.id as string,
       { note: body.note, ...(body.status ? { status: body.status } : {}) },

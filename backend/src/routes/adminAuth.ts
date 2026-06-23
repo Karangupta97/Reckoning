@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../config/prisma.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
+import jwt from "jsonwebtoken";
+
 import { requireAdminAuth } from "../middleware/adminAuth.js";
 import {
   verifyPassword,
@@ -127,11 +129,11 @@ router.post("/login", loginRateLimiter, async (req: any, res: any) => {
     if (!admin) {
       await bcrypt.compare(password, env.DUMMY_HASH);
       logger.warn("Admin login failed: Email not found (timing dummy executed)", { ip, email });
-      return res.status(401).json({
+      return res.status(404).json({
         success: false,
         error: {
-          code: "INVALID_CREDENTIALS",
-          message: "Invalid email or password.",
+          code: "USER_NOT_FOUND",
+          message: "There is no account with this email.",
         },
       });
     }
@@ -225,12 +227,40 @@ router.post("/login", loginRateLimiter, async (req: any, res: any) => {
       },
     });
 
+    let finalAccessToken = accessToken;
+    if (admin.role === "SUPER_ADMIN") {
+      const session = await prisma.superAdminSession.create({
+        data: {
+          adminId: admin.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        },
+      });
+
+      finalAccessToken = jwt.sign(
+        {
+          sub: admin.id,
+          email: admin.email,
+          role: admin.role,
+          districtId: admin.districtId ?? null,
+          subDistrictId: admin.subDistrictId ?? null,
+          sessionId: session.id,
+        },
+        env.ADMIN_JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      res.setHeader("Set-Cookie", [
+        `super_admin_access_token=${finalAccessToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900`,
+        `super_admin_refresh_token=${rawRefreshToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`,
+      ]);
+    }
+
     logger.info("Admin logged in successfully", { ip, adminId: admin.id, action: "login" });
 
     return res.status(200).json({
       success: true,
       data: {
-        accessToken,
+        accessToken: finalAccessToken,
         refreshToken: rawRefreshToken,
         admin: {
           id: admin.id,
@@ -338,12 +368,40 @@ router.post("/refresh", async (req: any, res: any) => {
       subDistrictId: admin.subDistrictId,
     });
 
+    let finalAccessToken = newAccessToken;
+    if (admin.role === "SUPER_ADMIN") {
+      const session = await prisma.superAdminSession.create({
+        data: {
+          adminId: admin.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        },
+      });
+
+      finalAccessToken = jwt.sign(
+        {
+          sub: admin.id,
+          email: admin.email,
+          role: admin.role,
+          districtId: admin.districtId ?? null,
+          subDistrictId: admin.subDistrictId ?? null,
+          sessionId: session.id,
+        },
+        env.ADMIN_JWT_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      res.setHeader("Set-Cookie", [
+        `super_admin_access_token=${finalAccessToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=900`,
+        `super_admin_refresh_token=${rawNewRefreshToken}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`,
+      ]);
+    }
+
     logger.info("Admin token refreshed successfully", { ip, adminId: admin.id, action: "token_refresh" });
 
     return res.status(200).json({
       success: true,
       data: {
-        accessToken: newAccessToken,
+        accessToken: finalAccessToken,
         refreshToken: rawNewRefreshToken,
         admin: {
           id: admin.id,

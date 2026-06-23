@@ -17,6 +17,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
+import { api } from "@/lib/api";
+
+
 type OfficerStatus = "Active" | "Suspended" | "Pending";
 
 interface SubDistrictAdmin {
@@ -54,12 +60,65 @@ function getSlaTextClass(sla: number) {
 }
 
 export default function SubDistrictsPage() {
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
+  const { data: serverAdmins, refetch, isLoading } = useQuery({
+    queryKey: ["subAdmins"],
+    queryFn: async () => {
+      const res = await api.get("/api/admin/my-district/sub-admins");
+      return res.data?.data?.admins;
+    },
+    enabled: !isMock,
+  });
+
+  const suspendMutation = useMutation({
+    mutationFn: async (adminId: string) => {
+      await api.patch(`/api/admin/sub-admins/${adminId}/suspend`);
+    },
+    onSuccess: () => {
+      refetch();
+      showToast("Admin suspended successfully");
+    },
+    onError: (err: any) => {
+      showToast(err.response?.data?.error?.message || "Failed to suspend admin");
+    },
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async (adminId: string) => {
+      await api.patch(`/api/admin/sub-admins/${adminId}/reactivate`);
+    },
+    onSuccess: () => {
+      refetch();
+      showToast("Admin reactivated successfully");
+    },
+    onError: (err: any) => {
+      showToast(err.response?.data?.error?.message || "Failed to reactivate admin");
+    },
+  });
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OfficerStatus | "All">("All");
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
 
-  const filtered = DATA.filter((d) => {
+  const mappedAdmins: SubDistrictAdmin[] = (isMock || !serverAdmins)
+    ? DATA
+    : serverAdmins.map((item: any) => ({
+        id: item.id,
+        name: item.fullName || "Unnamed Officer",
+        subDistrict: item.subDistrictName || "—",
+        email: item.email,
+        phone: item.phone || "—",
+        status: item.status === "ACTIVE" ? "Active" : item.status === "SUSPENDED" ? "Suspended" : "Pending",
+        joinDate: new Date(item.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }),
+        complaints: 0,
+        resolved: 0,
+        sla: 100,
+      }));
+
+  const filtered = mappedAdmins.filter((d) => {
     const matchSearch =
       d.name.toLowerCase().includes(search.toLowerCase()) ||
       d.subDistrict.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,6 +126,7 @@ export default function SubDistrictsPage() {
     const matchStatus = statusFilter === "All" || d.status === statusFilter;
     return matchSearch && matchStatus;
   });
+
 
   return (
     <div className="flex flex-col gap-4">
@@ -252,7 +312,23 @@ export default function SubDistrictsPage() {
                             <ActionButton label="View" icon={Eye} />
                           </Link>
                           <ActionButton label="Edit" icon={Edit2} color="emerald" onClick={() => showToast(`Editing ${d.name} — feature available in production`)} />
-                          <ActionButton label="Suspend" icon={ShieldOff} color="amber" onClick={() => showToast(`${d.name} suspension initiated`)} />
+                          {d.status === "Suspended" ? (
+                            <ActionButton label="Reactivate" icon={CheckCircle2} color="emerald" onClick={() => {
+                              if (isMock) {
+                                showToast(`${d.name} activated`);
+                              } else {
+                                reactivateMutation.mutate(d.id);
+                              }
+                            }} />
+                          ) : (
+                            <ActionButton label="Suspend" icon={ShieldOff} color="amber" onClick={() => {
+                              if (isMock) {
+                                showToast(`${d.name} suspension initiated`);
+                              } else {
+                                suspendMutation.mutate(d.id);
+                              }
+                            }} />
+                          )}
                         </div>
                       </td>
                     </motion.tr>

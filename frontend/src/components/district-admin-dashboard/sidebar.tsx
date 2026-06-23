@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   X,
-  Activity,
   Users,
   UserCircle,
   ShieldAlert,
@@ -25,6 +24,7 @@ import {
   Award,
   MessageSquare,
 } from "lucide-react";
+import { LogoMark } from "@/components/ui/Logo";
 import { districtSidebarSubtitle, DISTRICT_CONFIG } from "@/lib/district-config";
 
 interface SubNavItem {
@@ -239,16 +239,7 @@ export default function DistrictAdminSidebar({
       <div className="flex h-full flex-col">
         {/* Brand */}
         <div className="flex items-center gap-3.5 px-4 py-5">
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-500/10 border border-teal-500/20 shadow-[0_0_24px_rgba(20,184,166,0.22)]">
-            <div
-              className="pointer-events-none absolute inset-0 rounded-xl bg-teal-400/15 blur-md"
-              aria-hidden
-            />
-            <Activity
-              size={20}
-              className="relative text-teal-400 drop-shadow-[0_0_10px_rgba(20,184,166,0.55)]"
-            />
-          </div>
+          <LogoMark size={36} className="shrink-0" />
           <div className="min-w-0 flex flex-col gap-0.5">
             <span className="text-base font-bold tracking-wide text-[var(--color-text-primary)] truncate">
               RECKONING

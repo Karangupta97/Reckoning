@@ -115,6 +115,14 @@ managementRouter.patch(
   ctrl.suspendMySubAdmin,
 );
 
+managementRouter.patch(
+  "/sub-admins/:id/reactivate",
+  requireRole("DISTRICT_ADMIN"),
+  validate({ params: idParamSchema }),
+  ctrl.reactivateMySubAdmin,
+);
+
+
 // --- SUB_DISTRICT_ADMIN ----------------------------------------------------
 
 managementRouter.get(

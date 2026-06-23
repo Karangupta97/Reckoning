@@ -57,10 +57,10 @@ export async function adminDbGuard<T>(
 /** Admin row shape (with relations) needed to build a profile projection. */
 export interface AdminProfileRow {
   id: string;
-  fullName: string;
+  fullName: string | null;
   email: string;
   role: AdminRole;
-  status: AdminProfile["status"];
+  isActive: boolean;
   designation: string | null;
   department: string | null;
   phone: string | null;
@@ -82,10 +82,10 @@ export interface AdminProfileRow {
 export function toAdminProfile(row: AdminProfileRow): AdminProfile {
   return {
     id: row.id,
-    fullName: row.fullName,
+    fullName: row.fullName || "",
     email: row.email,
     role: row.role,
-    status: row.status,
+    status: row.isActive ? "ACTIVE" : "SUSPENDED",
     designation: row.designation,
     department: row.department,
     phone: row.phone,
@@ -105,7 +105,7 @@ export const ADMIN_PROFILE_SELECT = {
   fullName: true,
   email: true,
   role: true,
-  status: true,
+  isActive: true,
   designation: true,
   department: true,
   phone: true,
@@ -116,6 +116,7 @@ export const ADMIN_PROFILE_SELECT = {
   district: { select: { name: true, country: true } },
   subDistrict: { select: { name: true } },
 } satisfies Prisma.AdminUserSelect;
+
 
 /**
  * Compute a refresh token's absolute expiry from its decoded `exp`, falling
@@ -149,10 +150,10 @@ export async function storeAdminRefreshToken(
   await tx.adminRefreshToken.create({
     data: {
       tokenHash: sha256(refreshToken),
-      adminId,
+      adminUserId: adminId,
       expiresAt: adminRefreshExpiryOf(refreshToken),
-      ipAddress: ctx.ipAddress ?? null,
-      userAgent: ctx.userAgent ?? null,
+      ipAddress: ctx.ipAddress ?? "unknown",
+      userAgent: ctx.userAgent ?? "unknown",
     },
   });
 }

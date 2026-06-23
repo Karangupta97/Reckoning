@@ -18,6 +18,8 @@ import type {
   ResendOtpBody,
   UpdateProfileBody,
   VerifyOtpBody,
+  ForgotPasswordBody,
+  ResetPasswordBody,
 } from "./auth.validation.js";
 import type { RequestContext } from "./auth.types.js";
 
@@ -200,6 +202,44 @@ export async function updateMe(
     }
     const user = await authService.updateMe(req.user.id, req.body as UpdateProfileBody);
     res.status(200).json({ success: true, data: { user } });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `POST /api/auth/forgot-password` — request password reset.
+ *
+ * @returns 200 with `{ success: true, message }`.
+ */
+export async function forgotPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { email } = req.body as ForgotPasswordBody;
+    const result = await authService.forgotPassword(email);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `POST /api/auth/reset-password` — reset password using token.
+ *
+ * @returns 200 with `{ success: true, message }`.
+ */
+export async function resetPassword(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const { email, token, password } = req.body as ResetPasswordBody;
+    const result = await authService.resetPassword(email, token, password);
+    res.status(200).json({ success: true, ...result });
   } catch (error) {
     next(error);
   }

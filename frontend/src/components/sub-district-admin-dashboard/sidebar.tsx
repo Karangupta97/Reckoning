@@ -5,9 +5,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, FileWarning, ClipboardCheck,
-  MapPinned, UserCircle, X, Zap, Flame, MapPin,
+  MapPinned, UserCircle, X, Zap, MapPin,
   TrendingUp, ShieldCheck, Clock, Trophy, Award, IndianRupee, MessageSquare,
 } from "lucide-react";
+import { LogoMark } from "@/components/ui/Logo";
 import { subDistrictSidebarSubtitle, SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
 import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 
@@ -73,10 +74,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
     <div className="flex h-full flex-col">
       {/* Brand */}
       <div className="flex items-center gap-3.5 px-4 py-4">
-        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]">
-          <div className="pointer-events-none absolute inset-0 rounded-xl bg-amber-400/10 blur-md" aria-hidden />
-          <Flame size={18} className="relative text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-        </div>
+        <LogoMark size={36} className="shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
           <span className="text-sm font-bold tracking-wide text-[var(--color-text-primary)] truncate">RECKONING</span>
           <span className="flex items-center gap-1 text-[10px] leading-snug text-amber-400/80 line-clamp-1 font-medium truncate">

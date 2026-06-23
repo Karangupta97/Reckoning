@@ -188,7 +188,7 @@ async function generateTicketNumber(): Promise<string> {
  * @param complaintId The complaint to process.
  * @throws Error when complaint is not found (triggers BullMQ retry).
  */
-async function processAuthorityAssignment(complaintId: string): Promise<void> {
+export async function processAuthorityAssignment(complaintId: string): Promise<void> {
   // ─── Step 1: Fetch complaint ─────────────────────────────────────────────
   const complaint = await prisma.complaint.findUnique({
     where: { id: complaintId },

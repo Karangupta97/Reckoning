@@ -41,43 +41,79 @@ function CardSlot({ children }: { children: ReactNode }) {
   return <div className="min-w-0">{children}</div>;
 }
 
+import { useQuery } from "@tanstack/react-query";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
+import { api } from "@/lib/api";
+
 export default function DistrictAdminDashboard() {
-  const d = useDistrictDashboardMetrics();
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
+  const localMetrics = useDistrictDashboardMetrics();
+
+  const { data: serverStats, isLoading } = useQuery({
+    queryKey: ["districtStats"],
+    queryFn: async () => {
+      const res = await api.get("/api/admin/my-district/stats");
+      return res.data?.data?.stats;
+    },
+    enabled: !isMock,
+  });
+
+  const metrics = isMock || !serverStats ? {
+    totalComplaints: localMetrics.totalComplaints,
+    openComplaints: localMetrics.openComplaints,
+    resolvedComplaints: localMetrics.resolvedComplaints,
+    escalatedCases: localMetrics.escalatedCases,
+    newTickets: localMetrics.newTickets,
+    slaBreached: localMetrics.criticalEscalations,
+    resolutionRate: localMetrics.slaCompliance,
+  } : {
+    totalComplaints: serverStats.escalatedTotal,
+    openComplaints: serverStats.open,
+    resolvedComplaints: serverStats.resolved,
+    escalatedCases: serverStats.open,
+    newTickets: serverStats.open,
+    slaBreached: serverStats.slaBreached,
+    resolutionRate: serverStats.resolutionRate,
+  };
 
   const kpiData = [
     {
       title: "Total Complaints",
-      value: String(d.totalComplaints),
-      change: `${d.newTickets} new tickets`,
+      value: String(metrics.totalComplaints),
+      change: `${metrics.newTickets} active`,
       icon: <ClipboardList size={20} />,
       trend: "up" as const,
       variant: "neutral" as const,
     },
     {
       title: "Open Complaints",
-      value: String(d.openComplaints),
-      change: `${d.resolutionRequests} resolution requests`,
+      value: String(metrics.openComplaints),
+      change: `${metrics.slaBreached} SLA breached`,
       icon: <AlertTriangle size={20} />,
       trend: "up" as const,
       variant: "warn" as const,
     },
     {
       title: "Resolved Complaints",
-      value: String(d.resolvedComplaints),
-      change: `${d.evidenceReviews} evidence reviews`,
+      value: String(metrics.resolvedComplaints),
+      change: `${metrics.resolutionRate}% resolution rate`,
       icon: <CheckCircle2 size={20} />,
       trend: "down" as const,
       variant: "good" as const,
     },
     {
       title: "Escalated Cases",
-      value: String(d.escalatedCases),
-      change: `${d.incomingEscalations} incoming`,
+      value: String(metrics.escalatedCases),
+      change: `Critical active cases`,
       icon: <ShieldAlert size={20} />,
       trend: "up" as const,
       variant: "danger" as const,
     },
   ];
+
 
   return (
     <div className="flex flex-col gap-4">

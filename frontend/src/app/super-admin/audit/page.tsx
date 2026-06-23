@@ -24,6 +24,10 @@ import {
   type AuditCategory,
 } from "@/store/auditLogStore";
 import { exportAuditLog } from "@/lib/report-generator";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
 
 const CAT_ICON: Record<AuditCategory, typeof User> = {
   "User Actions": User,
@@ -47,13 +51,34 @@ export default function AuditLogCenterPage() {
   const initialCategory = CAT_PARAM[searchParams.get("category") ?? ""] ?? "";
   const initialEntity = searchParams.get("entity") ?? "";
 
-  const entries = useAuditLogStore((s) => s.entries);
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
+  const mockEntries = useAuditLogStore((s) => s.entries);
   const [search, setSearch] = useState(initialEntity);
   const [categoryFilter, setCategoryFilter] = useState<AuditCategory | "">(initialCategory);
 
+  // Live query for audit logs
+  const { data: dbLogsRes, isLoading } = useQuery({
+    queryKey: ["super-admin-audit-logs", search],
+    queryFn: async () => {
+      const res = await api.get("/api/super-admin/audit-logs", {
+        params: { search: search || undefined },
+      });
+      return res.data?.data;
+    },
+    enabled: !isMock,
+  });
+
+  const entries = isMock ? mockEntries : (dbLogsRes?.logs || []);
+
   const filtered = useMemo(() => {
+    if (!isMock) {
+      // In live mode, the backend already filters by search query. We just filter by category client-side
+      return entries.filter((e: any) => !categoryFilter || e.category === categoryFilter);
+    }
     const q = search.toLowerCase().trim();
-    return entries.filter((e) => {
+    return entries.filter((e: any) => {
       const matchCat = !categoryFilter || e.category === categoryFilter;
       const matchQ =
         !q ||
@@ -64,13 +89,13 @@ export default function AuditLogCenterPage() {
         e.userRole.toLowerCase().includes(q);
       return matchCat && matchQ;
     });
-  }, [entries, search, categoryFilter]);
+  }, [entries, search, categoryFilter, isMock]);
 
   const counts = useMemo(
     () =>
       AUDIT_CATEGORIES.reduce(
         (acc, c) => {
-          acc[c] = entries.filter((e) => e.category === c).length;
+          acc[c] = entries.filter((e: any) => e.category === c).length;
           return acc;
         },
         {} as Record<AuditCategory, number>
@@ -169,15 +194,21 @@ export default function AuditLogCenterPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {isLoading && !isMock ? (
+                  <tr>
+                    <td colSpan={8} className="dashboard-table-td text-center text-sm text-[var(--color-text-muted)] py-8">
+                      Loading audit entries...
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="dashboard-table-td text-center text-sm text-[var(--color-text-muted)] py-8">
                       No audit entries match your filters.
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((e, i) => {
-                    const Icon = CAT_ICON[e.category];
+                  filtered.map((e: any, i: number) => {
+                    const Icon = CAT_ICON[e.category as AuditCategory] || User;
                     return (
                       <motion.tr
                         key={e.id}
@@ -203,7 +234,7 @@ export default function AuditLogCenterPage() {
                         <td className="dashboard-table-td text-xs text-[var(--color-text-muted)]">{e.previousStatus}</td>
                         <td className="dashboard-table-td text-xs font-medium">{e.newStatus}</td>
                         <td className="dashboard-table-td">
-                          <span className={`dashboard-table-badge flex items-center gap-1 w-fit ${AUDIT_CATEGORY_CLS[e.category]}`}>
+                          <span className={`dashboard-table-badge flex items-center gap-1 w-fit ${AUDIT_CATEGORY_CLS[e.category as AuditCategory]}`}>
                             <Icon size={10} />
                             {e.category}
                           </span>
@@ -220,7 +251,7 @@ export default function AuditLogCenterPage() {
               {filtered.length} of {entries.length} entries
             </span>
             <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
-              <Shield size={10} /> Frontend audit trail — state resets on refresh
+              <Shield size={10} /> {isMock ? "Frontend audit trail — state resets on refresh" : "Live secure database audit trail"}
             </span>
           </div>
         </DashboardCard>
@@ -229,7 +260,7 @@ export default function AuditLogCenterPage() {
   );
 }
 
-function EntityLink({ entityId, category }: { entityId: string; category: AuditCategory }) {
+function EntityLink({ entityId, category }: { entityId: string; category: string }) {
   if (entityId.startsWith("EV-")) {
     return (
       <Link href={`/super-admin/evidence/${entityId}`} className="text-cyan-400 hover:underline">
