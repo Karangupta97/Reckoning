@@ -66,6 +66,7 @@ export function EvidenceStep({
   const [isDragging, setIsDragging] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const mobileCameraRef = useRef<HTMLInputElement>(null);
 
   const canAddMore = evidenceFiles.length < MAX_EVIDENCE_FILES;
   const hasFiles = evidenceFiles.length > 0;
@@ -99,9 +100,10 @@ export function EvidenceStep({
 
       {touchDevice ? (
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* ── Mobile: native camera via hidden input ── */}
           <button
             type="button"
-            onClick={() => setCameraOpen(true)}
+            onClick={() => mobileCameraRef.current?.click()}
             disabled={!canAddMore || isBusy}
             className={`relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-4 text-left transition-all ${
               canAddMore && !isBusy
@@ -124,6 +126,19 @@ export function EvidenceStep({
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">Take Photo / Video</p>
               <p className="mt-2 text-xs text-[var(--color-text-secondary)]">Use your camera to capture the hazard right now.</p>
             </div>
+            {/* Hidden native camera input — capture="environment" opens rear camera */}
+            <input
+              ref={mobileCameraRef}
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(event) => {
+                if (event.target.files?.length) {
+                  handleFiles(event.target.files, "camera");
+                }
+              }}
+            />
           </button>
 
           <button

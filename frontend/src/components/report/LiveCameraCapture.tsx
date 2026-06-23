@@ -6,15 +6,11 @@ import {
   Camera,
   Video,
   X,
-  RotateCcw,
   Zap,
   ZapOff,
-  Circle,
-  Square,
   Check,
   Trash2,
   SwitchCamera,
-  Timer,
 } from "lucide-react";
 
 type CaptureMode = "photo" | "video";
@@ -26,6 +22,35 @@ interface LiveCameraCaptureProps {
   onCapture: (files: File[]) => void;
   maxFiles?: number;
   currentFileCount?: number;
+}
+
+/* ── Viewport / body lock helpers ───────────────────────────── */
+
+let _savedViewport = "";
+
+function lockViewport() {
+  // Prevent pinch-zoom and double-tap-zoom while camera is active
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (meta) {
+    _savedViewport = meta.content;
+    meta.content =
+      "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";
+  }
+  // Lock body scroll and touch gestures
+  document.body.style.overflow = "hidden";
+  document.body.style.touchAction = "none";
+  document.body.style.overscrollBehavior = "none";
+}
+
+function unlockViewport() {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (meta && _savedViewport) {
+    meta.content = _savedViewport;
+    _savedViewport = "";
+  }
+  document.body.style.overflow = "";
+  document.body.style.touchAction = "";
+  document.body.style.overscrollBehavior = "";
 }
 
 export function LiveCameraCapture({
@@ -40,6 +65,7 @@ export function LiveCameraCapture({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [mode, setMode] = useState<CaptureMode>("photo");
   const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
@@ -51,61 +77,49 @@ export function LiveCameraCapture({
   const [cameraReady, setCameraReady] = useState(false);
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
-  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const remainingSlots = maxFiles - currentFileCount - capturedFiles.length;
 
-  // Check for multiple cameras
+  /* ── Viewport lock effect ─────────────────────────────────── */
+  useEffect(() => {
+    if (open) {
+      lockViewport();
+    } else {
+      unlockViewport();
+    }
+    return () => { unlockViewport(); };
+  }, [open]);
+
+  /* ── Multiple cameras check ───────────────────────────────── */
   useEffect(() => {
     if (!open) return;
     navigator.mediaDevices.enumerateDevices().then((devices) => {
-      const videoDevices = devices.filter((d) => d.kind === "videoinput");
-      setHasMultipleCameras(videoDevices.length > 1);
-    }).catch(() => {
-      setHasMultipleCameras(false);
-    });
+      setHasMultipleCameras(devices.filter((d) => d.kind === "videoinput").length > 1);
+    }).catch(() => setHasMultipleCameras(false));
   }, [open]);
 
-  // Start/stop camera stream
+  /* ── Start camera stream ──────────────────────────────────── */
   const startCamera = useCallback(async () => {
     setError(null);
     setCameraReady(false);
-
-    // Stop existing stream
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
-
     try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
         audio: mode === "video",
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      });
       streamRef.current = stream;
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-
-      // Apply flash/torch if supported
       const videoTrack = stream.getVideoTracks()[0];
       if (videoTrack && flash === "on") {
-        try {
-          await (videoTrack as any).applyConstraints({
-            advanced: [{ torch: true } as any],
-          });
-        } catch {
-          // Torch not supported on this device
-        }
+        try { await (videoTrack as any).applyConstraints({ advanced: [{ torch: true } as any] }); }
+        catch { /* torch not supported */ }
       }
-
       setCameraReady(true);
     } catch (err: any) {
       if (err.name === "NotAllowedError") {
@@ -119,169 +133,99 @@ export function LiveCameraCapture({
   }, [facingMode, flash, mode]);
 
   useEffect(() => {
-    if (open) {
-      startCamera();
-    }
+    if (open) { startCamera(); }
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     };
   }, [open, startCamera]);
 
-  // Toggle flash
+  /* ── Flash toggle ─────────────────────────────────────────── */
   const toggleFlash = useCallback(async () => {
-    const newFlash = flash === "off" ? "on" : "off";
-    setFlash(newFlash);
-
-    if (streamRef.current) {
-      const videoTrack = streamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        try {
-          await (videoTrack as any).applyConstraints({
-            advanced: [{ torch: newFlash === "on" } as any],
-          });
-        } catch {
-          // Torch not supported
-        }
-      }
+    const next = flash === "off" ? "on" : "off";
+    setFlash(next);
+    const vt = streamRef.current?.getVideoTracks()[0];
+    if (vt) {
+      try { await (vt as any).applyConstraints({ advanced: [{ torch: next === "on" } as any] }); }
+      catch { /* ignore */ }
     }
   }, [flash]);
 
-  // Switch camera
-  const switchCamera = useCallback(() => {
-    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
-  }, []);
-
-  // Capture photo
+  /* ── Capture photo ────────────────────────────────────────── */
   const capturePhoto = useCallback(() => {
     if (!videoRef.current || !canvasRef.current || remainingSlots <= 0) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
+    const vid = videoRef.current;
+    const cvs = canvasRef.current;
+    cvs.width = vid.videoWidth;
+    cvs.height = vid.videoHeight;
+    const ctx = cvs.getContext("2d");
     if (!ctx) return;
-
-    // If front camera, mirror the image
-    if (facingMode === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
-
-    ctx.drawImage(video, 0, 0);
-
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        const timestamp = Date.now();
-        const file = new File([blob], `capture_${timestamp}.jpg`, { type: "image/jpeg" });
-        const previewUrl = URL.createObjectURL(blob);
-        setCapturedFiles((prev) => [...prev, { file, previewUrl }]);
-      },
-      "image/jpeg",
-      0.92,
-    );
+    if (facingMode === "user") { ctx.translate(cvs.width, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(vid, 0, 0);
+    cvs.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+      setCapturedFiles((p) => [...p, { file, previewUrl: URL.createObjectURL(blob) }]);
+    }, "image/jpeg", 0.92);
   }, [facingMode, remainingSlots]);
 
-  // Start video recording
+  /* ── Video recording ──────────────────────────────────────── */
   const startRecording = useCallback(() => {
     if (!streamRef.current || remainingSlots <= 0) return;
-
     chunksRef.current = [];
     const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
       ? "video/webm;codecs=vp9,opus"
-      : MediaRecorder.isTypeSupported("video/webm")
-        ? "video/webm"
-        : "video/mp4";
-
+      : MediaRecorder.isTypeSupported("video/webm") ? "video/webm" : "video/mp4";
     try {
-      const recorder = new MediaRecorder(streamRef.current, { mimeType });
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
+      const rec = new MediaRecorder(streamRef.current, { mimeType });
+      mediaRecorderRef.current = rec;
+      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      rec.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        const extension = mimeType.includes("mp4") ? "mp4" : "webm";
-        const timestamp = Date.now();
-        const file = new File([blob], `video_${timestamp}.${extension}`, { type: mimeType });
-        const previewUrl = URL.createObjectURL(blob);
-        setCapturedFiles((prev) => [...prev, { file, previewUrl }]);
+        const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+        const file = new File([blob], `video_${Date.now()}.${ext}`, { type: mimeType });
+        setCapturedFiles((p) => [...p, { file, previewUrl: URL.createObjectURL(blob) }]);
         chunksRef.current = [];
       };
-
-      recorder.start(1000);
+      rec.start(1000);
       setIsRecording(true);
       setRecordingDuration(0);
-
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingDuration((prev) => prev + 1);
-      }, 1000);
-    } catch {
-      setError("Video recording is not supported on this device.");
-    }
+      recordingIntervalRef.current = setInterval(() => setRecordingDuration((p) => p + 1), 1000);
+    } catch { setError("Video recording is not supported on this device."); }
   }, [remainingSlots]);
 
-  // Stop video recording
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
+      if (recordingIntervalRef.current) { clearInterval(recordingIntervalRef.current); recordingIntervalRef.current = null; }
       setRecordingDuration(0);
     }
   }, [isRecording]);
 
-  // Remove a captured file
-  const removeCapture = useCallback((index: number) => {
-    setCapturedFiles((prev) => {
-      const removed = prev[index];
-      if (removed) URL.revokeObjectURL(removed.previewUrl);
-      return prev.filter((_, i) => i !== index);
-    });
+  /* ── Confirm / close ──────────────────────────────────────── */
+  const removeCapture = useCallback((i: number) => {
+    setCapturedFiles((p) => { URL.revokeObjectURL(p[i].previewUrl); return p.filter((_, idx) => idx !== i); });
   }, []);
 
-  // Confirm and send files back
   const confirmCaptures = useCallback(() => {
     if (capturedFiles.length === 0) return;
-    const files = capturedFiles.map((c) => c.file);
-    onCapture(files);
-    // Clean up preview URLs
+    onCapture(capturedFiles.map((c) => c.file));
     capturedFiles.forEach((c) => URL.revokeObjectURL(c.previewUrl));
     setCapturedFiles([]);
     onClose();
   }, [capturedFiles, onCapture, onClose]);
 
-  // Handle close
   const handleClose = useCallback(() => {
-    if (isRecording) {
-      stopRecording();
-    }
+    if (isRecording) stopRecording();
     capturedFiles.forEach((c) => URL.revokeObjectURL(c.previewUrl));
     setCapturedFiles([]);
     onClose();
   }, [isRecording, stopRecording, capturedFiles, onClose]);
 
-  // Format recording time
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
+  const formatTime = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   if (!open) return null;
 
@@ -291,16 +235,28 @@ export function LiveCameraCapture({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex flex-col bg-black"
+        /* Truly fullscreen — covers browser chrome, notch, and all page content */
+        style={{
+          position: "fixed",
+          inset: 0,
+          width: "100vw",
+          height: "100dvh",
+          zIndex: 99999,
+          background: "#000",
+          display: "flex",
+          flexDirection: "column",
+          touchAction: "none",
+          overscrollBehavior: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+        }}
       >
         {/* Top bar */}
-        <div className="relative z-10 flex items-center justify-between px-4 py-3">
-          <button
-            type="button"
-            onClick={handleClose}
+        <div className="relative z-10 flex items-center justify-between px-4 safe-area-top"
+          style={{ paddingTop: "max(12px, env(safe-area-inset-top))", paddingBottom: 12 }}>
+          <button type="button" onClick={handleClose}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur"
-            aria-label="Close camera"
-          >
+            aria-label="Close camera">
             <X size={20} />
           </button>
 
@@ -312,35 +268,36 @@ export function LiveCameraCapture({
           )}
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleFlash}
+            <button type="button" onClick={toggleFlash}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur"
-              aria-label={flash === "on" ? "Turn off flash" : "Turn on flash"}
-            >
+              aria-label={flash === "on" ? "Turn off flash" : "Turn on flash"}>
               {flash === "on" ? <Zap size={18} /> : <ZapOff size={18} />}
             </button>
             {hasMultipleCameras && (
-              <button
-                type="button"
-                onClick={switchCamera}
+              <button type="button" onClick={() => setFacingMode((p) => p === "user" ? "environment" : "user")}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur"
-                aria-label="Switch camera"
-              >
+                aria-label="Switch camera">
                 <SwitchCamera size={18} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Camera viewfinder */}
+        {/* Viewfinder — fills all remaining space */}
         <div className="relative flex-1 overflow-hidden">
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className={`h-full w-full object-cover ${facingMode === "user" ? "scale-x-[-1]" : ""}`}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: facingMode === "user" ? "scaleX(-1)" : "none",
+            }}
           />
           <canvas ref={canvasRef} className="hidden" />
 
@@ -349,50 +306,37 @@ export function LiveCameraCapture({
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 px-6">
               <Camera size={48} className="mb-4 text-white/50" />
               <p className="text-center text-sm text-white/80">{error}</p>
-              <button
-                type="button"
-                onClick={startCamera}
-                className="mt-4 rounded-full bg-white/20 px-5 py-2 text-sm font-medium text-white"
-              >
+              <button type="button" onClick={startCamera}
+                className="mt-4 rounded-full bg-white/20 px-5 py-2 text-sm font-medium text-white">
                 Retry
               </button>
             </div>
           )}
 
-          {/* Loading state */}
+          {/* Loading */}
           {!cameraReady && !error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             </div>
           )}
 
-          {/* Captured files preview strip */}
+          {/* Captured strip */}
           {capturedFiles.length > 0 && (
             <div className="absolute bottom-3 left-3 right-3">
               <div className="flex gap-2 overflow-x-auto rounded-2xl bg-black/60 p-2 backdrop-blur">
-                {capturedFiles.map((capture, index) => (
-                  <div key={index} className="relative shrink-0">
-                    {capture.file.type.startsWith("video/") ? (
-                      <video
-                        src={capture.previewUrl}
-                        className="h-14 w-14 rounded-xl object-cover"
-                      />
+                {capturedFiles.map((c, i) => (
+                  <div key={i} className="relative shrink-0">
+                    {c.file.type.startsWith("video/") ? (
+                      <video src={c.previewUrl} className="h-14 w-14 rounded-xl object-cover" />
                     ) : (
-                      <img
-                        src={capture.previewUrl}
-                        alt={`Capture ${index + 1}`}
-                        className="h-14 w-14 rounded-xl object-cover"
-                      />
+                      <img src={c.previewUrl} alt={`Capture ${i + 1}`} className="h-14 w-14 rounded-xl object-cover" />
                     )}
-                    <button
-                      type="button"
-                      onClick={() => removeCapture(index)}
+                    <button type="button" onClick={() => removeCapture(i)}
                       className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
-                      aria-label={`Remove capture ${index + 1}`}
-                    >
+                      aria-label={`Remove capture ${i + 1}`}>
                       <X size={10} />
                     </button>
-                    {capture.file.type.startsWith("video/") && (
+                    {c.file.type.startsWith("video/") && (
                       <div className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 py-0.5">
                         <Video size={8} className="text-white" />
                       </div>
@@ -410,96 +354,66 @@ export function LiveCameraCapture({
         </div>
 
         {/* Bottom controls */}
-        <div className="relative z-10 space-y-3 bg-black/90 px-4 pb-6 pt-4 backdrop-blur">
+        <div className="relative z-10 space-y-3 bg-black px-4 pt-4"
+          style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}>
           {/* Mode selector */}
           <div className="flex items-center justify-center gap-6">
-            <button
-              type="button"
-              onClick={() => {
-                if (isRecording) return;
-                setMode("photo");
-              }}
-              className={`text-xs font-semibold uppercase tracking-wider transition ${
-                mode === "photo" ? "text-white" : "text-white/50"
-              }`}
-            >
-              Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (isRecording) return;
-                setMode("video");
-              }}
-              className={`text-xs font-semibold uppercase tracking-wider transition ${
-                mode === "video" ? "text-white" : "text-white/50"
-              }`}
-            >
-              Video
-            </button>
+            {(["photo", "video"] as CaptureMode[]).map((m) => (
+              <button key={m} type="button"
+                onClick={() => { if (!isRecording) setMode(m); }}
+                className={`text-xs font-semibold uppercase tracking-wider transition ${mode === m ? "text-white" : "text-white/50"}`}>
+                {m}
+              </button>
+            ))}
           </div>
 
-          {/* Capture button and actions */}
+          {/* Capture row */}
           <div className="flex items-center justify-between">
-            {/* Done / close */}
+            {/* Discard */}
             <div className="flex w-16 justify-center">
               {capturedFiles.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClose}
+                <button type="button" onClick={handleClose}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white"
-                  aria-label="Discard captures"
-                >
+                  aria-label="Discard captures">
                   <Trash2 size={18} />
                 </button>
               )}
             </div>
 
-            {/* Main capture button */}
+            {/* Main shutter */}
             <div className="flex justify-center">
               {mode === "photo" ? (
-                <button
-                  type="button"
-                  onClick={capturePhoto}
+                <button type="button" onClick={capturePhoto}
                   disabled={!cameraReady || remainingSlots <= 0}
                   className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[4px] border-white disabled:opacity-40"
-                  aria-label="Take photo"
-                >
+                  aria-label="Take photo">
                   <div className="h-[58px] w-[58px] rounded-full bg-white transition-transform active:scale-90" />
                 </button>
               ) : (
-                <button
-                  type="button"
+                <button type="button"
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={!cameraReady || (!isRecording && remainingSlots <= 0)}
                   className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[4px] border-white disabled:opacity-40"
-                  aria-label={isRecording ? "Stop recording" : "Start recording"}
-                >
-                  {isRecording ? (
-                    <div className="h-7 w-7 rounded-md bg-red-500 transition-transform active:scale-90" />
-                  ) : (
-                    <div className="h-[58px] w-[58px] rounded-full bg-red-500 transition-transform active:scale-90" />
-                  )}
+                  aria-label={isRecording ? "Stop recording" : "Start recording"}>
+                  {isRecording
+                    ? <div className="h-7 w-7 rounded-md bg-red-500 transition-transform active:scale-90" />
+                    : <div className="h-[58px] w-[58px] rounded-full bg-red-500 transition-transform active:scale-90" />}
                 </button>
               )}
             </div>
 
-            {/* Confirm button */}
+            {/* Confirm */}
             <div className="flex w-16 justify-center">
               {capturedFiles.length > 0 && (
-                <button
-                  type="button"
-                  onClick={confirmCaptures}
+                <button type="button" onClick={confirmCaptures}
                   className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-amber,#f59e0b)] text-white"
-                  aria-label="Use captures"
-                >
+                  aria-label="Use captures">
                   <Check size={20} />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Remaining slots info */}
           {remainingSlots <= 0 && (
             <p className="text-center text-xs text-red-400">
               Maximum file limit reached. Remove a capture to take more.
