@@ -52,7 +52,7 @@ export async function getById(
       id,
       req.admin.id,
       req.admin.role,
-      req.admin.subDistrictId,
+      req.admin.subDistrictId ?? null,
     );
     res.status(200).json({ success: true, data: result });
   } catch (error) {
@@ -99,7 +99,7 @@ export async function addNote(
       id,
       req.admin.id,
       req.admin.role,
-      req.admin.districtId,
+      req.admin.districtId ?? null,
       input,
     );
     res.status(201).json({ success: true, data: result });

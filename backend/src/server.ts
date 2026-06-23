@@ -17,10 +17,8 @@ import { authRouter } from "./modules/auth/auth.routes.js";
 import { uploadRouter } from "./modules/upload/upload.routes.js";
 import { complaintRouter } from "./modules/complaints/complaint.routes.js";
 import { aiRouter } from "./modules/ai/ai.routes.js";
-import { adminAuthRouter } from "./modules/admin/auth/adminAuth.routes.js";
-import { districtRouter } from "./modules/admin/district/district.routes.js";
-import { subDistrictRouter } from "./modules/admin/subDistrict/subDistrict.routes.js";
-import { managementRouter } from "./modules/admin/management/management.routes.js";
+import { adminAuthRouter } from "./routes/adminAuth.js";
+import { adminInvitationsRouter } from "./routes/adminInvitations.js";
 import { ticketRouter, citizenTicketRouter, superAdminTicketRouter } from "./modules/tickets/tickets.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
@@ -28,6 +26,8 @@ import { verifyEmailTransport } from "./services/email.service.js";
 import { startAllWorkers } from "./workers/index.js";
 import { checkReckoningHealth } from "./modules/ai/ai.service.js";
 import { logger } from "./utils/logger.js";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app: Express = express();
 
@@ -79,13 +79,60 @@ app.use("/api/complaints", citizenTicketRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/tickets", ticketRouter);
 
-// Admin realm. Mount the specific onboarding prefixes BEFORE the catch-all
-// management router so `/api/admin/district/*` and `/api/admin/sub-district/*`
-// are not shadowed by the management router's `:id` routes.
+// Admin CORS configuration
+const adminCorsOptions = {
+  origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    if (!origin || origin === env.ADMIN_FRONTEND_URL) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked origin: ${origin} for admin routes`));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+// Admin Helmet CSP configuration
+const adminHelmet = helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+});
+
+// Admin global rate limiter (100 requests per 15 minutes)
+const adminRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: "RATE_LIMITED",
+      message: "Too many requests. Please try again after 15 minutes.",
+    },
+  },
+});
+
+// Apply security hardening to the Admin realm
+app.use("/api/admin", cors(adminCorsOptions));
+app.use("/api/admin", adminHelmet);
+app.use("/api/admin", adminRateLimiter);
+
+// Register admin routes
 app.use("/api/admin/auth", adminAuthRouter);
-app.use("/api/admin/district", districtRouter);
-app.use("/api/admin/sub-district", subDistrictRouter);
-app.use("/api/admin", managementRouter);
+app.use("/api/admin/invitations", adminInvitationsRouter);
 app.use("/api/admin/tickets", superAdminTicketRouter);
 
 // 404 + global error handler must come AFTER all routes.

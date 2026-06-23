@@ -89,8 +89,7 @@ async function resolveJurisdiction(
 /** Active admins for a jurisdiction scope, with contact details. */
 interface AdminContact {
   id: string;
-  fullName: string;
-  phone: string | null;
+  email: string;
 }
 
 /**
@@ -107,11 +106,11 @@ async function activeAdmins(
   return prisma.adminUser.findMany({
     where: {
       role,
-      status: "ACTIVE",
+      isActive: true,
       ...(scope.districtId ? { districtId: scope.districtId } : {}),
       ...(scope.subDistrictId ? { subDistrictId: scope.subDistrictId } : {}),
     },
-    select: { id: true, fullName: true, phone: true },
+    select: { id: true, email: true },
   });
 }
 
@@ -125,7 +124,7 @@ async function notifyAll(
   await Promise.all(
     admins.flatMap((admin) => [
       sendPushNotification({ adminId: admin.id, title, body, data }),
-      sendSms(admin.phone, `${title} — ${body}`),
+      sendSms(null, `${title} — ${body}`),
     ]),
   );
 }

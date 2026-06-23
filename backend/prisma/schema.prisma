@@ -94,34 +94,33 @@ model RefreshToken {
 /// for SUPER_ADMIN, district-scoped for DISTRICT_ADMIN, and district +
 /// sub-district scoped for SUB_DISTRICT_ADMIN.
 model AdminUser {
-  id                String              @id @default(cuid())
-  fullName          String
-  email             String              @unique
-  passwordHash      String?
-  phone             String?
-  designation       String?
-  department        String?
-  role              AdminRole
-  status            AdminStatus         @default(PENDING)
-  isVerified        Boolean             @default(false)
-  districtId        String?
-  subDistrictId     String?
-  inviteTokenHash   String?             @unique
-  inviteTokenExpiry DateTime?
-  inviteAcceptedAt  DateTime?
-  invitedById       String?
-  resendCount       Int                 @default(0)
-  loginAttempts     Int                 @default(0)
-  lockedUntil       DateTime?
-  lastLoginAt       DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  refreshTokens     AdminRefreshToken[]
-  district          District?           @relation(fields: [districtId], references: [id])
-  subDistrict       SubDistrict?        @relation(fields: [subDistrictId], references: [id])
+  id                  String              @id @default(uuid()) @db.Uuid
+  fullName            String?
+  email               String              @unique
+  passwordHash        String
+  phone               String?
+  designation         String?
+  department          String?
+  role                AdminRole
+  districtId          String?
+  subDistrictId       String?
+  invitedById         String?             @db.Uuid
+  isActive            Boolean             @default(true)
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int                 @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  
+  // Relations
+  invitedBy           AdminUser?          @relation("AdminInviters", fields: [invitedById], references: [id])
+  invitedUsers        AdminUser[]         @relation("AdminInviters")
+  refreshTokens       AdminRefreshToken[]
+  district            District?           @relation(fields: [districtId], references: [id])
+  subDistrict         SubDistrict?        @relation(fields: [subDistrictId], references: [id])
+  invitationsSent     AdminInvitation[]   @relation("InvitedByRelation")
 
   @@index([role])
-  @@index([status])
   @@index([districtId])
   @@index([subDistrictId])
   @@map("admin_users")
@@ -141,6 +140,7 @@ model District {
   createdAt    DateTime                 @default(now())
   admins       AdminUser[]
   subDistricts SubDistrict[]
+  invitations  AdminInvitation[]
 
   @@index([country])
   @@map("districts")
@@ -160,6 +160,7 @@ model SubDistrict {
   admins     AdminUser[]
   tickets    Ticket[]
   district   District                 @relation(fields: [districtId], references: [id])
+  invitations AdminInvitation[]
 
   @@index([districtId])
   @@map("sub_districts")
@@ -170,19 +171,42 @@ model SubDistrict {
 /// stored, never the raw JWT. Mirrors the citizen {@link RefreshToken} model
 /// but is bound to the separate admin auth realm.
 model AdminRefreshToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  adminId   String
-  expiresAt DateTime
-  revoked   Boolean   @default(false)
-  revokedAt DateTime?
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime  @default(now())
-  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid()) @db.Uuid
+  adminUserId String    @db.Uuid
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  ipAddress   String
+  userAgent   String
+  createdAt   DateTime  @default(now())
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
-  @@index([adminId])
+  @@index([adminUserId])
   @@map("admin_refresh_tokens")
+  @@schema("public")
+}
+
+model AdminInvitation {
+  id            String       @id @default(uuid()) @db.Uuid
+  token         String       @unique
+  email         String
+  role          AdminRole
+  districtId    String?
+  subDistrictId String?
+  invitedById   String       @db.Uuid
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime     @default(now())
+
+  // Relations
+  invitedBy     AdminUser    @relation("InvitedByRelation", fields: [invitedById], references: [id])
+  district      District?    @relation(fields: [districtId], references: [id])
+  subDistrict   SubDistrict? @relation(fields: [subDistrictId], references: [id])
+
+  @@index([invitedById])
+  @@index([districtId])
+  @@index([subDistrictId])
+  @@map("admin_invitations")
   @@schema("public")
 }
 

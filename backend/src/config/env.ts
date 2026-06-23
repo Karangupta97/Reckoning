@@ -98,6 +98,13 @@ const envSchema = z.object({
   ADMIN_JWT_ACCESS_EXPIRES: z.string().min(1).default("15m"),
   ADMIN_JWT_REFRESH_EXPIRES: z.string().min(1).default("7d"),
 
+  ADMIN_JWT_SECRET: z
+    .string()
+    .min(64, "ADMIN_JWT_SECRET must be at least 64 characters"),
+  ADMIN_FRONTEND_URL: z
+    .string()
+    .url("ADMIN_FRONTEND_URL must be a valid URL"),
+
   // Public base URL the activation email links point at. The raw invite token
   // is appended as `?token=...`. No trailing slash.
   ADMIN_ACTIVATION_BASE_URL: z
@@ -109,12 +116,10 @@ const envSchema = z.object({
   // The Super Admin can never be created through the API.
   SUPER_ADMIN_EMAIL: z
     .string()
-    .email("SUPER_ADMIN_EMAIL must be a valid email address")
-    .optional(),
+    .email("SUPER_ADMIN_EMAIL must be a valid email address"),
   SUPER_ADMIN_PASSWORD: z
     .string()
-    .min(10, "SUPER_ADMIN_PASSWORD must be at least 10 characters")
-    .optional(),
+    .min(10, "SUPER_ADMIN_PASSWORD must be at least 10 characters"),
   SUPER_ADMIN_FULL_NAME: z.string().min(2).max(80).optional(),
 
   // Pre-computed bcrypt hash of a throwaway string. Compared against during
@@ -183,6 +188,10 @@ const envSchema = z.object({
   .refine((data) => data.ADMIN_JWT_REFRESH_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "ADMIN_JWT_REFRESH_SECRET must differ from the citizen JWT_REFRESH_SECRET",
     path: ["ADMIN_JWT_REFRESH_SECRET"],
+  })
+  .refine((data) => data.ADMIN_JWT_SECRET !== data.JWT_ACCESS_SECRET, {
+    message: "ADMIN_JWT_SECRET must differ from the citizen JWT_ACCESS_SECRET",
+    path: ["ADMIN_JWT_SECRET"],
   });
 
 /** Strongly-typed shape of the validated environment. */

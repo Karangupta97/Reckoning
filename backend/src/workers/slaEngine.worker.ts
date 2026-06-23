@@ -120,7 +120,7 @@ async function checkWarnings(now: Date): Promise<number> {
           where: {
             districtId: ticket.districtId,
             role: "DISTRICT_ADMIN",
-            status: "ACTIVE",
+            isActive: true,
           },
           select: { id: true },
         });
@@ -235,7 +235,7 @@ async function escalateToDistrict(ticket: BreachedTicket, now: Date): Promise<vo
     where: {
       districtId: ticket.districtId,
       role: "DISTRICT_ADMIN",
-      status: "ACTIVE",
+      isActive: true,
     },
     select: { id: true },
   });
@@ -302,7 +302,7 @@ async function escalateToSuperAdmin(ticket: BreachedTicket, now: Date): Promise<
   const superAdmin = await prisma.adminUser.findFirst({
     where: {
       role: "SUPER_ADMIN",
-      status: "ACTIVE",
+      isActive: true,
     },
     select: { id: true },
   });

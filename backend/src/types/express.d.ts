@@ -8,7 +8,7 @@
  */
 
 import type { UserRole, UserCountry } from "../utils/jwt.js";
-import type { AdminRole, AdminCountry } from "../utils/adminJwt.js";
+import type { AdminJWTPayload } from "../utils/adminAuth.js";
 
 /** Authenticated principal attached to the request by `requireAuth`. */
 export interface AuthenticatedUser {
@@ -22,22 +22,6 @@ export interface AuthenticatedUser {
   country?: UserCountry;
 }
 
-/** Authenticated admin principal attached by `requireAdminAuth`. */
-export interface AuthenticatedAdmin {
-  /** Admin id (from the JWT `sub` claim). */
-  id: string;
-  /** Admin email. */
-  email: string;
-  /** Admin role (drives RBAC). */
-  role: AdminRole;
-  /** Jurisdiction district id, null for SUPER_ADMIN. */
-  districtId: string | null;
-  /** Jurisdiction sub-district id, null for SUPER_ADMIN/DISTRICT_ADMIN. */
-  subDistrictId: string | null;
-  /** Jurisdiction country, null for SUPER_ADMIN. */
-  country: AdminCountry | null;
-}
-
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
@@ -45,7 +29,7 @@ declare global {
       /** Present only on routes guarded by `requireAuth`. */
       user?: AuthenticatedUser;
       /** Present only on routes guarded by `requireAdminAuth`. */
-      admin?: AuthenticatedAdmin;
+      admin?: AdminJWTPayload;
     }
   }
 }
