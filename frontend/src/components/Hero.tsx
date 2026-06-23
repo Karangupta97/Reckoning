@@ -20,11 +20,6 @@ export function Hero() {
       />
 
       <div className="relative mx-auto flex w-full max-w-7xl flex-col items-center px-4 pb-20 pt-16 text-center sm:px-6 sm:pt-24 lg:px-8">
-        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] shadow-[var(--shadow-neu)]">
-          <span className="h-2 w-2 rounded-full bg-[var(--color-amber)]" />
-          {t("badge")}
-        </span>
-
         <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-5xl lg:text-6xl">
           {t("headline")}
         </h1>

@@ -130,14 +130,20 @@ export function Leaderboard() {
           showHighlightMe={true}
         />
 
-        <div className="rounded-3xl border border-gray-100 bg-white overflow-hidden">
+        <div
+          className="rounded-3xl overflow-hidden"
+          style={{
+            background: "var(--color-card)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
           <div className="px-4 py-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#64748B]">Top Contributors</p>
-                <p className="text-sm font-semibold text-[#0F172A]">Preview leaderboard</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Top Contributors</p>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)]">Preview leaderboard</p>
               </div>
-              <span className="text-[11px] font-semibold text-[#475569]">{listData.length} entries</span>
+              <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">{listData.length} entries</span>
             </div>
           </div>
 
@@ -161,8 +167,8 @@ export function Leaderboard() {
           className="w-full mt-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors duration-200"
           style={{
             color: "var(--color-teal, #14b8a6)",
-            border: "1px solid color-mix(in srgb, #14b8a6 25%, transparent)",
-            background: "color-mix(in srgb, #14b8a6 5%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--color-teal, #14b8a6) 25%, transparent)",
+            background: "color-mix(in srgb, var(--color-teal, #14b8a6) 5%, transparent)",
           }}
           aria-label="View full leaderboard"
         >

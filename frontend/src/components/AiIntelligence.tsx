@@ -14,7 +14,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-import { PredictiveMap } from "@/components/ui/PredictiveMap";
+import { AnalyticsMap } from "@/components/AnalyticsMap";
 import { Link } from "@/i18n/navigation";
 
 const DETECTION_PILLS = [
@@ -284,7 +284,7 @@ export function AiIntelligence() {
               {t("predictive.description")}
             </p>
 
-            <PredictiveMap />
+            <AnalyticsMap compact className="h-[220px] w-full" style={{ height: "220px", minHeight: "220px" }} showAttribution={false} />
 
             {/* Mapbox attribution kept minimal but present per Mapbox ToS */}
             <p className="-mt-2 text-right text-[10px] text-[var(--color-text-muted)]">
