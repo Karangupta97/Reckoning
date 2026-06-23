@@ -12,9 +12,10 @@ interface ReportCardProps {
   onShare: () => void;
   onSave: () => void;
   onFollow: () => void;
+  onDelete?: () => void;
 }
 
-export function ReportCard({ report, onUpvote, onComment, onShare, onSave, onFollow }: ReportCardProps) {
+export function ReportCard({ report, onUpvote, onComment, onShare, onSave, onFollow, onDelete }: ReportCardProps) {
   const [doubleTap, setDoubleTap] = useState<{ show: boolean; x: number; y: number }>({ show: false, x: 0, y: 0 });
   const lastTapRef = useRef<number>(0);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -100,6 +101,7 @@ export function ReportCard({ report, onUpvote, onComment, onShare, onSave, onFol
         onComment={onComment}
         onShare={onShare}
         onSave={onSave}
+        onDelete={onDelete}
       />
 
       {/* Card overlay (bottom left) */}

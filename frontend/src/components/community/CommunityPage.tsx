@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
-import { getCommunityFeed, getReportComments } from "@/lib/api/citizenApi";
+import { getCommunityFeed, getReportComments, deleteComplaint } from "@/lib/api/citizenApi";
 
 import { FeedContainer } from "./FeedContainer";
 import type { FeedContainerRef } from "./FeedContainer";
@@ -110,6 +110,17 @@ export function CommunityPage() {
     feedRef.current?.scrollToIndex(idx);
   }, []);
 
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await deleteComplaint(id, email);
+      setReports((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      // best-effort: surface error via console; UI toast could be added
+      // eslint-disable-next-line no-console
+      console.error("Failed to delete report:", err);
+    }
+  }, [email]);
+
   return (
     <div className="relative h-full w-full overflow-x-hidden overflow-y-hidden bg-black lg:bg-[var(--color-page)]">
       {!isLoading && error && (
@@ -139,6 +150,7 @@ export function CommunityPage() {
               onShare={handleShare}
               onSave={handleSave}
               onFollow={handleFollow}
+              onDelete={handleDelete}
               onIndexChange={handleIndexChange}
             />
           </div>

@@ -315,6 +315,20 @@ export async function getCommunityFeed(
 }
 
 /**
+ * Delete (soft) a complaint by id.
+ */
+export async function deleteComplaint(id: string, email?: string): Promise<{ message: string }> {
+  return withMockFallback(
+    async () => {
+      const response = await fetchCitizenAuth(apiUrl(`/complaints/${id}`), { method: "DELETE" });
+      return unwrapData<{ message: string }>(response, "Unable to delete complaint.");
+    },
+    async () => ({ message: "Deleted (mock)." }),
+    email,
+  );
+}
+
+/**
  * Fetch comments for a specific report.
  */
 export async function getReportComments(

@@ -11,6 +11,7 @@ interface FeedContainerProps {
   onShare: (id: string) => void;
   onSave: (id: string) => void;
   onFollow: (id: string) => void;
+  onDelete?: (id: string) => void;
   onIndexChange?: (index: number) => void;
 }
 
@@ -21,7 +22,7 @@ export interface FeedContainerRef {
 }
 
 export const FeedContainer = forwardRef<FeedContainerRef, FeedContainerProps>(
-  function FeedContainer({ reports, onUpvote, onComment, onShare, onSave, onFollow, onIndexChange }, ref) {
+  function FeedContainer({ reports, onUpvote, onComment, onShare, onSave, onFollow, onDelete, onIndexChange }, ref) {
     const feedRef = useRef<HTMLDivElement>(null);
     const [currentIndex, setCurrentIndex] = useState(0);
     const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -112,6 +113,7 @@ export const FeedContainer = forwardRef<FeedContainerRef, FeedContainerProps>(
                   onShare={() => onShare(report.id)}
                   onSave={() => onSave(report.id)}
                   onFollow={() => onFollow(report.id)}
+                  onDelete={onDelete ? () => onDelete(report.id) : undefined}
                 />
               </div>
             </div>

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, Send, Bookmark, MoreHorizontal, ChevronUp } from "lucide-react";
+import { MessageCircle, Send, Bookmark, ChevronUp } from "lucide-react";
+import ActionMoreButton from "./ActionMoreButton";
 import type { ReportFeedItem } from "./types";
 
 interface ActionColumnProps {
@@ -11,6 +12,7 @@ interface ActionColumnProps {
   onComment: () => void;
   onShare: () => void;
   onSave: () => void;
+  onDelete?: () => void;
 }
 
 function formatCount(n: number): string {
@@ -19,7 +21,7 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-export function ActionColumn({ report, onUpvote, onComment, onShare, onSave }: ActionColumnProps) {
+export function ActionColumn({ report, onUpvote, onComment, onShare, onSave, onDelete }: ActionColumnProps) {
   const [upvoteAnim, setUpvoteAnim] = useState(false);
 
   const handleUpvote = () => {
@@ -88,13 +90,9 @@ export function ActionColumn({ report, onUpvote, onComment, onShare, onSave }: A
       </button>
 
       {/* More */}
-      <button className="flex flex-col items-center">
-        <MoreHorizontal
-          size={24}
-          strokeWidth={2}
-          className="text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.5)]"
-        />
-      </button>
+      <div className="relative">
+        <ActionMoreButton onDelete={onDelete} />
+      </div>
 
       {/* Thumbnail */}
       <div
