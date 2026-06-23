@@ -16,7 +16,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { useAdminDateRange } from "@/hooks/useAdminDateRange";
 
@@ -55,7 +55,7 @@ export default function Header({
   subtitle = "National Infrastructure Overview",
 }: HeaderProps) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const adminLogout = useAdminAuthStore((s) => s.logout);
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { period: selectedDate, setPeriod: setSelectedDate } = useAdminDateRange();
@@ -73,6 +73,11 @@ export default function Header({
     setShowSettings(false);
     setShowDateDropdown(false);
   }, []);
+
+  const logout = useCallback(async () => {
+    await adminLogout();
+    router.push("/admin/login");
+  }, [adminLogout, router]);
 
   const toggleSettings = useCallback(() => {
     setShowSettings((prev) => !prev);

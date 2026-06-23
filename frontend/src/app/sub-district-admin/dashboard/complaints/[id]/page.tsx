@@ -33,6 +33,7 @@ import { ClarificationThread, parseNotesToThread, ClarificationRequiredBadge } f
 import { getRelatedRecordsForComplaint, buildCaseJourney } from "@/lib/case-traceability";
 import { ImpactCard } from "@/components/citizen/ImpactCard";
 import { CitizenTransparencyTimeline } from "@/components/citizen/CitizenTransparencyTimeline";
+import { AdminAIAnnotatedPanel } from "@/components/admin/AdminAIAnnotatedPanel";
 
 type SLAStatus = ComplaintSLAStatus;
 type ComplaintDetail = ComplaintDetailView;
@@ -93,11 +94,30 @@ function SlaBlock({ status, label, hours }: { status: "Breached"|"At Risk"|"On T
 }
 
 /* ─── Evidence Gallery ───────────────────────────────────────── */
-type EvidenceItem = { label: string; by: string; time: string; coords: string };
+type EvidenceItem = { label: string; by: string; time: string; coords: string; url?: string };
+
+function getEvidenceImageUrl(img: EvidenceItem & { url?: string }, category: string): string {
+  if (img.url) return img.url;
+  const labelLower = img.label.toLowerCase();
+  const catLower = category.toLowerCase();
+  if (catLower.includes("road") || catLower.includes("pothole") || labelLower.includes("pothole") || labelLower.includes("road")) {
+    return "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?q=80&w=600&auto=format&fit=cover";
+  }
+  if (catLower.includes("water") || catLower.includes("flood") || catLower.includes("sewage") || labelLower.includes("water") || labelLower.includes("sewage")) {
+    return "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=600&auto=format&fit=cover";
+  }
+  if (catLower.includes("light") || labelLower.includes("light") || labelLower.includes("dark")) {
+    return "https://images.unsplash.com/photo-1509099836639-18ba1795216d?q=80&w=600&auto=format&fit=cover";
+  }
+  if (catLower.includes("garbage") || catLower.includes("sanitation") || labelLower.includes("garbage") || labelLower.includes("trash")) {
+    return "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?q=80&w=600&auto=format&fit=cover";
+  }
+  return "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=600&auto=format&fit=cover";
+}
 
 function EvidenceSection({
-  title, color, items, emptyLabel,
-}: { title: string; color: string; items: EvidenceItem[]; emptyLabel: string }) {
+  title, color, items, emptyLabel, category,
+}: { title: string; color: string; items: EvidenceItem[]; emptyLabel: string; category: string }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   return (
@@ -118,16 +138,19 @@ function EvidenceSection({
               onClick={() => setLightbox(i)}
               className="relative aspect-video rounded-xl border overflow-hidden cursor-zoom-in group"
               style={{ borderColor: `color-mix(in srgb, ${color} 25%, var(--color-border))`, background: `color-mix(in srgb, ${color} 6%, var(--color-surface))` }}>
-              {/* Placeholder graphic */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Camera size={22} style={{ color: `color-mix(in srgb, ${color} 60%, transparent)` }} />
-              </div>
+              {/* Actual Image */}
+              <img
+                src={getEvidenceImageUrl(img, category)}
+                alt={img.label}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                 <ZoomIn size={16} className="text-white" />
               </div>
               {/* Caption */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 px-2 py-1.5">
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 px-2 py-1.5 z-10">
                 <p className="text-[10px] font-medium text-white truncate">{img.label}</p>
                 <p className="text-[9px] text-white/60 truncate">{img.by} · {img.time}</p>
               </div>
@@ -144,11 +167,12 @@ function EvidenceSection({
             onClick={() => setLightbox(null)}>
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
               className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
-              {/* Placeholder */}
-              <div className="aspect-video rounded-2xl border border-white/10 flex items-center justify-center"
-                style={{ background: `color-mix(in srgb, ${color} 8%, #111)` }}>
-                <Camera size={48} style={{ color: `color-mix(in srgb, ${color} 50%, transparent)` }} />
-              </div>
+              {/* Fullscreen Image */}
+              <img
+                src={getEvidenceImageUrl(items[lightbox], category)}
+                alt={items[lightbox]?.label}
+                className="w-full h-auto max-h-[85vh] object-contain rounded-2xl border border-white/10"
+              />
               {/* Meta */}
               <div className="mt-3 flex items-center justify-between px-1">
                 <div>
@@ -1091,6 +1115,11 @@ export default function ComplaintDetailPage() {
             </DashboardCard>
           </motion.div>
 
+          {/* AI Object Detection Panel */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <AdminAIAnnotatedPanel complaintId={complaintId} category={c.category} />
+          </motion.div>
+
           {/* Location with mini map */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <DashboardCard className="p-4 flex flex-col gap-3">
@@ -1147,9 +1176,9 @@ export default function ComplaintDetailPage() {
                   {c.evidence.citizen.length + c.evidence.inspection.length + c.evidence.resolution.length} files
                 </span>
               </div>
-              <EvidenceSection title="Citizen Evidence — Before Inspection"  color="var(--sda-amber)"     items={c.evidence.citizen}    emptyLabel="No citizen evidence uploaded" />
-              <EvidenceSection title="Officer Inspection Evidence"           color="var(--color-info)"    items={c.evidence.inspection} emptyLabel="No inspection photos yet" />
-              <EvidenceSection title="Resolution Evidence — After Completion" color="var(--color-success)" items={c.evidence.resolution} emptyLabel="No resolution evidence yet" />
+              <EvidenceSection title="Citizen Evidence — Before Inspection"  color="var(--sda-amber)"     items={c.evidence.citizen}    emptyLabel="No citizen evidence uploaded" category={c.category} />
+              <EvidenceSection title="Officer Inspection Evidence"           color="var(--color-info)"    items={c.evidence.inspection} emptyLabel="No inspection photos yet" category={c.category} />
+              <EvidenceSection title="Resolution Evidence — After Completion" color="var(--color-success)" items={c.evidence.resolution} emptyLabel="No resolution evidence yet" category={c.category} />
             </DashboardCard>
           </motion.div>
 

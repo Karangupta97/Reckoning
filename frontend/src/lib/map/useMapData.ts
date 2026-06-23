@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DrillState, GeoJSONCache, MapConfig, MapLevel, RegionStats } from './types';
-import { getMockDataForRegion } from './mockData';
+import { getRealDataForRegion } from './indiaRealData';
 import { generateFallbackGeoJSON, getGeoJSONUrl, filterDistrictsByState, filterSubdistrictsByDistrict, STATE_CENTERS, DISTRICT_CENTERS } from './mapUtils';
 
 export function useMapData(config: MapConfig) {
@@ -34,16 +34,16 @@ export function useMapData(config: MapConfig) {
 
   const currentData = useMemo((): Record<string, RegionStats> => {
     if (drillState.level === 'national') {
-      return getMockDataForRegion('national');
+      return getRealDataForRegion('national');
     }
     if (drillState.level === 'state') {
-      return getMockDataForRegion('state', drillState.stateId);
+      return getRealDataForRegion('state', drillState.stateId);
     }
     if (drillState.level === 'district') {
-      return getMockDataForRegion('district', drillState.districtId);
+      return getRealDataForRegion('district', drillState.districtId);
     }
     if (drillState.level === 'subdistrict') {
-      return getMockDataForRegion('district', drillState.subdistrictId);
+      return getRealDataForRegion('district', drillState.subdistrictId);
     }
     return {};
   }, [drillState]);
@@ -113,10 +113,10 @@ export function useMapData(config: MapConfig) {
       console.warn(`[IndiaMap] GeoJSON not found for ${url}, using fallback bounds`);
 
       const mockData = level === 'national'
-        ? getMockDataForRegion('national')
+        ? getRealDataForRegion('national')
         : level === 'state'
-          ? getMockDataForRegion('state', regionId)
-          : getMockDataForRegion('district', regionId);
+          ? getRealDataForRegion('state', regionId)
+          : getRealDataForRegion('district', regionId);
 
       const regionNames = Object.values(mockData).map(r => r.name);
       const center = regionId

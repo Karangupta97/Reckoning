@@ -20,6 +20,7 @@ import {
   type ReportEvidenceFile,
   type SupportedEvidenceMimeType,
 } from "./reportTypes";
+import { LiveCameraCapture } from "./LiveCameraCapture";
 
 const ACCEPT_ATTRIBUTE = SUPPORTED_EVIDENCE_MIME_TYPES.join(",");
 
@@ -63,7 +64,7 @@ export function EvidenceStep({
   onAnalyse,
 }: EvidenceStepProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const liveCaptureRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const galleryRef = useRef<HTMLInputElement>(null);
 
   const canAddMore = evidenceFiles.length < MAX_EVIDENCE_FILES;
@@ -73,9 +74,6 @@ export function EvidenceStep({
   const handleFiles = useCallback(
     (files: FileList | File[], source: "camera" | "gallery" | "drop") => {
       onSelectFiles(Array.from(files), source);
-      if (liveCaptureRef.current) {
-        liveCaptureRef.current.value = "";
-      }
       if (galleryRef.current) {
         galleryRef.current.value = "";
       }
@@ -90,11 +88,20 @@ export function EvidenceStep({
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
+      {/* Live Camera Capture Overlay */}
+      <LiveCameraCapture
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={(files) => onSelectFiles(files, "camera")}
+        maxFiles={MAX_EVIDENCE_FILES}
+        currentFileCount={evidenceFiles.length}
+      />
+
       {touchDevice ? (
         <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => liveCaptureRef.current?.click()}
+            onClick={() => setCameraOpen(true)}
             disabled={!canAddMore || isBusy}
             className={`relative flex min-h-[140px] flex-col justify-between rounded-3xl border p-4 text-left transition-all ${
               canAddMore && !isBusy
@@ -117,19 +124,6 @@ export function EvidenceStep({
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">Take Photo / Video</p>
               <p className="mt-2 text-xs text-[var(--color-text-secondary)]">Use your camera to capture the hazard right now.</p>
             </div>
-            <input
-              ref={liveCaptureRef}
-              type="file"
-              accept="image/*,video/*"
-              capture="environment"
-              multiple
-              className="sr-only"
-              onChange={(event) => {
-                if (event.target.files?.length) {
-                  handleFiles(event.target.files, "camera");
-                }
-              }}
-            />
           </button>
 
           <button
@@ -173,65 +167,78 @@ export function EvidenceStep({
         </motion.div>
       ) : (
         <motion.div variants={itemVariants}>
-          <div
-            onDrop={(event) => {
-              event.preventDefault();
-              setIsDragging(false);
-              if (event.dataTransfer.files.length) {
-                handleFiles(event.dataTransfer.files, "drop");
-              }
-            }}
-            onDragOver={(event) => {
-              event.preventDefault();
-              if (canAddMore) {
-                setIsDragging(true);
-              }
-            }}
-            onDragLeave={(event) => {
-              event.preventDefault();
-              setIsDragging(false);
-            }}
-            onClick={() => galleryRef.current?.click()}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setCameraOpen(true)}
+              disabled={!canAddMore || isBusy}
+              className={`relative flex min-h-[100px] flex-col justify-between rounded-3xl border p-4 text-left transition-all ${
+                canAddMore && !isBusy
+                  ? "border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--color-amber)_12%,transparent)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] opacity-60"
+              }`}
+            >
+              <div className="rounded-2xl bg-[color-mix(in_srgb,var(--color-amber)_14%,transparent)] p-3 text-[var(--color-amber)] w-fit">
+                <Camera size={22} />
+              </div>
+              <div className="mt-2">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Live Capture</h3>
+                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Open camera to take photo or record video.</p>
+              </div>
+            </button>
+            <div
+              onDrop={(event) => {
                 event.preventDefault();
-                galleryRef.current?.click();
-              }
-            }}
-            className={`group relative flex min-h-[250px] flex-col items-center justify-center gap-4 rounded-[1.75rem] border-2 border-dashed px-6 py-10 text-center transition-all ${
-              isDragging
-                ? "border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)] shadow-[var(--shadow-neu)]"
-                : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-amber)] hover:bg-[var(--color-card)]"
-            } ${!canAddMore ? "opacity-65" : ""}`}
-          >
-            <div className="flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-[color-mix(in_srgb,var(--color-amber)_12%,transparent)] text-[var(--color-amber)] transition-transform group-hover:scale-105">
-              <Upload size={30} strokeWidth={1.8} />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-base font-semibold text-[var(--color-text-primary)]">
-                Drag photos or video, or tap to capture
-              </h3>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Drop files here or choose from your device. Accepts photos and video clips.
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Up to 5 files. Maximum 25 MB per file.
-              </p>
-            </div>
-            <input
-              ref={galleryRef}
-              type="file"
-              accept={ACCEPT_ATTRIBUTE}
-              multiple
-              className="sr-only"
-              onChange={(event) => {
-                if (event.target.files?.length) {
-                  handleFiles(event.target.files, "gallery");
+                setIsDragging(false);
+                if (event.dataTransfer.files.length) {
+                  handleFiles(event.dataTransfer.files, "drop");
                 }
               }}
-            />
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (canAddMore) {
+                  setIsDragging(true);
+                }
+              }}
+              onDragLeave={(event) => {
+                event.preventDefault();
+                setIsDragging(false);
+              }}
+              onClick={() => galleryRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  galleryRef.current?.click();
+                }
+              }}
+              className={`relative flex min-h-[100px] flex-col justify-between rounded-3xl border-2 border-dashed p-4 text-left transition-all ${
+                isDragging
+                  ? "border-[var(--color-amber)] bg-[color-mix(in_srgb,var(--color-amber)_6%,transparent)]"
+                  : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-amber)] hover:bg-[var(--color-card)]"
+              } ${!canAddMore ? "opacity-65" : ""}`}
+            >
+              <div className="rounded-2xl bg-[color-mix(in_srgb,var(--color-text-muted)_14%,transparent)] p-3 text-[var(--color-text-secondary)] w-fit">
+                <Upload size={22} />
+              </div>
+              <div className="mt-2">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Upload / Drop Files</h3>
+                <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Drag &amp; drop or browse from your device.</p>
+              </div>
+              <input
+                ref={galleryRef}
+                type="file"
+                accept={ACCEPT_ATTRIBUTE}
+                multiple
+                className="sr-only"
+                onChange={(event) => {
+                  if (event.target.files?.length) {
+                    handleFiles(event.target.files, "gallery");
+                  }
+                }}
+              />
+            </div>
           </div>
         </motion.div>
       )}

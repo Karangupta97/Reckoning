@@ -78,7 +78,7 @@ async function findByContains(
       AND au.role = 'SUB_DISTRICT_ADMIN'
       AND au.status = 'ACTIVE'
     WHERE ST_Contains(
-      sd.geofence,
+      sd.boundary,
       ST_SetSRID(ST_MakePoint($1, $2), 4326)
     )
     LIMIT 1
@@ -109,7 +109,7 @@ async function findByNearest(
       au.id        AS "assignedAdminId",
       sd.name      AS "subDistrictName",
       ST_Distance(
-        sd.geofence::geography,
+        sd.boundary::geography,
         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
       ) AS distance
     FROM "sub_districts" sd
@@ -118,7 +118,7 @@ async function findByNearest(
       AND au.role = 'SUB_DISTRICT_ADMIN'
       AND au.status = 'ACTIVE'
     WHERE ST_DWithin(
-      sd.geofence::geography,
+      sd.boundary::geography,
       ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
       5000
     )

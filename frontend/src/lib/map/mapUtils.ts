@@ -262,50 +262,141 @@ export function getInitialView(config: MapConfig): { center: [number, number]; z
 }
 
 export function generateTooltipHTML(stats: RegionStats, isDark: boolean): string {
-  const bg = isDark ? '#222838' : '#FFFFFF';
-  const textPrimary = isDark ? '#EDF1F7' : '#1C2B3A';
-  const textSecondary = isDark ? '#A8B6C8' : '#4A5D70';
-  const textMuted = isDark ? '#5C6E82' : '#8A9BAD';
-  const border = isDark ? '#313A50' : '#D6DFE8';
+  const bg = isDark ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.98)';
+  const textPrimary = isDark ? '#F1F5F9' : '#0F172A';
+  const textSecondary = isDark ? '#94A3B8' : '#475569';
+  const textMuted = isDark ? '#64748B' : '#94A3B8';
+  const border = isDark ? 'rgba(51,65,85,0.5)' : 'rgba(226,232,240,0.8)';
+  const cardBg = isDark ? 'rgba(30,41,59,0.6)' : 'rgba(248,250,252,0.9)';
   const riskColor = getRiskColor(stats.riskScore);
   const riskLabel = getRiskLabel(stats.riskScore);
 
-  const trendIcon = stats.trend === 'up' ? '📈' : stats.trend === 'down' ? '📉' : '➡️';
+  const trendIcon = stats.trend === 'up' ? '↑' : stats.trend === 'down' ? '↓' : '→';
+  const trendColor = stats.trend === 'up' ? '#EF4444' : stats.trend === 'down' ? '#10B981' : '#64748B';
   const trendSign = stats.trend === 'up' ? '+' : stats.trend === 'down' ? '-' : '';
+
+  // Severity progress bar widths
+  const total = stats.criticalCount + stats.highCount + stats.mediumCount + stats.lowCount;
+  const critW = total > 0 ? (stats.criticalCount / total) * 100 : 0;
+  const highW = total > 0 ? (stats.highCount / total) * 100 : 0;
+  const medW = total > 0 ? (stats.mediumCount / total) * 100 : 0;
+  const lowW = total > 0 ? (stats.lowCount / total) * 100 : 0;
+
+  // Resolution rate
+  const resolutionRate = stats.totalReports > 0
+    ? Math.round((stats.resolvedReports / stats.totalReports) * 100) : 0;
 
   return `
     <div style="
       background: ${bg};
       border: 1px solid ${border};
-      border-radius: 12px;
-      padding: 12px 14px;
-      max-width: 220px;
-      font-family: system-ui, -apple-system, sans-serif;
+      border-radius: 14px;
+      padding: 14px 16px;
+      width: 280px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       font-size: 11px;
       line-height: 1.4;
       color: ${textPrimary};
+      box-shadow: 0 25px 50px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     ">
-      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+      <!-- Risk Badge + Trend -->
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
         <span style="
-          display: inline-block;
-          padding: 2px 7px;
-          border-radius: 6px;
-          background: ${riskColor}22;
+          display:inline-flex; align-items:center; gap:4px;
+          padding: 2px 8px;
+          border-radius: 20px;
+          background: ${riskColor}18;
           color: ${riskColor};
-          font-size: 9px;
-          font-weight: 700;
+          font-size: 8px;
+          font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-        ">${riskLabel}</span>
+          letter-spacing: 0.7px;
+          border: 1px solid ${riskColor}30;
+        ">
+          <span style="width:5px;height:5px;border-radius:50%;background:${riskColor};display:inline-block;"></span>
+          ${riskLabel}
+        </span>
+        <span style="font-size:9px; color:${trendColor}; font-weight:700;">
+          ${trendIcon} ${trendSign}${stats.trendPercent}%
+        </span>
       </div>
-      <div style="font-weight: 700; font-size: 13px; margin-bottom: 8px; color: ${textPrimary};">${stats.name}</div>
-      <div style="border-top: 1px solid ${border}; margin-bottom: 8px;"></div>
-      <div style="color: ${textSecondary}; margin-bottom: 3px;">📊 ${stats.totalReports} Total Reports</div>
-      <div style="color: ${textSecondary}; margin-bottom: 3px;">🔴 Critical: ${stats.criticalCount} &nbsp; 🟡 High: ${stats.highCount}</div>
-      <div style="color: ${textSecondary}; margin-bottom: 8px;">🟢 Resolved: ${stats.resolvedReports} &nbsp; ⏳ Open: ${stats.openReports}</div>
-      <div style="border-top: 1px solid ${border}; margin-bottom: 8px;"></div>
-      <div style="color: ${textMuted}; margin-bottom: 3px;">⚠️ Top: ${stats.topHazardType} &nbsp; ${trendIcon} ${trendSign}${stats.trendPercent}%</div>
-      <div style="color: ${textMuted};">✅ ${stats.verificationAccuracy}% accuracy &nbsp; ⏱ ${stats.avgResolutionDays}d avg</div>
+
+      <!-- Region Name -->
+      <div style="font-weight:800; font-size:14px; margin-bottom:2px; color:${textPrimary}; letter-spacing:-0.2px;">
+        ${stats.name}
+      </div>
+      ${stats.parentName ? `<div style="font-size:9px; color:${textMuted}; margin-bottom:10px; font-weight:500;">${stats.parentName}</div>` : '<div style="margin-bottom:10px;"></div>'}
+
+      <!-- Stats Row -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:4px; margin-bottom:10px;">
+        <div style="background:${cardBg}; border-radius:8px; padding:6px 8px; text-align:center; border:1px solid ${border};">
+          <div style="font-size:13px; font-weight:800; color:#3B82F6;">${stats.totalReports.toLocaleString()}</div>
+          <div style="font-size:8px; color:${textMuted}; font-weight:600; margin-top:1px;">TOTAL</div>
+        </div>
+        <div style="background:${cardBg}; border-radius:8px; padding:6px 8px; text-align:center; border:1px solid ${border};">
+          <div style="font-size:13px; font-weight:800; color:#F59E0B;">${stats.openReports.toLocaleString()}</div>
+          <div style="font-size:8px; color:${textMuted}; font-weight:600; margin-top:1px;">OPEN</div>
+        </div>
+        <div style="background:${cardBg}; border-radius:8px; padding:6px 8px; text-align:center; border:1px solid ${border};">
+          <div style="font-size:13px; font-weight:800; color:#10B981;">${stats.resolvedReports.toLocaleString()}</div>
+          <div style="font-size:8px; color:${textMuted}; font-weight:600; margin-top:1px;">DONE</div>
+        </div>
+        <div style="background:${cardBg}; border-radius:8px; padding:6px 8px; text-align:center; border:1px solid ${border};">
+          <div style="font-size:13px; font-weight:800; color:#EF4444;">${stats.criticalCount.toLocaleString()}</div>
+          <div style="font-size:8px; color:${textMuted}; font-weight:600; margin-top:1px;">CRIT</div>
+        </div>
+      </div>
+
+      <!-- Severity Bar -->
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+          <span style="font-size:8px; color:${textSecondary}; font-weight:600;">Severity Distribution</span>
+          <span style="font-size:8px; color:${textMuted};">${resolutionRate}% resolved</span>
+        </div>
+        <div style="height:5px; border-radius:3px; overflow:hidden; display:flex; background:${isDark ? 'rgba(30,41,59,0.8)' : 'rgba(241,245,249,1)'};">
+          <div style="width:${critW}%; background:#EF4444;"></div>
+          <div style="width:${highW}%; background:#F59E0B;"></div>
+          <div style="width:${medW}%; background:#EAB308;"></div>
+          <div style="width:${lowW}%; background:#10B981;"></div>
+        </div>
+        <div style="display:flex; gap:6px; margin-top:4px;">
+          <span style="font-size:8px; color:${textMuted}; display:flex; align-items:center; gap:2px;">
+            <span style="width:5px;height:5px;border-radius:1px;background:#EF4444;display:inline-block;"></span>${stats.criticalCount}
+          </span>
+          <span style="font-size:8px; color:${textMuted}; display:flex; align-items:center; gap:2px;">
+            <span style="width:5px;height:5px;border-radius:1px;background:#F59E0B;display:inline-block;"></span>${stats.highCount}
+          </span>
+          <span style="font-size:8px; color:${textMuted}; display:flex; align-items:center; gap:2px;">
+            <span style="width:5px;height:5px;border-radius:1px;background:#EAB308;display:inline-block;"></span>${stats.mediumCount}
+          </span>
+          <span style="font-size:8px; color:${textMuted}; display:flex; align-items:center; gap:2px;">
+            <span style="width:5px;height:5px;border-radius:1px;background:#10B981;display:inline-block;"></span>${stats.lowCount}
+          </span>
+        </div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div style="border-top:1px solid ${border}; padding-top:8px; display:flex; flex-direction:column; gap:4px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:9px; color:${textMuted};">⚠️ Top Hazard</span>
+          <span style="font-size:9px; font-weight:700; color:${textPrimary};">${stats.topHazardType}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:9px; color:${textMuted};">✅ Accuracy</span>
+          <span style="font-size:9px; font-weight:700; color:#10B981;">${stats.verificationAccuracy}%</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:9px; color:${textMuted};">⏱ Avg Resolution</span>
+          <span style="font-size:9px; font-weight:700; color:${textPrimary};">${stats.avgResolutionDays}d</span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top:8px; padding-top:6px; border-top:1px solid ${border}; text-align:center;">
+        <span style="font-size:8px; color:${textMuted}; font-weight:500; letter-spacing:0.3px;">Click to drill down</span>
+      </div>
     </div>
   `;
 }

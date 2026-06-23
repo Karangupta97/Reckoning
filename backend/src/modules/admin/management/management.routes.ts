@@ -12,6 +12,7 @@
 
 import { Router } from "express";
 import * as ctrl from "./management.controller.js";
+import * as subDistrictComplaintsCtrl from "../subDistrict/subDistrictComplaints.controller.js";
 import {
   addNoteSchema,
   idParamSchema,
@@ -157,4 +158,18 @@ managementRouter.post(
   requireRole("SUB_DISTRICT_ADMIN"),
   validate({ params: idParamSchema, body: addNoteSchema }),
   ctrl.addNote,
+);
+
+// New: sub-district complaint endpoints (subDistrictId-scoped, not geofence)
+
+managementRouter.get(
+  "/subdistrict/complaints",
+  requireRole("SUB_DISTRICT_ADMIN"),
+  subDistrictComplaintsCtrl.listComplaints,
+);
+
+managementRouter.patch(
+  "/subdistrict/complaints/:id/status",
+  requireRole("SUB_DISTRICT_ADMIN"),
+  subDistrictComplaintsCtrl.updateStatus,
 );

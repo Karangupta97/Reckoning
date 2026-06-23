@@ -127,7 +127,7 @@ export async function setSubDistrictGeofence(
     () =>
       tx.$executeRaw`
         UPDATE "sub_districts"
-        SET geofence = ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geofence)}), 4326)
+        SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geofence)}), 4326)
         WHERE id = ${id}
       `,
   );

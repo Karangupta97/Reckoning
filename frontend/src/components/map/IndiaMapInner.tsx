@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import type { Layer, LeafletMouseEvent, PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import './map-tooltip.css';
 
 import type { IndiaMapProps } from './IndiaMap';
 import type { MapLevel } from '@/lib/map/types';
@@ -142,7 +143,7 @@ export default function IndiaMapInner({
 
   // Style function for GeoJSON features (data layer)
   const styleFeature = useCallback((feature: GeoJSON.Feature | undefined): PathOptions => {
-    if (!feature) return { fillColor: '#94A3B8', fillOpacity: 0.20, color: '#FFFFFF', weight: 1.5, opacity: 0.8 };
+    if (!feature) return { fillColor: '#94A3B8', fillOpacity: 0.15, color: '#FFFFFF', weight: 1.2, opacity: 0.6 };
 
     const regionId = getFeatureId(feature);
     const stats = currentData[regionId];
@@ -150,35 +151,35 @@ export default function IndiaMapInner({
     const hasSelection = selectedRegion !== null;
 
     // Determine fill opacity based on state
-    let fillOpacity = 0.35; // default — transparent enough to see map tiles
+    let fillOpacity = 0.40; // default — slightly more opaque for professional look
     if (isSelected) {
-      fillOpacity = 0.70;
+      fillOpacity = 0.75;
     } else if (hasSelection) {
-      fillOpacity = 0.10; // dimmed — other regions when one is selected
+      fillOpacity = 0.12; // dimmed — other regions when one is selected
     }
 
     // No-data regions get even lighter opacity
     if (!stats) {
-      fillOpacity = 0.20;
+      fillOpacity = 0.15;
     }
 
     return {
-      fillColor: stats ? getRiskColor(stats.riskScore) : '#94A3B8',
+      fillColor: stats ? getRiskColor(stats.riskScore) : '#64748B',
       fillOpacity,
-      color: isSelected ? '#F59E0B' : '#FFFFFF',
-      weight: isSelected ? 3 : 1.5,
-      opacity: isSelected ? 1.0 : 0.8,
+      color: isSelected ? '#F59E0B' : (isDark ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.9)'),
+      weight: isSelected ? 2.5 : 1,
+      opacity: isSelected ? 1.0 : 0.7,
     };
-  }, [currentData, selectedRegion]);
+  }, [currentData, selectedRegion, isDark]);
 
   // Style for the state border overlay (always visible)
   const borderStyle = useCallback((): PathOptions => ({
     fillColor: 'transparent',
     fillOpacity: 0,
-    color: '#FFFFFF',
-    weight: 1.5,
-    opacity: 0.8,
-  }), []);
+    color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.7)',
+    weight: 1,
+    opacity: 0.6,
+  }), [isDark]);
 
   // Feature event handlers
   const onEachFeature = useCallback((feature: GeoJSON.Feature, layer: Layer) => {
@@ -189,8 +190,8 @@ export default function IndiaMapInner({
     if (stats) {
       layer.bindTooltip(generateTooltipHTML(stats, isDark), {
         sticky: true,
-        direction: 'top',
-        offset: [0, -10],
+        direction: 'auto',
+        offset: [0, -15],
         opacity: 1,
         className: 'map-tooltip',
       });
@@ -200,12 +201,19 @@ export default function IndiaMapInner({
       mouseover: (e: LeafletMouseEvent) => {
         hoverRegion(regionId);
         const target = e.target;
+        const riskColor = stats ? getRiskColor(stats.riskScore) : '#94A3B8';
         target.setStyle({
-          fillOpacity: 0.55,
-          color: '#FFFFFF',
-          weight: 2.5,
+          fillOpacity: 0.65,
+          color: riskColor,
+          weight: 3,
           opacity: 1.0,
         });
+        // Add subtle shadow/glow via className
+        const path = (target as unknown as { _path?: HTMLElement })._path;
+        if (path) {
+          path.style.filter = `drop-shadow(0 0 8px ${riskColor}80)`;
+          path.style.transition = 'all 0.2s ease-out';
+        }
         target.bringToFront();
       },
       mouseout: (e: LeafletMouseEvent) => {
@@ -230,6 +238,12 @@ export default function IndiaMapInner({
           weight: isSelected ? 3 : 1.5,
           opacity: isSelected ? 1.0 : 0.8,
         });
+        // Remove glow
+        const pathEl = (target as unknown as { _path?: HTMLElement })._path;
+        if (pathEl) {
+          pathEl.style.filter = 'none';
+          pathEl.style.transition = 'all 0.2s ease-out';
+        }
       },
       click: () => {
         if (canDrillDown(drillState.level)) {
@@ -305,7 +319,6 @@ export default function IndiaMapInner({
         height: activeHeight,
         width: '100%',
         borderRadius: '12px',
-        overflow: 'hidden',
         transition: 'height 0.3s ease',
         isolation: 'isolate',
       }}

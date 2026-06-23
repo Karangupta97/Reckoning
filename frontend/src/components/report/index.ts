@@ -4,6 +4,7 @@ export { AIAnalysisStep } from "./AIAnalysisStep";
 export { HazardInfoStep } from "./HazardInfoStep";
 export { LocationStep } from "./LocationStep";
 export { EvidenceStep } from "./EvidenceStep";
+export { LiveCameraCapture } from "./LiveCameraCapture";
 export { ReviewStep } from "./ReviewStep";
 export { SuccessScreen } from "./SuccessScreen";
 export * from "./reportTypes";

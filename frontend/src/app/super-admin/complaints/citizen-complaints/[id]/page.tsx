@@ -8,7 +8,7 @@ import {
   MessageSquare, Camera, CheckCircle2, Clock, Timer,
   X, Check, ChevronDown, Download, UserCheck, Search,
   ClipboardCheck, Eye, ArrowUpRight, XCircle,
-  ShieldAlert, IndianRupee, Shield,
+  ShieldAlert, IndianRupee, Shield, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import IndiaMap from "@/components/map/IndiaMap";
@@ -18,6 +18,26 @@ import {
   SA_COMPLAINT_MAP, priorityBadge, statusBadge, slaBadgeColor,
   type SAStatus, type SAPriority,
 } from "@/lib/super-admin-mock";
+import { AdminAIAnnotatedPanel } from "@/components/admin/AdminAIAnnotatedPanel";
+
+function getEvidenceImageUrl(img: { label: string; url?: string }, category: string): string {
+  if (img.url) return img.url;
+  const labelLower = img.label.toLowerCase();
+  const catLower = category.toLowerCase();
+  if (catLower.includes("road") || catLower.includes("pothole") || labelLower.includes("pothole") || labelLower.includes("road")) {
+    return "https://images.unsplash.com/photo-1515162305285-0293e4767cc2?q=80&w=600&auto=format&fit=cover";
+  }
+  if (catLower.includes("water") || catLower.includes("flood") || catLower.includes("sewage") || labelLower.includes("water") || labelLower.includes("sewage")) {
+    return "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?q=80&w=600&auto=format&fit=cover";
+  }
+  if (catLower.includes("light") || labelLower.includes("light") || labelLower.includes("dark")) {
+    return "https://images.unsplash.com/photo-1509099836639-18ba1795216d?q=80&w=600&auto=format&fit=cover";
+  }
+  if (catLower.includes("garbage") || catLower.includes("sanitation") || labelLower.includes("garbage") || labelLower.includes("trash")) {
+    return "https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?q=80&w=600&auto=format&fit=cover";
+  }
+  return "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=600&auto=format&fit=cover";
+}
 
 /* ─── Helpers ────────────────────────────────────────────────── */
 function now() {
@@ -255,6 +275,7 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
   const [activityLog, setActivityLog] = useState(complaint.activityLog);
   const [noteText,    setNoteText]    = useState("");
   const [toast,       setToast]       = useState<string | null>(null);
+  const [lightbox,    setLightbox]    = useState<number | null>(null);
 
   // Dialogs
   const [statusOpen,      setStatusOpen]      = useState(false);
@@ -407,6 +428,11 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
             </DashboardCard>
           </motion.div>
 
+          {/* AI Object Detection Panel */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <AdminAIAnnotatedPanel complaintId={complaint.id} category={complaint.category} />
+          </motion.div>
+
           {/* Location */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
             <DashboardCard className="p-4 flex flex-col gap-3">
@@ -445,15 +471,19 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {complaint.evidence.map((e, i) => (
-                    <div key={i} className="relative aspect-video rounded-xl border overflow-hidden group cursor-pointer"
+                    <div key={i} onClick={() => setLightbox(i)} className="relative aspect-video rounded-xl border overflow-hidden group cursor-pointer"
                       style={{ borderColor: "rgba(34,211,238,0.2)", background: "rgba(34,211,238,0.05)" }}>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <Camera size={20} className="text-cyan-400 opacity-40" />
-                      </div>
+                      {/* Actual Image */}
+                      <img
+                        src={getEvidenceImageUrl(e, complaint.category)}
+                        alt={e.label}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Eye size={14} className="text-white" />
                       </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 px-2 py-1.5">
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 px-2 py-1.5 z-10">
                         <p className="text-[10px] font-medium text-white truncate">{e.label}</p>
                         <p className="text-[9px] text-white/60 truncate">{e.by} · {e.time}</p>
                       </div>
@@ -636,6 +666,46 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
         {reassignOpen && <ReassignDialog        id={complaint.id}                     onClose={() => setReassignOpen(false)}  onSubmit={handleReassign}     />}
         {clarifyOpen  && <ClarificationDialog   id={complaint.id}                     onClose={() => setClarifyOpen(false)}   onSubmit={handleClarify}      />}
         {closureOpen  && <ApproveClosureDialog  id={complaint.id}                     onClose={() => setClosureOpen(false)}   onSubmit={handleClosure}      />}
+      </AnimatePresence>
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightbox !== null && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            onClick={() => setLightbox(null)}>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              className="relative w-full max-w-2xl animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={getEvidenceImageUrl(complaint.evidence[lightbox], complaint.category)}
+                alt={complaint.evidence[lightbox]?.label}
+                className="w-full h-auto max-h-[85vh] object-contain rounded-2xl border border-white/10"
+              />
+              <div className="mt-3 flex items-center justify-between px-1">
+                <div>
+                  <p className="text-sm font-semibold text-white">{complaint.evidence[lightbox]?.label}</p>
+                  <p className="text-xs text-white/50">{complaint.evidence[lightbox]?.by} · {complaint.evidence[lightbox]?.time}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"><Download size={14} /></button>
+                  <button onClick={() => setLightbox(null)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"><X size={14} /></button>
+                </div>
+              </div>
+              {complaint.evidence.length > 1 && (
+                <>
+                  <button onClick={() => setLightbox((lightbox - 1 + complaint.evidence.length) % complaint.evidence.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors">
+                    <ChevronLeft size={18} />
+                  </button>
+                  <button onClick={() => setLightbox((lightbox + 1) % complaint.evidence.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors">
+                    <ChevronRight size={18} />
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

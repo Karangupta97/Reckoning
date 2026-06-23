@@ -378,9 +378,22 @@ export const useComplaintStore = create<ComplaintState>()(
         if (!esc.sourceComplaintId) return;
         const c = get().complaints.find((x) => x.id === esc.sourceComplaintId);
         if (!c) return;
+
+        const targetStatus = mapEscalationStatus(esc.status);
+        const targetOfficer = (esc.assignedTo && esc.assignedTo !== "Unassigned") ? esc.assignedTo : c.officer;
+        const targetEscalationId = esc.id;
+
+        if (
+          c.escalationId === targetEscalationId &&
+          c.status === targetStatus &&
+          c.officer === targetOfficer
+        ) {
+          return;
+        }
+
         const patch: Partial<ComplaintRecord> = {
-          escalationId: esc.id,
-          status: mapEscalationStatus(esc.status),
+          escalationId: targetEscalationId,
+          status: targetStatus,
         };
         if (esc.assignedTo && esc.assignedTo !== "Unassigned") {
           patch.officer = esc.assignedTo;

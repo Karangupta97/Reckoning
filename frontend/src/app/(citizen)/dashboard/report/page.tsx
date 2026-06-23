@@ -651,6 +651,7 @@ export default function ReportPage() {
 
   const submitReport = useCallback(async () => {
     const payload = toBackendPayload(state);
+    console.log("Submitting complaint payload:", payload);
     if (!payload) {
       dispatch({ type: "SET_TOAST", toastMessage: "Complete the required fields before submitting." });
       return;
@@ -663,8 +664,9 @@ export default function ReportPage() {
       localStorage.removeItem("report-draft");
       dispatch({ type: "SET_SUBMITTED", submittedReportId: response.id, submittedTicketNumber: response.ticketNumber });
     } catch (error) {
-      dispatch({ type: "SET_SUBMITTING", isSubmitting: false });
       dispatch({ type: "SET_TOAST", toastMessage: error instanceof Error ? error.message : "Unable to submit your report." });
+    } finally {
+      dispatch({ type: "SET_SUBMITTING", isSubmitting: false });
     }
   }, [accessToken, state]);
 

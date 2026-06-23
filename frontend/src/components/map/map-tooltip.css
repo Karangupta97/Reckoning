@@ -1,0 +1,74 @@
+/* Enhanced Map Tooltip & Hover Styles */
+
+/* Override Leaflet tooltip defaults for our custom tooltip */
+.map-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  opacity: 1 !important;
+  pointer-events: none;
+  z-index: 10000 !important;
+}
+
+.map-tooltip .leaflet-tooltip-content {
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove default tooltip arrow */
+.map-tooltip::before,
+.map-tooltip::after {
+  display: none !important;
+}
+
+/* Ensure the tooltip pane sits above everything and is not clipped */
+.leaflet-tooltip-pane {
+  z-index: 10000 !important;
+}
+
+/* Smooth transitions for GeoJSON path elements */
+.leaflet-interactive {
+  transition: fill-opacity 0.25s ease,
+              stroke-width 0.2s ease,
+              stroke-opacity 0.2s ease;
+  cursor: pointer;
+}
+
+/* Pulse animation for the active hazard indicator */
+@keyframes mapPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.1); }
+}
+
+.map-pulse-dot {
+  animation: mapPulse 2s ease-in-out infinite;
+}
+
+/* Map container enhancements */
+.leaflet-container {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Smooth zoom transitions */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Better scrollbar for map sidebar */
+.map-sidebar-mobile::-webkit-scrollbar {
+  width: 4px;
+}
+
+.map-sidebar-mobile::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.map-sidebar-mobile::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+.map-sidebar-mobile::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}

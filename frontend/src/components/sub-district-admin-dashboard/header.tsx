@@ -8,7 +8,7 @@ import {
   User, Menu, LogOut, HelpCircle, Shield, UserCircle,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { subDistrictLabel, subDistrictLocationLabel } from "@/lib/sub-district-config";
 import { useAdminDateRange } from "@/hooks/useAdminDateRange";
@@ -61,7 +61,7 @@ export default function SubDistrictAdminHeader({
   subtitle = "Field Operations • Complaint Resolution • SLA Management",
 }: HeaderProps) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const adminLogout = useAdminAuthStore((s) => s.logout);
 
   const [isMobile,         setIsMobile]         = useState(false);
   const [searchQuery,      setSearchQuery]       = useState("");
@@ -80,6 +80,11 @@ export default function SubDistrictAdminHeader({
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const closeDateDropdown = useCallback(() => setShowDateDropdown(false), []);
   const closeProfile = useCallback(() => setShowProfile(false), []);
+
+  const logout = useCallback(async () => {
+    await adminLogout();
+    router.push("/admin/login");
+  }, [adminLogout, router]);
 
   const settingsRef = useDropdownClose(closeSettings);
   const dateRef     = useDropdownClose(closeDateDropdown);

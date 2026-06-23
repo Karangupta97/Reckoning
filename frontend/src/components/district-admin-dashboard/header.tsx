@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useAuth } from "@/hooks/useAuth";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
 import { districtLabel, districtLocationLabel } from "@/lib/district-config";
 import { useAdminDateRange } from "@/hooks/useAdminDateRange";
@@ -56,7 +56,7 @@ export default function DistrictAdminHeader({
   subtitle = "Monitoring • Escalations • SLA Compliance",
 }: HeaderProps) {
   const router = useRouter();
-  const { logout } = useAuth();
+  const adminLogout = useAdminAuthStore((s) => s.logout);
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { period: selectedDate, setPeriod: setSelectedDate } = useAdminDateRange();
@@ -74,6 +74,11 @@ export default function DistrictAdminHeader({
     setShowSettings(false);
     setShowDateDropdown(false);
   }, []);
+
+  const logout = useCallback(async () => {
+    await adminLogout();
+    router.push("/admin/login");
+  }, [adminLogout, router]);
 
   const toggleSettings = useCallback(() => {
     setShowSettings((p) => !p);

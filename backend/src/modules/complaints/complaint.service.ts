@@ -241,6 +241,73 @@ async function findAssignedAuthority(
 }
 
 /**
+ * Resolve the sub-district whose geofence contains the point.
+ *
+ * Attempt 1: ST_Contains — exact polygon containment.
+ * Attempt 2: ST_DWithin nearest within 10 km — handles boundary-edge points.
+ *
+ * Returns `null` only when both attempts find no sub-district within 10 km
+ * (i.e. the coordinates are outside any mapped zone entirely).
+ *
+ * @param latitude  WGS84 latitude.
+ * @param longitude WGS84 longitude.
+ * @returns The sub-district id, or `null`.
+ */
+async function findSubDistrictForPoint(
+  latitude: number,
+  longitude: number,
+): Promise<{ subDistrictId: string; districtId: string } | null> {
+  try {
+    // Attempt 1 — exact containment
+    const exact = await query<{ id: string; districtId: string }>(
+      `SELECT id, "districtId"
+       FROM "sub_districts"
+       WHERE "isActive" = true
+         AND boundary IS NOT NULL
+         AND ST_Contains(
+           boundary,
+           ST_SetSRID(ST_MakePoint($1, $2), 4326)
+         )
+       LIMIT 1`,
+      [longitude, latitude],
+    );
+    if (exact.rows[0]?.id) {
+      return { subDistrictId: exact.rows[0].id, districtId: exact.rows[0].districtId };
+    }
+
+    // Attempt 2 — nearest within 10 km
+    const nearest = await query<{ id: string; districtId: string }>(
+      `SELECT id, "districtId"
+       FROM "sub_districts"
+       WHERE "isActive" = true
+         AND boundary IS NOT NULL
+         AND ST_DWithin(
+           boundary::geography,
+           ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+           10000
+         )
+       ORDER BY ST_Distance(
+         boundary::geography,
+         ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+       ) ASC
+       LIMIT 1`,
+      [longitude, latitude],
+    );
+    if (nearest.rows[0]?.id) {
+      return { subDistrictId: nearest.rows[0].id, districtId: nearest.rows[0].districtId };
+    }
+    return null;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      "[complaint.service] findSubDistrictForPoint failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
+}
+
+/**
  * STEP (security) — Detect a soft duplicate: a same-category complaint by the
  * same user within {@link DUPLICATE_RADIUS_METERS} in the last 24 hours.
  *
@@ -343,12 +410,21 @@ export async function createComplaint(
   // wall-clock time. Each of these is independent of the others:
   //   - Reverse geocode (external HTTP, best-effort)
   //   - Authority auto-assignment (PostGIS containment)
+  //   - Sub-district resolution (PostGIS containment → nearest fallback)
   //   - Duplicate detection (PostGIS proximity)
-  const [geo, assignedTo, duplicateWarning] = await Promise.all([
+  const [geo, assignedTo, subDistrictResult, duplicateWarning] = await Promise.all([
     reverseGeocode(latitude, longitude),
     findAssignedAuthority(country, latitude, longitude),
+    findSubDistrictForPoint(latitude, longitude),
     detectDuplicate(userId, category, latitude, longitude),
   ]);
+
+  if (!subDistrictResult) {
+    throw new AppError("Could not determine jurisdiction for provided coordinates", 422, {
+      code: "LOCATION_UNRESOLVABLE",
+    });
+  }
+  const { subDistrictId, districtId } = subDistrictResult;
 
   // Validate geocoded country only if we got a result with a country code.
   if (geo?.countryCode && geo.countryCode !== isoCodeForCountry(country)) {
@@ -386,6 +462,7 @@ export async function createComplaint(
 
         const created = await tx.complaint.create({
           data: {
+            id: `CMP-${1000 + seq}`,
             userId,
             isAnonymous: input.isAnonymous ?? false,
             category,
@@ -408,6 +485,8 @@ export async function createComplaint(
             aiAnnotatedImageKey: input.aiAnnotatedImageKey ?? null,
             severity,
             assignedTo,
+            subDistrictId,
+            districtId,
             ticketNumber,
           },
           select: {

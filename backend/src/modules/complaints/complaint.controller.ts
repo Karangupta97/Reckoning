@@ -41,6 +41,7 @@ export async function create(
     if (!req.user) {
       throw new AppError("No token provided", 401, { code: "NO_TOKEN" });
     }
+    console.log("POST /api/complaints body:", req.body);
     const body = req.body as CreateComplaintBody;
     const result = await complaintService.createComplaint(
       req.user.id,
@@ -49,6 +50,13 @@ export async function create(
     );
     res.status(201).json({ success: true, data: result });
   } catch (error) {
+    if (error instanceof AppError && error.code === "LOCATION_UNRESOLVABLE") {
+      res.status(422).json({
+        error: "LOCATION_UNRESOLVABLE",
+        message: error.message,
+      });
+      return;
+    }
     next(error);
   }
 }
