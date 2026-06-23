@@ -13,12 +13,14 @@ import type { Worker } from "bullmq";
 import { startAuthorityAssignmentWorker } from "./authorityAssignment.worker.js";
 import { startSlaEngineWorker } from "./slaEngine.worker.js";
 import { startAiAnalysisWorker } from "../jobs/workers/aiAnalysis.worker.js";
+import { startNotificationUserWorker } from "./notificationUser.worker.js";
 
 /** Registry of active worker instances (null entries mean Redis is absent). */
 export interface WorkerRegistry {
   authorityAssignment: Worker | null;
   slaEngine: Worker | null;
   aiAnalysis: Worker | null;
+  notificationUser: Worker | null;
 }
 
 /**
@@ -36,6 +38,7 @@ export function startAllWorkers(): WorkerRegistry {
     authorityAssignment: startAuthorityAssignmentWorker(),
     slaEngine: startSlaEngineWorker(),
     aiAnalysis: startAiAnalysisWorker(),
+    notificationUser: startNotificationUserWorker(),
   };
 
   // eslint-disable-next-line no-console
@@ -46,3 +49,4 @@ export function startAllWorkers(): WorkerRegistry {
 export { startAuthorityAssignmentWorker } from "./authorityAssignment.worker.js";
 export { startSlaEngineWorker } from "./slaEngine.worker.js";
 export { startAiAnalysisWorker } from "../jobs/workers/aiAnalysis.worker.js";
+export { startNotificationUserWorker } from "./notificationUser.worker.js";

@@ -16,6 +16,7 @@ import {
   QUEUE_NAMES,
   type NotificationUserJob,
 } from "../../jobs/queues.js";
+import { processStatusUpdateNotification } from "../../jobs/handlers.js";
 import { ALLOWED_TRANSITIONS } from "./tickets.validation.js";
 import type {
   CitizenTicketView,
@@ -79,18 +80,33 @@ function paginate(total: number, page: number, limit: number): PaginationMeta {
 
 /**
  * Push a notification job to the user notification queue.
+ * Falls back to inline delivery when queues are disabled (no Redis).
  */
 async function pushUserNotification(payload: NotificationUserJob): Promise<void> {
   if (notificationUserQueue) {
     try {
       await notificationUserQueue.add(QUEUE_NAMES.notificationUser, payload);
+      // eslint-disable-next-line no-console
+      console.log("[tickets.service] Notification queued:", JSON.stringify(payload));
+      return;
     } catch {
       // eslint-disable-next-line no-console
-      console.error("[tickets.service] Failed to push user notification.");
+      console.error("[tickets.service] Failed to push user notification to queue.");
     }
   }
-  // eslint-disable-next-line no-console
-  console.log("[tickets.service] Notification:", JSON.stringify(payload));
+
+  // Inline fallback: deliver the notification directly (fire-and-forget).
+  if (payload.type === "STATUS_UPDATE" && payload.newStatus) {
+    processStatusUpdateNotification(payload.complaintId, payload.userId, payload.newStatus).catch(
+      (error) => {
+        // eslint-disable-next-line no-console
+        console.error("[tickets.service] Inline status-update notification failed:", error);
+      },
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.log("[tickets.service] Notification (no queue):", JSON.stringify(payload));
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

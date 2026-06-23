@@ -41,6 +41,7 @@ import { complaintReceivedTemplate } from "../templates/complaintReceived.templa
 import { adminNotificationTemplate } from "../templates/adminNotification.template.js";
 import { districtInviteEmailTemplate } from "../templates/districtInviteEmail.js";
 import { subDistrictInviteEmailTemplate } from "../templates/subDistrictInviteEmail.js";
+import { complaintStatusUpdateTemplate } from "../templates/complaintStatusUpdate.template.js";
 
 /** RFC-5322-lite email check — defensive, not a full parser. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -419,5 +420,38 @@ export async function sendSubDistrictInviteEmail(
       args.activationUrl,
       args.expiryHours,
     ),
+  });
+}
+
+/** Arguments for {@link sendComplaintStatusUpdateEmail}. */
+export interface ComplaintStatusUpdateArgs {
+  to: string;
+  fullName: string;
+  ticketNumber: string;
+  newStatus: string;
+  category: string;
+  address?: string | null;
+}
+
+/**
+ * Send the citizen a notification when their complaint status changes.
+ *
+ * @param args Recipient + complaint status details.
+ * @returns The provider message id.
+ * @throws {AppError} 400 invalid recipient / 502 on send failure.
+ */
+export async function sendComplaintStatusUpdateEmail(
+  args: ComplaintStatusUpdateArgs,
+): Promise<string> {
+  return dispatch({
+    to: args.to,
+    kind: "status-update",
+    rendered: complaintStatusUpdateTemplate({
+      fullName: args.fullName,
+      ticketNumber: args.ticketNumber,
+      newStatus: args.newStatus,
+      category: args.category,
+      address: args.address,
+    }),
   });
 }

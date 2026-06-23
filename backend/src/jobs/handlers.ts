@@ -19,6 +19,7 @@ import { prisma } from "../config/prisma.js";
 import {
   sendComplaintReceivedEmail,
   sendAdminNotificationEmail,
+  sendComplaintStatusUpdateEmail,
 } from "../services/email.service.js";
 import { processSlaEscalation } from "../modules/admin/escalation/escalation.service.js";
 
@@ -172,4 +173,47 @@ export async function processSlaEscalationJob(
 ): Promise<boolean> {
   const { action } = await processSlaEscalation(complaintId);
   return action.startsWith("escalated");
+}
+
+/**
+ * Email the citizen when their complaint status changes (RESOLVED, REJECTED, etc.).
+ *
+ * @param complaintId Complaint whose status changed.
+ * @param userId      The citizen who filed the complaint.
+ * @param newStatus   The new status value.
+ * @returns `true` when an email was sent, `false` when skipped (missing data).
+ */
+export async function processStatusUpdateNotification(
+  complaintId: string,
+  userId: string,
+  newStatus: string,
+): Promise<boolean> {
+  const [complaint, user] = await Promise.all([
+    prisma.complaint.findUnique({
+      where: { id: complaintId },
+      select: { ticketNumber: true, category: true, address: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, fullName: true },
+    }),
+  ]);
+
+  if (!complaint || !user) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[handlers] status-update-notification skipped — missing complaint/user (complaint=${complaintId}, user=${userId}).`,
+    );
+    return false;
+  }
+
+  await sendComplaintStatusUpdateEmail({
+    to: user.email,
+    fullName: user.fullName,
+    ticketNumber: complaint.ticketNumber,
+    newStatus,
+    category: complaint.category,
+    address: complaint.address,
+  });
+  return true;
 }
