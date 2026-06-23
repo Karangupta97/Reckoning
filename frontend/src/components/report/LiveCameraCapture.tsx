@@ -332,7 +332,6 @@ export function LiveCameraCapture({
             autoPlay
             playsInline
             muted
-            // @ts-expect-error — webkit-playsinline is a non-standard iOS attribute
             webkit-playsinline="true"
             style={{
               position: "absolute",
