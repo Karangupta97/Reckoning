@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Map, Phone, FileText } from "lucide-react";
 import { InstallPWAButton } from "@/components/pwa/InstallPWAButton";
+import { useAuthStore } from "@/stores/authStore";
 
 const QUICK_ACTIONS_KEYS = [
   { labelKey: "reportHazard", subKey: "reportHazardSub", icon: AlertTriangle, color: "var(--color-amber)" },
@@ -26,6 +27,8 @@ const itemVariants = {
 
 export function HeroSection() {
   const t = useTranslations("dashboard");
+  const user = useAuthStore((state) => state.user);
+  const firstName = user?.fullName?.split(" ")[0] ?? "Citizen";
 
   return (
     <motion.section
@@ -39,7 +42,7 @@ export function HeroSection() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--color-text-primary)]">
-              {t("greeting", { name: "Karan" })}
+              {t("greeting", { name: firstName })}
             </h1>
             <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               {t("subtitle")}

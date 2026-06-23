@@ -2,33 +2,43 @@
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, IndianRupee, MapPin, Activity, Shield } from "lucide-react";
-import { useComplaintStore } from "@/store/complaintStore";
-import { useBudgetApprovalStore } from "@/store/budgetApprovalStore";
+import { CheckCircle2, Eye, MapPin, FileText, Shield } from "lucide-react";
+import type { UserStats } from "@/components/my-reports/types";
+
+interface CommunityImpactProps {
+  stats?: UserStats;
+  isLoading?: boolean;
+}
 
 /**
- * CommunityImpact — Shows live governance impact metrics for citizens.
- * Derived entirely from complaint + budget stores.
+ * CommunityImpact — Shows real governance impact metrics for the citizen.
+ * Derived from the authenticated user's stats fetched from the backend.
  */
-export function CommunityImpact() {
-  const complaints = useComplaintStore((s) => s.complaints);
-  const budgets = useBudgetApprovalStore((s) => s.requests);
-
+export function CommunityImpact({ stats, isLoading }: CommunityImpactProps) {
   const metrics = useMemo(() => {
-    const resolved = complaints.filter((c) => c.status === "Resolved").length;
-    const fundsReleased = budgets.reduce((s, b) => s + (b.releasedAmount ?? 0), 0);
-    const activeProjects = budgets.filter((b) => b.status === "Approved" && b.releasedAmount).length;
-    const total = complaints.length;
-    const safetyScore = total > 0 ? Math.max(0, Math.min(100, 100 - (complaints.filter((c) => c.priority === "Critical" && c.status !== "Resolved").length * 10) - (complaints.filter((c) => c.priority === "High" && c.status !== "Resolved").length * 5))) : 100;
+    if (!stats) {
+      return [
+        { label: "Issues Resolved", value: "0", icon: CheckCircle2, color: "#22c55e" },
+        { label: "Total Reports", value: "0", icon: FileText, color: "#f59e0b" },
+        { label: "Roads Improved", value: "0", icon: MapPin, color: "#3b82f6" },
+        { label: "Total Views", value: "0", icon: Eye, color: "#8b5cf6" },
+        { label: "Safety Score", value: "0/100", icon: Shield, color: "#f59e0b" },
+      ];
+    }
+
+    const safetyScore = Math.min(
+      100,
+      Math.max(0, Math.round(stats.resolutionRate * 0.7 + stats.rankPercentile * 0.3)),
+    );
 
     return [
-      { label: "Issues Resolved", value: String(resolved), icon: CheckCircle2, color: "#22c55e" },
-      { label: "Funds Released", value: `₹${fundsReleased.toFixed(1)} Cr`, icon: IndianRupee, color: "#f59e0b" },
-      { label: "Roads Improved", value: String(resolved), icon: MapPin, color: "#3b82f6" },
-      { label: "Active Projects", value: String(activeProjects), icon: Activity, color: "#8b5cf6" },
+      { label: "Issues Resolved", value: String(stats.resolvedReports), icon: CheckCircle2, color: "#22c55e" },
+      { label: "Total Reports", value: String(stats.totalReports), icon: FileText, color: "#f59e0b" },
+      { label: "Roads Improved", value: String(stats.resolvedReports), icon: MapPin, color: "#3b82f6" },
+      { label: "Total Views", value: String(stats.totalViews), icon: Eye, color: "#8b5cf6" },
       { label: "Safety Score", value: `${safetyScore}/100`, icon: Shield, color: safetyScore >= 70 ? "#22c55e" : "#f59e0b" },
     ];
-  }, [complaints, budgets]);
+  }, [stats]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -62,7 +72,7 @@ export function CommunityImpact() {
 
               <div className="flex items-baseline gap-0.5">
                 <span className="text-3xl font-bold text-[var(--color-text-primary)]">
-                  {m.value}
+                  {isLoading ? "—" : m.value}
                 </span>
               </div>
             </motion.div>

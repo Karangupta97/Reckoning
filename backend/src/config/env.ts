@@ -172,6 +172,13 @@ const envSchema = z.object({
     .optional(),
   RECKONING_TIMEOUT_MS: z.coerce.number().default(30000),
   RECKONING_CONFIDENCE_THRESHOLD: z.coerce.number().default(0.40),
+
+  // Web Push (VAPID) — browser push notifications for citizens.
+  // Optional: when unset, push notifications are disabled gracefully.
+  // Generate with: npx web-push generate-vapid-keys
+  VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+  VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+  VAPID_SUBJECT: z.string().min(1).default("mailto:noreply@roadwatch.ai"),
 })
   .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",

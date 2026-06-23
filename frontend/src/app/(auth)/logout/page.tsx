@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, Loader2, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { unsubscribeFromPush } from '@/lib/pushNotifications';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -23,6 +24,11 @@ export default function LogoutPage() {
     setIsLoading(true);
 
     try {
+      // Unsubscribe from push notifications before clearing session.
+      if (accessToken) {
+        await unsubscribeFromPush(accessToken).catch(() => {});
+      }
+
       await fetch(`${API_BASE_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
@@ -35,6 +41,8 @@ export default function LogoutPage() {
     } catch {
       // Network error — clear local session regardless
     } finally {
+      // Clear push subscription session flag.
+      sessionStorage.removeItem('reckoning-push-subscribed');
       clearSession();
       setIsLoading(false);
       setIsDone(true);

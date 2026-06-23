@@ -22,6 +22,7 @@ import { adminInvitationsRouter } from "./routes/adminInvitations.js";
 import { superAdminRouter, superAdminCorsOptions } from "./routes/superAdmin.js";
 import { ticketRouter, citizenTicketRouter, superAdminTicketRouter } from "./modules/tickets/tickets.routes.js";
 import { managementRouter } from "./modules/admin/management/management.routes.js";
+import { pushRouter } from "./modules/push/push.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
 import { verifyEmailTransport } from "./services/email.service.js";
@@ -80,6 +81,7 @@ app.use("/api/complaints", complaintRouter);
 app.use("/api/complaints", citizenTicketRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/tickets", ticketRouter);
+app.use("/api/push", pushRouter);
 
 // Admin CORS configuration
 const adminCorsOptions = {

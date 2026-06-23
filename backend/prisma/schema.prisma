@@ -39,6 +39,7 @@ model User {
   complaints    Complaint[]
   mediaUploads  MediaUpload[]
   refreshTokens RefreshToken[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
   @@schema("public")
@@ -96,6 +97,22 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+  @@schema("public")
+}
+
+/// Web Push subscription stored per-device for a citizen user.
+/// Each user can have multiple subscriptions (one per browser/device).
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
   @@schema("public")
 }
 

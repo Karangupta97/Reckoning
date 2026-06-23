@@ -21,6 +21,7 @@ import {
   sendAdminNotificationEmail,
   sendComplaintStatusUpdateEmail,
 } from "../services/email.service.js";
+import { sendWebPushToUser } from "../services/webpush.service.js";
 import { processSlaEscalation } from "../modules/admin/escalation/escalation.service.js";
 
 /**
@@ -207,6 +208,40 @@ export async function processStatusUpdateNotification(
     return false;
   }
 
+  // Format status for display
+  const humanStatus = newStatus
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .map((w) => (w ? w[0]!.toUpperCase() + w.slice(1) : w))
+    .join(" ");
+
+  // Status-specific human-readable messages per spec.
+  const statusMessages: Record<string, string> = {
+    PENDING: "Your complaint has been received and is pending review.",
+    IN_PROGRESS: "Your complaint is now being actively worked on.",
+    RESOLVED: "Your complaint has been resolved. Thank you for reporting!",
+    ESCALATED: "Your complaint has been escalated to the district authority.",
+    REJECTED: "Your complaint has been reviewed and closed.",
+  };
+
+  const body = statusMessages[newStatus.toUpperCase()] ??
+    `Your complaint status has been updated to ${humanStatus}.`;
+
+  // 1) Send Web Push notification (real-time, best-effort).
+  sendWebPushToUser(userId, {
+    title: `Complaint Update — ${complaint.ticketNumber}`,
+    body,
+    icon: "/android-chrome-192x192.png",
+    badge: "/android-chrome-192x192.png",
+    tag: `complaint-status-${complaintId}`,
+    url: "/dashboard/my-reports",
+    data: { complaintId, ticketNumber: complaint.ticketNumber, status: newStatus },
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error("[handlers] Web Push failed (non-fatal):", err);
+  });
+
+  // 2) Send email notification.
   await sendComplaintStatusUpdateEmail({
     to: user.email,
     fullName: user.fullName,

@@ -33,7 +33,7 @@ export default function DashboardPage() {
         <OverviewCards stats={stats} isLoading={isLoading} />
 
         {/* Community Impact */}
-        <CommunityImpact />
+        <CommunityImpact stats={stats} isLoading={isLoading} />
 
         {/* My Reports (left) + Recent Activity (right) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
