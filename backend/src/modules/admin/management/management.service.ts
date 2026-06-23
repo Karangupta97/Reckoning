@@ -350,7 +350,7 @@ export async function getMyDistrict(districtId: string | null): Promise<{
   const geo = await adminDbGuard(
     () =>
       query<{ geofence: string | null }>(
-        `SELECT ST_AsGeoJSON(geofence) AS geofence FROM "districts" WHERE id = $1`,
+        `SELECT ST_AsGeoJSON(boundary) AS geofence FROM "districts" WHERE id = $1`,
         [districtId],
       ),
     "getMyDistrict:geofence",

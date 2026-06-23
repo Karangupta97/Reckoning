@@ -4,11 +4,17 @@ import { query, closeDbPool } from "../../src/config/db.js";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("\n=== Listing all admin users ===");
-  const admins = await prisma.adminUser.findMany({
-    select: { id: true, email: true, role: true, subDistrictId: true, districtId: true, isActive: true },
-  });
-  console.table(admins);
+  console.log("\n=== Checking all database tables ===");
+  try {
+    const res = await query(
+      `SELECT table_name 
+       FROM information_schema.tables 
+       WHERE table_schema = 'public'`
+    );
+    console.table(res.rows);
+  } catch (err: any) {
+    console.error("Error fetching tables:", err.message);
+  }
 
   await prisma.$disconnect();
   await closeDbPool();

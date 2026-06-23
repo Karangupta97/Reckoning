@@ -149,7 +149,7 @@ model District {
   id           String                   @id @default(cuid())
   name         String
   country      Country
-  geofence     Unsupported("geometry")?
+  boundary     Unsupported("geometry(Polygon,4326)")?
   isActive     Boolean                  @default(true)
   createdAt    DateTime                 @default(now())
   admins       AdminUser[]

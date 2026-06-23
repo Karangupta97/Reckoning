@@ -419,7 +419,7 @@ export async function createComplaint(
     detectDuplicate(userId, category, latitude, longitude),
   ]);
 
-  if (!subDistrictResult) {
+  if (!subDistrictResult || !subDistrictResult.subDistrictId || !subDistrictResult.districtId) {
     throw new AppError("Could not determine jurisdiction for provided coordinates", 422, {
       code: "LOCATION_UNRESOLVABLE",
     });

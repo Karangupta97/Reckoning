@@ -104,7 +104,7 @@ export async function setDistrictGeofence(
     () =>
       tx.$executeRaw`
         UPDATE "districts"
-        SET geofence = ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geofence)}), 4326)
+        SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geofence)}), 4326)
         WHERE id = ${id}
       `,
   );
@@ -154,11 +154,11 @@ export async function isWithinDistrict(
       tx.$queryRaw<Array<{ within: boolean | null }>>`
         SELECT ST_Within(
                  ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geofence)}), 4326),
-                 districts.geofence
+                 districts.boundary
                ) AS within
         FROM "districts" AS districts
         WHERE districts.id = ${districtId}
-          AND districts.geofence IS NOT NULL
+          AND districts.boundary IS NOT NULL
       `,
   );
 

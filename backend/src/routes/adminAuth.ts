@@ -204,13 +204,27 @@ router.post("/login", loginRateLimiter, async (req: any, res: any) => {
       },
     });
 
+    let districtId = admin.districtId;
+    let subDistrictId = admin.subDistrictId;
+    if (admin.role === "SUB_DISTRICT_ADMIN") {
+      if (subDistrictId && !districtId) {
+        const subDist = await prisma.subDistrict.findUnique({
+          where: { id: subDistrictId },
+          select: { districtId: true },
+        });
+        if (subDist) {
+          districtId = subDist.districtId;
+        }
+      }
+    }
+
     // Generate tokens
     const accessToken = generateAccessToken({
       sub: admin.id,
       email: admin.email,
       role: admin.role,
-      districtId: admin.districtId,
-      subDistrictId: admin.subDistrictId,
+      districtId,
+      subDistrictId,
     });
 
     const rawRefreshToken = generateRefreshToken();
@@ -360,12 +374,26 @@ router.post("/refresh", async (req: any, res: any) => {
       }),
     ]);
 
+    let districtId = admin.districtId;
+    let subDistrictId = admin.subDistrictId;
+    if (admin.role === "SUB_DISTRICT_ADMIN") {
+      if (subDistrictId && !districtId) {
+        const subDist = await prisma.subDistrict.findUnique({
+          where: { id: subDistrictId },
+          select: { districtId: true },
+        });
+        if (subDist) {
+          districtId = subDist.districtId;
+        }
+      }
+    }
+
     const newAccessToken = generateAccessToken({
       sub: admin.id,
       email: admin.email,
       role: admin.role,
-      districtId: admin.districtId,
-      subDistrictId: admin.subDistrictId,
+      districtId,
+      subDistrictId,
     });
 
     let finalAccessToken = newAccessToken;
