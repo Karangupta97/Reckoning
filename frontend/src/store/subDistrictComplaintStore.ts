@@ -115,9 +115,13 @@ export const useSubDistrictComplaintStore = create<SubDistrictComplaintState>(
 
         const { complaints, total, page, limit } = res.data.data;
         set({ complaints, total, page, limit, isLoading: false });
-      } catch (err: unknown) {
-        const msg =
-          err instanceof Error ? err.message : "Failed to load complaints.";
+      } catch (err: any) {
+        let msg = "Failed to load complaints.";
+        if (err?.response?.status === 403) {
+          msg = "Your account is not assigned to a jurisdiction. Contact your District Admin.";
+        } else if (err instanceof Error) {
+          msg = err.message;
+        }
         set({ isLoading: false, error: msg });
       }
     },

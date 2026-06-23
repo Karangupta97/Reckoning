@@ -24,6 +24,8 @@ import { validate } from "../../../middleware/validate.js";
 import { requireAdminAuth } from "../../../middleware/requireAdminAuth.js";
 import { requireRole } from "../../../middleware/requireRole.js";
 
+import { enforceSubDistrictScope } from "../../../middleware/enforceSubDistrictScope.js";
+
 /**
  * Express router exposing the admin management endpoints. Mount under
  * `/api/admin`:
@@ -161,11 +163,18 @@ managementRouter.post(
 );
 
 // New: sub-district complaint endpoints (subDistrictId-scoped, not geofence)
+managementRouter.use("/subdistrict", enforceSubDistrictScope);
 
 managementRouter.get(
   "/subdistrict/complaints",
   requireRole("SUB_DISTRICT_ADMIN"),
   subDistrictComplaintsCtrl.listComplaints,
+);
+
+managementRouter.get(
+  "/subdistrict/complaints/:id",
+  requireRole("SUB_DISTRICT_ADMIN"),
+  subDistrictComplaintsCtrl.getComplaintDetail,
 );
 
 managementRouter.patch(

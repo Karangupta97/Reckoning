@@ -20,6 +20,8 @@ export interface AuthenticatedUser {
   role: UserRole;
   /** User country, when present on the token. */
   country?: UserCountry;
+  subDistrictId?: string | null;
+  districtId?: string | null;
 }
 
 declare global {
@@ -30,6 +32,11 @@ declare global {
       user?: AuthenticatedUser;
       /** Present only on routes guarded by `requireAdminAuth`. */
       admin?: AdminJWTPayload;
+      /** Present only on routes guarded by `enforceSubDistrictScope`. */
+      scope?: {
+        subDistrictId: string;
+        districtId: string;
+      };
     }
   }
 }

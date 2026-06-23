@@ -71,9 +71,9 @@ async function resolveJurisdiction(
     `SELECT sd.id AS sub_district_id, sd.name AS sub_district_name, sd."districtId" AS district_id
      FROM "complaints" AS c
      JOIN "sub_districts" AS sd
-       ON sd.geofence IS NOT NULL
-      AND c.location IS NOT NULL
-      AND ST_Within(c.location::geometry, sd.geofence)
+        ON sd.boundary IS NOT NULL
+       AND c.location IS NOT NULL
+       AND ST_Within(c.location::geometry, sd.boundary)
      WHERE c.id = $1
      LIMIT 1`,
     [complaintId],

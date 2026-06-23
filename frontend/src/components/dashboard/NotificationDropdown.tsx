@@ -69,8 +69,8 @@ export function NotificationDropdown() {
 
   const unreadCount = getUnreadCount();
 
-  // Sync unread count with dashboard store
-  const { setNotificationCount } = useDashboardStore();
+  // Sync unread count with dashboard store — use individual selector for stable reference
+  const setNotificationCount = useDashboardStore((s) => s.setNotificationCount);
   useEffect(() => {
     setNotificationCount(unreadCount);
   }, [unreadCount, setNotificationCount]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -34,6 +34,7 @@ import { getRelatedRecordsForComplaint, buildCaseJourney } from "@/lib/case-trac
 import { ImpactCard } from "@/components/citizen/ImpactCard";
 import { CitizenTransparencyTimeline } from "@/components/citizen/CitizenTransparencyTimeline";
 import { AdminAIAnnotatedPanel } from "@/components/admin/AdminAIAnnotatedPanel";
+import { LiveComplaintDetail } from "@/components/admin/LiveComplaintDetail";
 
 type SLAStatus = ComplaintSLAStatus;
 type ComplaintDetail = ComplaintDetailView;
@@ -918,6 +919,18 @@ function StickyActions({
 export default function ComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
   const complaintId = id ?? "CMP-1024";
+
+  // If the ID is NOT a mock CMP-XXXX pattern, render the live API detail view
+  const isMockId = /^CMP-\d+$/.test(complaintId);
+  if (!isMockId) {
+    return <LiveComplaintDetail complaintId={complaintId} />;
+  }
+
+  return <MockComplaintDetail complaintId={complaintId} />;
+}
+
+/* ─── Mock Complaint Detail (existing CMP-XXXX flow) ─────────── */
+function MockComplaintDetail({ complaintId }: { complaintId: string }) {
   const record = useComplaintStore((s) => s.complaints.find((x) => x.id === complaintId) ?? s.getById(complaintId));
   const assignOfficer = useComplaintStore((s) => s.assignOfficer);
   const setComplaintStatus = useComplaintStore((s) => s.setStatus);
@@ -925,6 +938,10 @@ export default function ComplaintDetailPage() {
   const appendActivity = useComplaintStore((s) => s.appendActivity);
   const syncFromEscalation = useComplaintStore((s) => s.syncFromEscalation);
 
+  // Use primitive selectors for escalation to avoid re-render on unrelated escalation store updates
+  const linkedEscId = useEscalationStore((s) => s.escalations.find((e) => e.sourceComplaintId === complaintId)?.id ?? null);
+  const linkedEscStatus = useEscalationStore((s) => s.escalations.find((e) => e.sourceComplaintId === complaintId)?.status ?? null);
+  const linkedEscAssignedTo = useEscalationStore((s) => s.escalations.find((e) => e.sourceComplaintId === complaintId)?.assignedTo ?? null);
   const linkedEsc = useEscalationStore((s) => s.escalations.find((e) => e.sourceComplaintId === complaintId));
   const resolution = useComplaintWorkflowStore((s) => s.resolutions.find((r) => r.complaintId === complaintId));
 
@@ -942,9 +959,19 @@ export default function ComplaintDetailPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
+  // Stabilize sync to prevent infinite re-render loop (React Error #185).
+  // Only sync once per complaintId mount, and only when linkedEsc actually differs.
+  const hasSyncedRef = useRef(false);
   useEffect(() => {
-    if (linkedEsc) syncFromEscalation(linkedEsc);
-  }, [linkedEsc, syncFromEscalation]);
+    if (!linkedEsc) return;
+    if (hasSyncedRef.current) return;
+    hasSyncedRef.current = true;
+    // Defer to next microtask to avoid synchronous cascading state updates
+    Promise.resolve().then(() => {
+      syncFromEscalation(linkedEsc);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedEscId, linkedEscStatus, linkedEscAssignedTo]);
 
   const handleAssign = (officer: string) => {
     assignOfficer(complaintId, officer);
@@ -1554,7 +1581,7 @@ export default function ComplaintDetailPage() {
         {updateStatusOpen && (
           <UpdateStatusDialog
             complaint={c}
-            currentStatus={status}
+            currentStatus={c.status}
             onClose={() => setUpdateStatusOpen(false)}
             onSubmit={handleUpdateStatus}
           />

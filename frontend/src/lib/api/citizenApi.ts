@@ -323,7 +323,7 @@ export async function deleteComplaint(id: string, email?: string): Promise<{ mes
       const response = await fetchCitizenAuth(apiUrl(`/complaints/${id}`), { method: "DELETE" });
       return unwrapData<{ message: string }>(response, "Unable to delete complaint.");
     },
-    async () => ({ message: "Deleted (mock)." }),
+    () => ({ message: "Deleted (mock)." }),
     email,
   );
 }

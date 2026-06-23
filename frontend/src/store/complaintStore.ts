@@ -383,6 +383,8 @@ export const useComplaintStore = create<ComplaintState>()(
         const targetOfficer = (esc.assignedTo && esc.assignedTo !== "Unassigned") ? esc.assignedTo : c.officer;
         const targetEscalationId = esc.id;
 
+        // Strict field-level equality guard: bail out if nothing has actually changed.
+        // This prevents cascading Zustand updates that trigger mutual re-render loops.
         if (
           c.escalationId === targetEscalationId &&
           c.status === targetStatus &&
@@ -391,16 +393,19 @@ export const useComplaintStore = create<ComplaintState>()(
           return;
         }
 
-        const patch: Partial<ComplaintRecord> = {
-          escalationId: targetEscalationId,
-          status: targetStatus,
-        };
-        if (esc.assignedTo && esc.assignedTo !== "Unassigned") {
-          patch.officer = esc.assignedTo;
-        }
-        set({
-          complaints: patchComplaint(get().complaints, esc.sourceComplaintId, patch),
+        // Directly patch without changing updatedDate to avoid triggering
+        // unnecessary re-renders from the timestamp alone.
+        const complaints = get().complaints.map((x) => {
+          if (x.id !== esc.sourceComplaintId) return x;
+          const patch: Partial<ComplaintRecord> = { escalationId: targetEscalationId };
+          if (x.status !== targetStatus) patch.status = targetStatus;
+          if (esc.assignedTo && esc.assignedTo !== "Unassigned" && x.officer !== targetOfficer) {
+            patch.officer = targetOfficer;
+          }
+          return { ...x, ...patch };
         });
+
+        set({ complaints });
       },
     }),
     adminPersistOptions("complaints", (s) => ({ complaints: s.complaints }))

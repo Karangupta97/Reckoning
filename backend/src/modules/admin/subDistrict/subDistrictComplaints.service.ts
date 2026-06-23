@@ -191,14 +191,15 @@ async function toListItem(row: ListRow): Promise<SubDistrictComplaintItem> {
  * @throws {AppError} 400 when the admin has no sub-district assigned.
  */
 export async function listSubDistrictComplaints(
-  adminSubDistrictId: string | null | undefined,
+  subDistrictId: string,
+  districtId: string,
   filters: SubDistrictComplaintFilters = {},
 ): Promise<SubDistrictComplaintListResult> {
-  if (!adminSubDistrictId) {
+  if (!subDistrictId || !districtId) {
     throw new AppError(
-      "Your account is not assigned to a sub-district.",
-      400,
-      { code: "NO_SUB_DISTRICT" },
+      "Your account is not assigned to a jurisdiction.",
+      403,
+      { code: "INSUFFICIENT_SCOPE" },
     );
   }
 
@@ -207,7 +208,8 @@ export async function listSubDistrictComplaints(
   const sortBy = filters.sortBy ?? "createdAt";
 
   const where: Prisma.ComplaintWhereInput = {
-    subDistrictId: adminSubDistrictId,
+    subDistrictId,
+    districtId,
     deletedAt: null,
     ...(filters.status ? { status: filters.status } : {}),
   };
@@ -246,6 +248,57 @@ export async function listSubDistrictComplaints(
 }
 
 /**
+ * Retrieve details for a single complaint. Scoped strictly to the caller's jurisdiction.
+ *
+ * @param subDistrictId  Sub-district id from the JWT.
+ * @param districtId     District id from the JWT.
+ * @param complaintId    Target complaint id.
+ * @returns The formatted complaint view.
+ * @throws {AppError} 403 when out of jurisdiction, 404 not found.
+ */
+export async function getSubDistrictComplaintDetail(
+  subDistrictId: string,
+  districtId: string,
+  complaintId: string,
+): Promise<SubDistrictComplaintItem> {
+  const existing = await adminDbGuard(
+    () =>
+      prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: { id: true, subDistrictId: true, districtId: true, deletedAt: true },
+      }),
+    "getSubDistrictComplaintDetail:find",
+  );
+
+  if (!existing || existing.deletedAt) {
+    throw new AppError("Complaint not found.", 404, { code: "NOT_FOUND" });
+  }
+
+  if (existing.subDistrictId !== subDistrictId || existing.districtId !== districtId) {
+    throw new AppError(
+      "Complaint is out of jurisdiction.",
+      403,
+      { code: "COMPLAINT_OUT_OF_JURISDICTION" },
+    );
+  }
+
+  const row = await adminDbGuard(
+    () =>
+      prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: LIST_SELECT,
+      }),
+    "getSubDistrictComplaintDetail:load",
+  );
+
+  if (!row) {
+    throw new AppError("Complaint not found.", 404, { code: "NOT_FOUND" });
+  }
+
+  return toListItem(row);
+}
+
+/**
  * Update a complaint's status. Scoped to the caller's sub-district.
  *
  * @param adminSubDistrictId  Sub-district id from the JWT.
@@ -256,25 +309,26 @@ export async function listSubDistrictComplaints(
  * @throws {AppError} 400 no sub-district, 403 out-of-district, 404 not found.
  */
 export async function updateSubDistrictComplaintStatus(
-  adminSubDistrictId: string | null | undefined,
+  adminSubDistrictId: string,
+  adminDistrictId: string,
   adminId: string,
   complaintId: string,
   status: ComplaintStatus,
 ): Promise<SubDistrictComplaintItem> {
-  if (!adminSubDistrictId) {
+  if (!adminSubDistrictId || !adminDistrictId) {
     throw new AppError(
-      "Your account is not assigned to a sub-district.",
-      400,
-      { code: "NO_SUB_DISTRICT" },
+      "Your account is not assigned to a jurisdiction.",
+      403,
+      { code: "INSUFFICIENT_SCOPE" },
     );
   }
 
-  // Verify the complaint belongs to this sub-district
+  // Verify the complaint belongs to this sub-district and district
   const existing = await adminDbGuard(
     () =>
       prisma.complaint.findUnique({
         where: { id: complaintId },
-        select: { id: true, subDistrictId: true, deletedAt: true },
+        select: { id: true, subDistrictId: true, districtId: true, deletedAt: true },
       }),
     "updateSubDistrictComplaintStatus:find",
   );
@@ -283,11 +337,11 @@ export async function updateSubDistrictComplaintStatus(
     throw new AppError("Complaint not found.", 404, { code: "NOT_FOUND" });
   }
 
-  if (existing.subDistrictId !== adminSubDistrictId) {
+  if (existing.subDistrictId !== adminSubDistrictId || existing.districtId !== adminDistrictId) {
     throw new AppError(
-      "This complaint does not belong to your sub-district.",
+      "Complaint is out of jurisdiction.",
       403,
-      { code: "OUT_OF_ZONE" },
+      { code: "COMPLAINT_OUT_OF_JURISDICTION" },
     );
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/stores/authStore";
@@ -372,14 +372,14 @@ export default function ReportPage() {
   const router = useRouter();
   const accessToken = useAuthStore((state) => state.accessToken);
   const [state, dispatch] = useReducer(reducer, undefined, createInitialReportState);
-  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const draftSavedAtRef = useRef<string | null>(null);
 
   useEffect(() => {
     dispatch({ type: "SET_TOUCH_DEVICE", touchDevice: isTouchDevice() });
     const stored = readStoredDraft();
     if (stored) {
       dispatch({ type: "RESTORE_DRAFT", state: stored });
-      setDraftSavedAt(new Date().toISOString());
+      draftSavedAtRef.current = new Date().toISOString();
     }
   }, []);
 
@@ -394,8 +394,12 @@ export default function ReportPage() {
 
     const draft = formatDraftSnapshot(state);
     localStorage.setItem("report-draft", JSON.stringify(draft));
-    setDraftSavedAt(new Date().toISOString());
+    // Use a ref to avoid triggering re-render from draft saves
+    draftSavedAtRef.current = new Date().toISOString();
   }, [state]);
+
+  const analysisIndexRef = useRef(state.analysisStatusIndex);
+  analysisIndexRef.current = state.analysisStatusIndex;
 
   useEffect(() => {
     if (state.analysisState !== "uploading" && state.analysisState !== "scanning") {
@@ -403,11 +407,13 @@ export default function ReportPage() {
     }
 
     const timer = window.setInterval(() => {
-      dispatch({ type: "SET_ANALYSIS_STATUS_INDEX", analysisStatusIndex: (state.analysisStatusIndex + 1) % 3 });
+      dispatch({ type: "SET_ANALYSIS_STATUS_INDEX", analysisStatusIndex: (analysisIndexRef.current + 1) % 3 });
     }, 1600);
 
     return () => window.clearInterval(timer);
-  }, [state.analysisState, state.analysisStatusIndex]);
+    // Only re-create interval when analysisState changes, not on every index tick
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.analysisState]);
 
   const canProceed = useMemo(() => {
     switch (state.currentStep) {
@@ -680,7 +686,7 @@ export default function ReportPage() {
 
         <ReportHazardForm
           state={state}
-          draftSavedAt={draftSavedAt}
+          draftSavedAt={draftSavedAtRef.current}
           canProceed={canProceed}
           onJumpToStep={jumpToStep}
           onPrevStep={prevStep}

@@ -13,6 +13,9 @@
     "db:postgis": "tsx prisma/migrations/applyPostgis.ts",
     "db:postgis:admin": "tsx prisma/migrations/applyAdminPostgis.ts",
     "seed": "npx tsx prisma/seed.ts",
+    "seed:boundaries": "node scripts/seed-boundaries.mjs",
+    "seed:boundaries:dry": "node scripts/seed-boundaries.mjs --dry-run",
+    "seed:boundaries:state": "node scripts/seed-boundaries.mjs --state",
     "worker:ai": "tsx src/jobs/workers/aiAnalysis.worker.ts",
     "worker:authority": "tsx src/jobs/workers/authorityNotify.worker.ts",
     "worker:admin": "tsx src/jobs/workers/adminNotify.worker.ts",
@@ -51,6 +54,7 @@
     "redis": "^5.8.0",
     "sanitize-html": "^2.17.4",
     "sharp": "^0.34.5",
+    "stream-json": "^3.4.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

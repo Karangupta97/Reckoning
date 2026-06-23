@@ -12,6 +12,7 @@ import { AppError } from "../../../utils/AppError.js";
 import {
   listSubDistrictComplaints,
   updateSubDistrictComplaintStatus,
+  getSubDistrictComplaintDetail,
   type SubDistrictComplaintFilters,
 } from "./subDistrictComplaints.service.js";
 
@@ -35,8 +36,18 @@ export async function listComplaints(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const admin = getAdmin(req);
-    console.log("Decoded admin token payload in subDistrictComplaints.controller:", admin);
+    const user = req.user || req.admin;
+    const subDistrictId = user?.subDistrictId;
+    const districtId = user?.districtId;
+
+    if (!subDistrictId || !districtId) {
+      res.status(403).json({
+        error: "INSUFFICIENT_SCOPE",
+        message: "Admin profile is missing jurisdiction assignment",
+      });
+      return;
+    }
+
     const q = req.query as Record<string, string | undefined>;
 
     const filters: SubDistrictComplaintFilters = {
@@ -48,9 +59,57 @@ export async function listComplaints(
       limit: q.limit ? Number.parseInt(q.limit, 10) : 20,
     };
 
-    const result = await listSubDistrictComplaints(admin.subDistrictId, filters);
+    const result = await listSubDistrictComplaints(subDistrictId, districtId, filters);
     res.status(200).json({ success: true, data: result });
   } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * `GET /api/admin/subdistrict/complaints/:id`
+ *
+ * Protected: SUB_DISTRICT_ADMIN only.
+ * Scoped to `subDistrictId` and `districtId`.
+ */
+export async function getComplaintDetail(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const user = req.user || req.admin;
+    const subDistrictId = user?.subDistrictId;
+    const districtId = user?.districtId;
+
+    if (!subDistrictId || !districtId) {
+      res.status(403).json({
+        error: "INSUFFICIENT_SCOPE",
+        message: "Admin profile is missing jurisdiction assignment",
+      });
+      return;
+    }
+
+    const { id: complaintId } = req.params as { id: string };
+
+    const result = await getSubDistrictComplaintDetail(subDistrictId, districtId, complaintId);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    if (error instanceof AppError) {
+      if (error.code === "COMPLAINT_OUT_OF_JURISDICTION") {
+        res.status(403).json({
+          error: "COMPLAINT_OUT_OF_JURISDICTION",
+        });
+        return;
+      }
+      if (error.statusCode === 404) {
+        res.status(404).json({
+          success: false,
+          error: { message: error.message, code: error.code },
+        });
+        return;
+      }
+    }
     next(error);
   }
 }
@@ -67,7 +126,18 @@ export async function updateStatus(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const admin = getAdmin(req);
+    const user = req.user || req.admin;
+    const subDistrictId = user?.subDistrictId;
+    const districtId = user?.districtId;
+
+    if (!subDistrictId || !districtId) {
+      res.status(403).json({
+        error: "INSUFFICIENT_SCOPE",
+        message: "Admin profile is missing jurisdiction assignment",
+      });
+      return;
+    }
+
     const { id: complaintId } = req.params as { id: string };
     const { status } = req.body as { status: ComplaintStatus };
 
@@ -80,14 +150,30 @@ export async function updateStatus(
     }
 
     const updated = await updateSubDistrictComplaintStatus(
-      admin.subDistrictId,
-      admin.id,
+      subDistrictId,
+      districtId,
+      user.id || (user as any).sub,
       complaintId,
       status,
     );
 
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
+    if (error instanceof AppError) {
+      if (error.code === "COMPLAINT_OUT_OF_JURISDICTION") {
+        res.status(403).json({
+          error: "COMPLAINT_OUT_OF_JURISDICTION",
+        });
+        return;
+      }
+      if (error.statusCode === 404) {
+        res.status(404).json({
+          success: false,
+          error: { message: error.message, code: error.code },
+        });
+        return;
+      }
+    }
     next(error);
   }
 }
