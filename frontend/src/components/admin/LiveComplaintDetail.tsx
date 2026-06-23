@@ -245,9 +245,10 @@ export function LiveComplaintDetail({ complaintId }: LiveComplaintDetailProps) {
           setComplaint(res.data.data);
           setLoading(false);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (mounted) {
-          if (err?.response?.status === 403) {
+          const axiosErr = err as { response?: { status?: number } };
+          if (axiosErr?.response?.status === 403) {
             setError("Complaint is out of your jurisdiction scope.");
           } else {
             setError(err instanceof Error ? err.message : "Failed to load complaint.");
@@ -426,7 +427,11 @@ export function LiveComplaintDetail({ complaintId }: LiveComplaintDetailProps) {
 
           {/* AI Object Detection Panel */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            <AdminAIAnnotatedPanel complaintId={complaint.id} category={categoryGuess} />
+            <AdminAIAnnotatedPanel
+              complaintId={complaint.id}
+              category={categoryGuess}
+              evidenceImageUrl={complaint.mediaUrls[0] ?? null}
+            />
           </motion.div>
 
           {/* Location */}

@@ -50,9 +50,14 @@ export default function DistrictAdminLayout({
       return;
     }
 
+    // Only verify if we haven't already determined auth status
+    if (authStatus !== "loading") return;
+
+    let cancelled = false;
     const verifyAuth = async () => {
       try {
         const res = await api.get("/api/admin/auth/me");
+        if (cancelled) return;
         if (res.data?.success && res.data?.data?.role === "DISTRICT_ADMIN") {
           setAuthStatus("authenticated");
         } else {
@@ -60,12 +65,16 @@ export default function DistrictAdminLayout({
           router.push("/admin/login");
         }
       } catch (err) {
+        if (cancelled) return;
         setAuthStatus("unauthenticated");
         router.push("/admin/login");
       }
     };
     verifyAuth();
-  }, [router, isMock, currentAdmin]);
+    return () => { cancelled = true; };
+    // Only depend on stable values — not currentAdmin which changes on store hydration
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMock]);
 
   if (authStatus === "loading") {
     return (

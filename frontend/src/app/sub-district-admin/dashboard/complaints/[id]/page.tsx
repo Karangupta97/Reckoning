@@ -920,9 +920,11 @@ export default function ComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
   const complaintId = id ?? "CMP-1024";
 
-  // If the ID is NOT a mock CMP-XXXX pattern, render the live API detail view
-  const isMockId = /^CMP-\d+$/.test(complaintId);
-  if (!isMockId) {
+  // If the ID exists in the mock complaints store, render the mock detail view.
+  // Otherwise, treat it as a live database complaint.
+  const isMock = useComplaintStore((s) => s.complaints.some((x) => x.id === complaintId));
+
+  if (!isMock) {
     return <LiveComplaintDetail complaintId={complaintId} />;
   }
 
@@ -1144,7 +1146,11 @@ function MockComplaintDetail({ complaintId }: { complaintId: string }) {
 
           {/* AI Object Detection Panel */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            <AdminAIAnnotatedPanel complaintId={complaintId} category={c.category} />
+            <AdminAIAnnotatedPanel
+              complaintId={complaintId}
+              category={c.category}
+              evidenceImageUrl={c.evidence.citizen[0] ? getEvidenceImageUrl(c.evidence.citizen[0], c.category) : null}
+            />
           </motion.div>
 
           {/* Location with mini map */}

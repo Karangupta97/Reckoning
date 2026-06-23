@@ -48,9 +48,13 @@ export default function SuperAdminLayout({
       return;
     }
 
+    if (authStatus !== "loading") return;
+
+    let cancelled = false;
     const verifyAuth = async () => {
       try {
         const res = await api.get("/api/super-admin/auth/me");
+        if (cancelled) return;
         if (res.data?.success && res.data?.data?.role === "SUPER_ADMIN") {
           setAuthStatus("authenticated");
         } else {
@@ -58,12 +62,15 @@ export default function SuperAdminLayout({
           router.push("/admin/login");
         }
       } catch (err) {
+        if (cancelled) return;
         setAuthStatus("unauthenticated");
         router.push("/admin/login");
       }
     };
     verifyAuth();
-  }, [router, isMock, currentAdmin]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMock]);
 
   if (authStatus === "loading") {
     return (

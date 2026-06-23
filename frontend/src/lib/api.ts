@@ -19,18 +19,13 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle auto-logout on 401 Unauthorized
+// Response interceptor — reject 401 errors without hard redirect.
+// Auth layouts handle redirection to avoid race conditions and infinite loops.
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== "undefined") {
-        // Redirect to admin login on unauthorized access
-        window.location.href = "/admin/login";
-      }
-    }
     return Promise.reject(error);
   }
 );

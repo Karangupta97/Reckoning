@@ -430,7 +430,11 @@ export default function ComplaintDetailPage({ params }: { params: Promise<{ id: 
 
           {/* AI Object Detection Panel */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-            <AdminAIAnnotatedPanel complaintId={complaint.id} category={complaint.category} />
+            <AdminAIAnnotatedPanel
+              complaintId={complaint.id}
+              category={complaint.category}
+              evidenceImageUrl={complaint.evidence[0] ? getEvidenceImageUrl(complaint.evidence[0], complaint.category) : null}
+            />
           </motion.div>
 
           {/* Location */}

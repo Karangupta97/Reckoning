@@ -13,6 +13,7 @@
 import { Router } from "express";
 import * as ctrl from "./management.controller.js";
 import * as subDistrictComplaintsCtrl from "../subDistrict/subDistrictComplaints.controller.js";
+import * as subDistrictAiCtrl from "../subDistrict/subDistrictAi.controller.js";
 import {
   addNoteSchema,
   idParamSchema,
@@ -169,6 +170,19 @@ managementRouter.get(
   "/subdistrict/complaints",
   requireRole("SUB_DISTRICT_ADMIN"),
   subDistrictComplaintsCtrl.listComplaints,
+);
+
+// AI routes MUST be registered before /:id to prevent Express from matching /:id first
+managementRouter.get(
+  "/subdistrict/complaints/:id/ai",
+  requireRole("SUB_DISTRICT_ADMIN"),
+  subDistrictAiCtrl.getAdminComplaintAiResult,
+);
+
+managementRouter.get(
+  "/subdistrict/complaints/:id/ai/image",
+  requireRole("SUB_DISTRICT_ADMIN"),
+  subDistrictAiCtrl.proxyAdminComplaintAiImage,
 );
 
 managementRouter.get(
