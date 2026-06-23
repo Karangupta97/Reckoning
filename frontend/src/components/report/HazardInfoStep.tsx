@@ -50,9 +50,18 @@ interface HazardInfoStepProps {
   onDescriptionChange: (value: string) => void;
 }
 
-function AIBadge({ visible }: { visible: boolean }) {
+function AIBadge({ visible, compact = false }: { visible: boolean; compact?: boolean }) {
   if (!visible) {
     return null;
+  }
+
+  if (compact) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-md border border-[color-mix(in_srgb,var(--color-amber)_18%,transparent)] bg-[color-mix(in_srgb,var(--color-amber)_10%,transparent)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--color-amber)]" title="AI Suggested">
+        <Sparkles size={9} />
+        AI
+      </span>
+    );
   }
 
   return (
@@ -133,7 +142,7 @@ export function HazardInfoStep({
                   <span className={`text-sm font-semibold ${isSelected ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
                     {option.label}
                   </span>
-                  {isSuggested && <AIBadge visible />}
+                  {isSuggested && <AIBadge visible compact />}
                 </div>
                 <div
                   className={`absolute inset-y-0 left-0 w-1 rounded-r-full bg-[var(--color-amber)] transition-opacity ${

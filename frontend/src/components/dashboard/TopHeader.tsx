@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Search, Plus, Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
@@ -30,6 +31,7 @@ function formatCountry(country?: string): string {
 }
 
 export function TopHeader() {
+  const [searchVal, setSearchVal] = useState("");
   const { toggleMobile } = useSidebarStore();
   const t = useTranslations("dashboard");
   const router = useRouter();
@@ -57,6 +59,13 @@ export function TopHeader() {
             />
             <input
               type="text"
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  router.push(`/dashboard/my-reports?search=${encodeURIComponent(searchVal)}`);
+                }
+              }}
               placeholder="Search reports, locations..."
               className="w-full pl-9 pr-12 py-2.5 rounded-xl bg-[var(--color-surface)] border border-[var(--color-border)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-amber)] transition-shadow"
             />

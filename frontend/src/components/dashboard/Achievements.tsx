@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Shield, CheckCircle2, Users, Trophy } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
@@ -14,6 +15,7 @@ const BADGES = [
 ];
 
 export function Achievements() {
+  const router = useRouter();
   const t = useTranslations("dashboard.achievements");
   const email = useAuthStore((state) => state.user?.email);
 
@@ -44,7 +46,10 @@ export function Achievements() {
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
           {t("title")}
         </h3>
-        <button className="text-xs font-medium text-[var(--color-amber)] hover:underline">
+        <button
+          onClick={() => router.push("/dashboard/achievements")}
+          className="text-xs font-medium text-[var(--color-amber)] hover:underline"
+        >
           {t("viewAll")}
         </button>
       </div>

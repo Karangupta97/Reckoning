@@ -603,7 +603,7 @@ export default function SafetyMapPage() {
             height="100%"
             showBreadcrumb={false}
             showControls={false}
-            showLegend={false}
+            showLegend={true}
             showSidebar={false}
             isDark
           />

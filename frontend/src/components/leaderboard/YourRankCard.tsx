@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { Trophy, ArrowUpRight } from "lucide-react";
 import type { RankProgress } from "@/types/leaderboard";
 
@@ -11,6 +12,7 @@ interface YourRankCardProps {
 }
 
 export function YourRankCard({ progress }: YourRankCardProps) {
+  const router = useRouter();
   const pct = Math.min(100, Math.round((progress.currentXP / progress.nextRankXP) * 100));
   const remaining = progress.nextRankXP - progress.currentXP;
 
@@ -88,6 +90,7 @@ export function YourRankCard({ progress }: YourRankCardProps) {
 
       {/* CTA */}
       <button
+        onClick={() => router.push("/dashboard/achievements")}
         className="btn-outline w-full py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
         aria-label="View achievements"
       >

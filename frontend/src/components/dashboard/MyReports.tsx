@@ -77,7 +77,7 @@ export function MyReports({ reports = [], isLoading = false }: MyReportsProps) {
       </div>
 
       <div className="overflow-x-auto -mx-5 px-5">
-        <table className="w-full text-left min-w-[480px]">
+        <table className="w-full text-left min-w-0">
           <thead>
             <tr className="border-b border-[var(--color-border)]">
               <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
@@ -86,13 +86,13 @@ export function MyReports({ reports = [], isLoading = false }: MyReportsProps) {
               <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
                 {t("columns.type")}
               </th>
-              <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+              <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide hidden sm:table-cell">
                 {t("columns.location")}
               </th>
               <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
                 {t("columns.status")}
               </th>
-              <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+              <th className="pb-2 text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wide hidden sm:table-cell">
                 {t("columns.date")}
               </th>
             </tr>
@@ -114,7 +114,7 @@ export function MyReports({ reports = [], isLoading = false }: MyReportsProps) {
                 <td className="py-3 text-xs text-[var(--color-text-secondary)]">
                   {t(`types.${report.typeKey}`)}
                 </td>
-                <td className="py-3 text-xs text-[var(--color-text-secondary)]">
+                <td className="py-3 text-xs text-[var(--color-text-secondary)] hidden sm:table-cell">
                   {report.location}
                 </td>
                 <td className="py-3">
@@ -124,7 +124,7 @@ export function MyReports({ reports = [], isLoading = false }: MyReportsProps) {
                     {t(`status.${report.status}`)}
                   </span>
                 </td>
-                <td className="py-3 text-xs text-[var(--color-text-muted)]">
+                <td className="py-3 text-xs text-[var(--color-text-muted)] hidden sm:table-cell">
                   {new Date(report.dateLabel).toLocaleDateString()}
                 </td>
               </motion.tr>

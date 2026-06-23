@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
@@ -23,7 +23,7 @@ import {
 import type { MyReport, FilterTab, SortOption, HazardType, Severity } from "./types";
 import { ReportSidebar } from "./ReportSidebar";
 import { ReportCard } from "./ReportCard";
-import { ReportDetailSheet, DesktopDetailPanel } from "./ReportDetailSheet";
+import { ReportDetailModal } from "./ReportDetailModal";
 import { ExportButton } from "./ExportButton";
 import { EmptyState } from "./EmptyState";
 import { useMyReports } from "@/hooks/useMyReports";
@@ -390,6 +390,16 @@ export function MyReportsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<Severity | "all">("all");
   const [hazardFilter, setHazardFilter] = useState<HazardType | "all">("all");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const search = params.get("search");
+      if (search) {
+        setSearchQuery(search);
+      }
+    }
+  }, []);
 
   // Detail panel
   const [selectedReport, setSelectedReport] = useState<MyReport | null>(null);
@@ -804,16 +814,8 @@ export function MyReportsPage() {
         </div>
       </div>
 
-      {/* ── Right Detail Panel (desktop) ───────────────────────── */}
-      <DesktopDetailPanel
-        report={selectedReport}
-        onClose={handleCloseDetail}
-        onDelete={handleDelete}
-        onToggleNotify={handleToggleNotify}
-      />
-
-      {/* ── Bottom Sheet Detail (mobile/tablet) ────────────────── */}
-      <ReportDetailSheet
+      {/* ── Report Detail Modal ────────────────────────────────── */}
+      <ReportDetailModal
         report={selectedReport}
         onClose={handleCloseDetail}
         onDelete={handleDelete}

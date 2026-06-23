@@ -25,6 +25,7 @@ import {
   Share2,
   Bell,
   BellRing,
+  MoreVertical,
   CircleDot,
   Droplets,
   AlertTriangle,
@@ -93,15 +94,32 @@ interface ReportDetailPanelProps {
   onClose: () => void;
   onDelete?: (report: MyReport) => void;
   onToggleNotify?: (report: MyReport) => void;
+  embeddedInModal?: boolean;
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  submitted: "Submitted",
+  verified: "Verified",
+  assigned: "Assigned",
+  in_progress: "In Progress",
+  resolved: "Resolved",
+  rejected: "Rejected",
+};
+
 /* ─── Component ───────────────────────────────────────────────── */
-export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }: ReportDetailPanelProps) {
+export function ReportDetailPanel({
+  report,
+  onClose,
+  onDelete,
+  onToggleNotify,
+  embeddedInModal = false,
+}: ReportDetailPanelProps) {
   const [copied, setCopied] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [impactCardOpen, setImpactCardOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
   const banner = STATUS_BANNER[report.status] || STATUS_BANNER.submitted;
 
@@ -134,80 +152,190 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-        <button
-          onClick={onClose}
-          className="flex items-center gap-1 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <ChevronLeft size={16} />
-          Back
-        </button>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-        >
-          <X size={16} />
-        </button>
+      <div className="flex items-start justify-between gap-3 p-4 border-b border-[var(--color-border)] shrink-0">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              id="report-modal-title"
+              className="text-sm font-bold font-mono text-[var(--color-text-primary)]"
+            >
+              {report.reportId}
+            </span>
+            <span
+              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[0.65rem] font-bold capitalize"
+              style={{
+                backgroundColor: banner.bg,
+                color: banner.color,
+                border: `1px solid color-mix(in srgb, ${banner.color} 24%, transparent)`,
+              }}
+            >
+              {STATUS_LABELS[report.status] ?? report.status.replace("_", " ")}
+            </span>
+          </div>
+          <p className="text-[0.7rem] text-[var(--color-text-secondary)] mt-1 flex items-center gap-1">
+            <Clock size={11} className="text-[var(--color-text-muted)] shrink-0" />
+            Submitted {formatDate(report.createdAt)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {!embeddedInModal && (
+            <button
+              onClick={onClose}
+              className="flex items-center gap-1 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <ChevronLeft size={16} />
+              Back
+            </button>
+          )}
+
+          {/* Actions Overflow Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setActionsOpen(!actionsOpen)}
+              className="h-8 px-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-border)] flex items-center gap-1 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+              aria-expanded={actionsOpen}
+              aria-haspopup="true"
+            >
+              <MoreVertical size={14} />
+              <span>Actions</span>
+            </button>
+
+            <AnimatePresence>
+              {actionsOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setActionsOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-1.5 z-50 rounded-2xl border p-1.5 min-w-[200px]"
+                    style={{
+                      backgroundColor: "var(--color-card)",
+                      borderColor: "var(--color-border)",
+                      boxShadow: "var(--shadow-neu-lg)",
+                    }}
+                  >
+                    {/* Share Report */}
+                    <button
+                      onClick={() => {
+                        setActionsOpen(false);
+                        handleShare();
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-colors hover:bg-[var(--color-surface)] text-[var(--color-text-primary)] flex items-center gap-2 min-h-[44px] cursor-pointer"
+                    >
+                      <Share2 size={14} className="text-[var(--color-text-muted)]" />
+                      <span>Share Report</span>
+                    </button>
+
+                    {/* Notify Me About Updates */}
+                    <button
+                      onClick={() => {
+                        setActionsOpen(false);
+                        onToggleNotify?.(report);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold transition-colors hover:bg-[color-mix(in_srgb,var(--color-amber)_8%,var(--color-card))] text-[var(--color-amber)] flex items-center gap-2 min-h-[44px] cursor-pointer"
+                    >
+                      {report.isNotifying ? (
+                        <BellRing size={14} className="text-[var(--color-amber)]" />
+                      ) : (
+                        <Bell size={14} className="text-[var(--color-amber)]" />
+                      )}
+                      <span>{report.isNotifying ? "Notifying of Updates" : "Notify Me About Updates"}</span>
+                    </button>
+
+                    {/* Delete Report */}
+                    {report.status === "submitted" && (
+                      <button
+                        onClick={() => {
+                          setActionsOpen(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:bg-[color-mix(in_srgb,var(--color-danger)_8%,var(--color-card))] text-[var(--color-danger)] flex items-center gap-2 min-h-[44px] cursor-pointer"
+                      >
+                        <Trash2 size={14} className="text-[var(--color-danger)]" />
+                        <span>Delete Report</span>
+                      </button>
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
+            aria-label="Close report details"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         {/* Hero Photo */}
         {photos.length > 0 && (
-          <div className="relative aspect-[4/3] w-full overflow-hidden">
-            <img
-              src={photos[activePhotoIndex]}
-              alt={report.title}
-              className="w-full h-full object-cover cursor-zoom-in"
-              onClick={() => setLightboxImage(photos[activePhotoIndex])}
-            />
-            {/* Photo dots */}
-            {photos.length > 1 && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                {photos.map((_, i) => (
+          <div className="px-4 pt-4 sm:px-0 sm:pt-0 shrink-0">
+            <div className="relative w-full h-[220px] sm:h-auto sm:aspect-[4/3] overflow-hidden rounded-xl sm:rounded-none">
+              <img
+                src={photos[activePhotoIndex]}
+                alt={report.title}
+                className="w-full h-full object-cover cursor-zoom-in"
+                onClick={() => setLightboxImage(photos[activePhotoIndex])}
+              />
+              {/* Photo dots */}
+              {photos.length > 1 && (
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {photos.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActivePhotoIndex(i)}
+                      className={`w-2 h-2 rounded-full transition-colors ${i === activePhotoIndex ? "bg-white" : "bg-white/50"}`}
+                    />
+                  ))}
+                </div>
+              )}
+              {/* Photo nav */}
+              {photos.length > 1 && (
+                <>
                   <button
-                    key={i}
-                    onClick={() => setActivePhotoIndex(i)}
-                    className={`w-2 h-2 rounded-full transition-colors ${i === activePhotoIndex ? "bg-white" : "bg-white/50"}`}
-                  />
-                ))}
-              </div>
-            )}
-            {/* Photo nav */}
-            {photos.length > 1 && (
-              <>
-                <button
-                  onClick={() => setActivePhotoIndex((activePhotoIndex - 1 + photos.length) % photos.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white text-sm"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <button
-                  onClick={() => setActivePhotoIndex((activePhotoIndex + 1) % photos.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white text-sm"
-                >
-                  <ChevronLeft size={16} className="rotate-180" />
-                </button>
-              </>
-            )}
+                    onClick={() => setActivePhotoIndex((activePhotoIndex - 1 + photos.length) % photos.length)}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white text-sm"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    onClick={() => setActivePhotoIndex((activePhotoIndex + 1) % photos.length)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center text-white text-sm"
+                  >
+                    <ChevronLeft size={16} className="rotate-180" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
         <div className="p-4 space-y-5">
-          {/* Report Identity */}
+          {/* Report Details */}
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[0.7rem] font-mono text-[var(--color-text-muted)]">
-                {report.reportId}
-              </span>
+            <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-2">
+              Report Details
+            </p>
+            <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={copyId}
-                className="flex items-center gap-1 text-[0.65rem] text-[var(--color-info)] hover:underline"
+                className="flex items-center gap-1 text-[0.65rem] text-[var(--color-info)] hover:underline cursor-pointer"
               >
                 {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy ID</>}
               </button>
             </div>
-            <h2 className="text-base font-bold text-[var(--color-text-primary)] mt-2 leading-tight">
+            <h2 className="text-base font-bold text-[var(--color-text-primary)] leading-tight">
               {report.title}
             </h2>
             <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -391,16 +519,27 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
             </div>
           )}
 
-          {/* Official Response */}
-          {report.officialResponse && (
-            <OfficialResponseCard response={report.officialResponse} />
-          )}
-
           {/* Timeline */}
           <div>
-            <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-3">Status Timeline</p>
+            <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-3">Timeline</p>
             <ReportTimeline timeline={report.timeline} />
           </div>
+
+          {/* Comments & Updates */}
+          {(report.officialResponse || report.comments > 0) && (
+            <div>
+              <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-3">
+                Comments &amp; Updates
+              </p>
+              {report.officialResponse ? (
+                <OfficialResponseCard response={report.officialResponse} />
+              ) : (
+                <p className="text-xs text-[var(--color-text-secondary)]">
+                  {report.comments} citizen comment{report.comments === 1 ? "" : "s"} on this report.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Evidence Gallery */}
           <EvidenceGallery report={report} />
@@ -439,13 +578,13 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
                 {report.comments} comments
               </p>
             </div>
-            <div className="flex gap-2 mt-3">
-              <button className="flex-1 py-2 rounded-lg border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-amber)] transition-colors flex items-center justify-center gap-1.5">
+            <div className="flex flex-col sm:flex-row gap-2 mt-3">
+              <button className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-amber)] hover:text-[var(--color-text-primary)] hover:shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer">
                 <MessageCircle size={12} /> View Comments
               </button>
               <button
                 onClick={handleShare}
-                className="flex-1 py-2 rounded-lg border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-amber)] transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] text-xs text-[var(--color-text-secondary)] hover:border-[var(--color-amber)] hover:text-[var(--color-text-primary)] hover:shadow-sm transition-all duration-200 flex items-center justify-center gap-1.5 min-h-[44px] cursor-pointer"
               >
                 <Share2 size={12} /> Share Report
               </button>
@@ -471,39 +610,7 @@ export function ReportDetailPanel({ report, onClose, onDelete, onToggleNotify }:
         </div>
       </div>
 
-      {/* Action Buttons (sticky bottom) */}
-      <div className="border-t border-[var(--color-border)] p-4 flex gap-2 bg-[var(--color-card)]" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
-        {report.status === "submitted" && (
-          <button className="flex-1 py-2.5 rounded-full border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:border-[var(--color-amber)] transition-colors flex items-center justify-center gap-1.5">
-            <Pencil size={12} /> Edit
-          </button>
-        )}
-        {report.status === "submitted" && (
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="flex-1 py-2.5 rounded-full border border-[var(--color-danger)]/30 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Trash2 size={12} /> Delete
-          </button>
-        )}
-        <button
-          onClick={handleShare}
-          className="flex-1 py-2.5 rounded-full border border-[var(--color-border)] text-xs font-medium text-[var(--color-text-secondary)] hover:border-[var(--color-amber)] transition-colors flex items-center justify-center gap-1.5"
-        >
-          <Share2 size={12} /> Share
-        </button>
-        <button
-          onClick={() => onToggleNotify?.(report)}
-          className={`flex-1 py-2.5 rounded-full text-xs font-medium transition-colors flex items-center justify-center gap-1.5 ${
-            report.isNotifying
-              ? "bg-[var(--color-amber)] text-white"
-              : "border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-amber)]"
-          }`}
-        >
-          {report.isNotifying ? <BellRing size={12} /> : <Bell size={12} />}
-          {report.isNotifying ? "Notifying" : "Notify me"}
-        </button>
-      </div>
+      {/* Footer bar removed completely */}
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (

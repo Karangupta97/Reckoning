@@ -11,7 +11,6 @@ import {
   AlertTriangle,
   TrafficCone,
   TreePine,
-  ChevronDown,
   Eye,
   ThumbsUp,
   MessageCircle,
@@ -22,13 +21,8 @@ import {
   CheckCheck,
   ClipboardList,
   Wrench,
-  Sparkles,
-  X,
 } from "lucide-react";
 import type { MyReport } from "./types";
-import { ReportTimeline } from "./ReportTimeline";
-import { OfficialResponseCard } from "./OfficialResponseCard";
-import { EvidenceGallery } from "./EvidenceGallery";
 
 /* ─── Constants ───────────────────────────────────────────────── */
 const HAZARD_ICONS: Record<string, React.ReactNode> = {
@@ -382,176 +376,6 @@ function ActionMenu({
   );
 }
 
-/* ─── Expanded Detail (accordion) ─────────────────────────────── */
-function ExpandedDetail({ report, onImageClick }: { report: MyReport; onImageClick: (url: string) => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="border-t pt-4 mt-3 space-y-4"
-      style={{ borderColor: "var(--color-border)" }}
-    >
-      {/* Full description */}
-      <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-secondary)" }}>
-        {report.description}
-      </p>
-
-      {/* AI Analysis */}
-      {report.aiDetected && (
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-          <p className="text-xs font-semibold text-[var(--color-text-primary)] mb-2 flex items-center gap-1.5">
-            <Sparkles size={13} className="text-[var(--color-amber)] animate-pulse" /> AI Analysis
-          </p>
-          <div className="space-y-1.5 text-xs text-[var(--color-text-secondary)]">
-            {report.aiCategory && (
-              <p>
-                <span className="font-semibold text-[var(--color-text-primary)]">Suggested Category:</span>{" "}
-                {report.aiCategory.charAt(0).toUpperCase() + report.aiCategory.slice(1).toLowerCase().replace("_", " ")}
-              </p>
-            )}
-            {report.aiConfidence != null && (
-              <p>
-                <span className="font-semibold text-[var(--color-text-primary)]">Confidence:</span>{" "}
-                {Math.round(report.aiConfidence * 100)}%
-              </p>
-            )}
-          </div>
-          {report.media && report.media.filter(m => m.aiResult?.annotatedImage?.url).length > 0 ? (
-            <div className="mt-4 space-y-4">
-              {report.media.filter(m => m.aiResult?.annotatedImage?.url).map((m, idx) => (
-                <div key={idx} className="space-y-2">
-                  {report.media!.filter(m => m.aiResult?.annotatedImage?.url).length > 1 && (
-                    <p className="text-[11px] font-bold text-[var(--color-text-primary)]">Image {idx + 1} Analysis</p>
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Original Image */}
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
-                      <div 
-                        className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
-                        onClick={() => onImageClick(m.url)}
-                      >
-                        <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
-                          <img
-                            src={m.url}
-                            alt={`Original Upload ${idx + 1}`}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AI Detection */}
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
-                      <div 
-                        className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
-                        onClick={() => onImageClick(m.aiResult!.annotatedImage!.url)}
-                      >
-                        <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
-                          <img
-                            src={m.aiResult!.annotatedImage!.url}
-                            alt={`AI Annotated Detection ${idx + 1}`}
-                            className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            report.aiAnnotatedImage && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Original Image */}
-                {report.photoUrl && (
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Original Upload</p>
-                    <div 
-                      className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
-                      onClick={() => onImageClick(report.photoUrl!)}
-                    >
-                      <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
-                        <img
-                          src={report.photoUrl}
-                          alt="Original Upload"
-                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* AI Detection */}
-                <div className="space-y-1">
-                  <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">AI Detection</p>
-                  <div 
-                    className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] cursor-zoom-in relative group"
-                    onClick={() => onImageClick(report.aiAnnotatedImage!)}
-                  >
-                    <div className="relative aspect-video max-h-52 w-full flex justify-center bg-black/5">
-                      <img
-                        src={report.aiAnnotatedImage}
-                        alt="AI Annotated Detection"
-                        className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      )}
-
-      {/* Evidence thumbnails */}
-      {report.media && report.media.length > 1 && (
-        <div>
-          <p
-            className="text-[0.7rem] font-semibold mb-2"
-            style={{ color: "var(--color-text-primary)" }}
-          >
-            Evidence
-          </p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {report.media.filter((m) => m.mimeType.startsWith("image/")).map((m, i) => {
-              return (
-                <img
-                  key={i}
-                  src={m.url}
-                  alt={`Evidence ${i + 1}`}
-                  className="flex-shrink-0 w-20 h-20 rounded-lg object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
-                  loading="lazy"
-                  onClick={() => onImageClick(m.url)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Official response */}
-      {report.officialResponse && (
-        <OfficialResponseCard response={report.officialResponse} />
-      )}
-
-      {/* Full timeline */}
-      <div>
-        <p
-          className="text-[0.7rem] font-semibold mb-3"
-          style={{ color: "var(--color-text-primary)" }}
-        >
-          Full Timeline
-        </p>
-        <ReportTimeline timeline={report.timeline} />
-      </div>
-    </motion.div>
-  );
-}
-
 /* ─── ReportCard Component ─────────────────────────────────────── */
 interface ReportCardProps {
   report: MyReport;
@@ -560,8 +384,6 @@ interface ReportCardProps {
 }
 
 export function ReportCard({ report, onView, onDelete }: ReportCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const statusCfg = STATUS_CONFIG[report.status] ?? STATUS_CONFIG.submitted;
   const severityColor = SEVERITY_COLORS[report.severity] ?? "var(--color-amber)";
   const hazardIcon = HAZARD_ICONS[report.hazardType];
@@ -576,9 +398,9 @@ export function ReportCard({ report, onView, onDelete }: ReportCardProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.2 }}
-      className="neu-card-lg overflow-hidden cursor-pointer transition-all duration-200"
+      className="neu-card-lg overflow-hidden cursor-pointer transition-all duration-200 hover:border-[var(--color-amber)]/30"
       style={{ borderLeft: `3px solid ${borderAccent}` }}
-      onClick={() => setExpanded((v) => !v)}
+      onClick={() => onView(report)}
     >
       <div className="p-4">
         {/* Main row */}
@@ -688,127 +510,57 @@ export function ReportCard({ report, onView, onDelete }: ReportCardProps) {
               {report.reportId}
             </span>
 
-            {/* Date */}
-            <div className="flex items-center gap-1">
-              <Clock size={9} style={{ color: "var(--color-text-muted)" }} />
-              <span
-                className="text-[0.6rem]"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {formatTimeAgo(report.createdAt)}
-              </span>
-            </div>
-
-            {/* Risk gauge */}
-            <div className="w-28">
-              <RiskGauge severity={report.severity} />
-            </div>
-
-            {/* Action menu */}
-            <div onClick={(e) => e.stopPropagation()}>
-              <ActionMenu
-                report={report}
-                onView={() => onView(report)}
-                onDelete={onDelete ? () => onDelete(report) : undefined}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Stats row */}
-        <div
-          className="flex items-center justify-between mt-3 pt-2.5 border-t"
-          style={{ borderColor: "var(--color-border)" }}
-        >
-          <div
-            className="flex items-center gap-3 text-[0.7rem]"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <span className="flex items-center gap-1">
-              <ThumbsUp size={11} /> {report.upvotes}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle size={11} /> {report.comments}
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye size={11} /> {formatViews(report.views)}
+          {/* Date */}
+          <div className="flex items-center gap-1">
+            <Clock size={9} style={{ color: "var(--color-text-muted)" }} />
+            <span
+              className="text-[0.6rem]"
+              style={{ color: "var(--color-text-muted)" }}
+            >
+              {formatTimeAgo(report.createdAt)}
             </span>
           </div>
 
-          {/* Expand toggle */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded((v) => !v);
-            }}
-            className="flex items-center gap-1 text-[0.65rem] transition-colors"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <span>{expanded ? "Less" : "Details"}</span>
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown size={12} />
-            </motion.span>
-          </button>
+          {/* Risk gauge */}
+          <div className="w-28">
+            <RiskGauge severity={report.severity} />
+          </div>
+
+          {/* Action menu */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <ActionMenu
+              report={report}
+              onView={() => onView(report)}
+              onDelete={onDelete ? () => onDelete(report) : undefined}
+            />
+          </div>
         </div>
-
-        {/* Progress Track */}
-        <ProgressTrack report={report} />
-
-        {/* Expanded accordion */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              key="expanded"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              style={{ overflow: "hidden" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ExpandedDetail report={report} onImageClick={setLightboxImage} />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      <AnimatePresence>
-        {lightboxImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
-            onClick={(e) => {
-              e.stopPropagation();
-              setLightboxImage(null);
-            }}
-          >
-            <button
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                setLightboxImage(null);
-              }}
-              aria-label="Close image lightbox"
-            >
-              <X size={20} />
-            </button>
-            <motion.img
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              src={lightboxImage}
-              alt="Full screen view"
-              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Stats row */}
+      <div
+        className="flex items-center justify-between mt-3 pt-2.5 border-t"
+        style={{ borderColor: "var(--color-border)" }}
+      >
+        <div
+          className="flex items-center gap-3 text-[0.7rem]"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          <span className="flex items-center gap-1">
+            <ThumbsUp size={11} /> {report.upvotes}
+          </span>
+          <span className="flex items-center gap-1">
+            <MessageCircle size={11} /> {report.comments}
+          </span>
+          <span className="flex items-center gap-1">
+            <Eye size={11} /> {formatViews(report.views)}
+          </span>
+        </div>
+      </div>
+
+      {/* Progress Track */}
+      <ProgressTrack report={report} />
+      </div>
     </motion.div>
   );
 }

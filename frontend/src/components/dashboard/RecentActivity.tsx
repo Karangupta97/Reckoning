@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, Droplets, Trash2, Lightbulb } from "lucide-react";
 import type { RecentActivityItem } from "@/components/my-reports/types";
@@ -21,6 +22,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ activities, isLoading = false }: RecentActivityProps) {
+  const router = useRouter();
   const t = useTranslations("dashboard.recentActivity");
 
   const ACTIVITIES = activities.slice(0, 6).map((item) => {
@@ -55,7 +57,10 @@ export function RecentActivity({ activities, isLoading = false }: RecentActivity
         <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
           {t("title")}
         </h3>
-        <button className="text-xs font-medium text-[var(--color-amber)] hover:underline">
+        <button
+          onClick={() => router.push("/dashboard/my-reports")}
+          className="text-xs font-medium text-[var(--color-amber)] hover:underline"
+        >
           {t("viewAll")}
         </button>
       </div>

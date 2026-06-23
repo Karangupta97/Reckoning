@@ -46,6 +46,7 @@ export function EmergencyContacts() {
             key={contact.number}
             variants={itemVariants}
             whileHover={{ x: 2 }}
+            onClick={() => { window.location.href = `tel:${contact.number}`; }}
             className="w-full flex items-center justify-between gap-3 p-2 rounded-xl hover:bg-[var(--color-surface)] transition-colors group"
           >
             <div className="flex items-center gap-3">
@@ -67,6 +68,7 @@ export function EmergencyContacts() {
       <motion.button
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.99 }}
+        onClick={() => { window.location.href = "tel:112"; }}
         className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[color-mix(in_srgb,var(--color-danger)_12%,transparent)] text-[var(--color-danger)] text-sm font-semibold hover:bg-[color-mix(in_srgb,var(--color-danger)_18%,transparent)] transition-colors"
       >
         <AlertTriangle size={15} strokeWidth={2} />

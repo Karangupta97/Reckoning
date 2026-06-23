@@ -6,7 +6,7 @@
  */
 
 /* ─── District-admin accent tokens ─────────────────────────── */
-.district-admin-shell {
+:root {
   --admin-nav-active-bg: #ECFDF5;
   --admin-nav-active-text: #111827;
   --admin-nav-active-icon: #10B981;
@@ -16,9 +16,6 @@
   --admin-nav-hover-bg: rgba(148, 163, 184, 0.08);
   --admin-nav-hover-text: #334155;
   --admin-nav-hover-icon: #475569;
-}
-
-:root {
   --da-teal: #14b8a6;
   --da-teal-glow: rgba(20, 184, 166, 0.14);
   --da-border-teal: rgba(20, 184, 166, 0.22);

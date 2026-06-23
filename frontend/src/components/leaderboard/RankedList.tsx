@@ -258,37 +258,36 @@ function ListRow({
         </div>
 
         {/* Points */}
-        <div className="flex flex-col items-end flex-shrink-0 gap-0.5 mr-1">
+        <div className="w-20 text-right flex-shrink-0">
           {view === "citizen" && isCitizenEntry(entry) ? (
-            <>
-              <span
-                className="text-sm font-black tabular-nums font-mono"
-                style={{ color: "var(--color-amber)" }}
-              >
-                {entry.points.toLocaleString()}
-              </span>
-              <span
-                className="text-[10px] tabular-nums font-mono hidden sm:block"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                Rep {entry.reputation}
-              </span>
-            </>
+            <span
+              className="text-sm font-black tabular-nums font-mono text-[#F59E0B]"
+            >
+              {entry.points.toLocaleString()}
+            </span>
           ) : !isCitizenEntry(entry) ? (
-            <>
-              <span
-                className="text-sm font-black tabular-nums font-mono"
-                style={{ color: "var(--color-success)" }}
-              >
-                {entry.issuesResolved}
-              </span>
-              <span
-                className="text-[10px] tabular-nums font-mono hidden sm:block"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                {entry.validationAccuracy}% acc
-              </span>
-            </>
+            <span
+              className="text-sm font-black tabular-nums font-mono text-green-600"
+            >
+              {entry.issuesResolved}
+            </span>
+          ) : null}
+        </div>
+
+        {/* Reputation */}
+        <div className="w-16 text-right flex-shrink-0 hidden sm:block">
+          {view === "citizen" && isCitizenEntry(entry) ? (
+            <span
+              className="text-sm font-semibold tabular-nums font-mono text-gray-500"
+            >
+              {entry.reputation}
+            </span>
+          ) : !isCitizenEntry(entry) ? (
+            <span
+              className="text-xs font-semibold tabular-nums font-mono text-gray-500"
+            >
+              {entry.validationAccuracy}%
+            </span>
           ) : null}
         </div>
 
@@ -433,21 +432,21 @@ function YourRankStyleRow({
           </div>
 
           {/* Points value */}
-          <div className="flex flex-col items-end flex-shrink-0 gap-0.5 mr-1">
+          <div className="w-20 text-right flex-shrink-0">
             <span
-              className="text-sm font-black tabular-nums font-mono"
-              style={{ color: "var(--color-amber)" }}
+              className="text-sm font-black tabular-nums font-mono text-[#F59E0B]"
             >
               {points.toLocaleString()}
             </span>
-            {isCitizenEntry(entry) && (
-              <span
-                className="text-[10px] tabular-nums font-mono hidden sm:block"
-                style={{ color: "var(--color-text-muted)" }}
-              >
-                Rep {entry.reputation}
-              </span>
-            )}
+          </div>
+
+          {/* Reputation / Acc */}
+          <div className="w-16 text-right flex-shrink-0 hidden sm:block">
+            <span
+              className="text-sm font-semibold tabular-nums font-mono text-gray-500"
+            >
+              {isCitizenEntry(entry) ? entry.reputation : `${entry.validationAccuracy}%`}
+            </span>
           </div>
 
           {/* Expand / detail chevron */}

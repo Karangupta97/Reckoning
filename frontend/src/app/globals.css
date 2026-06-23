@@ -22,11 +22,9 @@
 
   /* Neumorphic shadows (light) */
   --shadow-neu:
-    -5px -5px 10px #FAFBFF,
-    5px 5px 10px rgba(22, 27, 29, 0.23);
+    0 4px 12px rgba(22, 27, 29, 0.08);
   --shadow-neu-lg:
-    -10px -10px 20px #FAFBFF,
-    10px 10px 20px rgba(22, 27, 29, 0.23);
+    0 10px 25px rgba(22, 27, 29, 0.12);
 
   /* Bottom nav shadow */
   --shadow-bottom-nav: 0 -4px 24px rgba(0, 0, 0, 0.08);

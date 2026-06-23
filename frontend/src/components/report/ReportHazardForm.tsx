@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react";
 import {
@@ -179,10 +180,48 @@ export function ReportHazardForm({
             )}
           </motion.div>
         </AnimatePresence>
+
+        {/* Mobile-only inline step navigation */}
+        <div className="mt-8 flex w-full items-center gap-3 lg:hidden">
+          {currentStep > 1 && (
+            <button
+              type="button"
+              onClick={onPrevStep}
+              className="flex-1 inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] px-4 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors active:scale-95"
+            >
+              <ChevronLeft size={16} />
+              Back
+            </button>
+          )}
+
+          {showSubmit ? (
+            <button
+              type="button"
+              onClick={onSubmitReport}
+              disabled={state.isSubmitting}
+              className="flex-1 inline-flex h-11 items-center justify-center gap-2 rounded-2xl btn-amber px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-70 active:scale-95"
+            >
+              {state.isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {state.isSubmitting ? "Submitting…" : "Submit report"}
+            </button>
+          ) : showAnalyse ? (
+            null
+          ) : (
+            <button
+              type="button"
+              onClick={onNextStep}
+              disabled={!canProceed}
+              className="flex-1 inline-flex h-11 items-center justify-center gap-2 rounded-2xl btn-amber px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:bg-[var(--color-surface)] disabled:text-[var(--color-text-muted)] active:scale-95"
+            >
+              Next
+              <ChevronRight size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-page)_85%,transparent)] backdrop-blur-xl ${sidebarOffsetClass}`}
+        className={`hidden lg:block fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-page)_85%,transparent)] backdrop-blur-xl ${sidebarOffsetClass}`}
       >
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-0">
           <div className="min-w-0">

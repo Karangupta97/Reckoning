@@ -122,7 +122,7 @@ const TABS: TabConfig[] = [
   {
     id: "profile",
     label: "Profile",
-    href: "/profile",
+    href: "/dashboard/settings",
     ariaLabel: "Open Profile",
     IconOutlined: UserOutlined,
     IconFilled: UserFilled,

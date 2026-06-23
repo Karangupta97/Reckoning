@@ -51,7 +51,7 @@ function getInitial(name: string) {
 // ─── Citizen Names Pool ────────────────────────────────────────────────────────
 
 const CITIZEN_NAMES = [
-  "Blademir Tori", "Priya Nair", "Molida Glinda", "Ajay Sharma", "Suresh Patil",
+  "Arjun Verma", "Priya", "Sneha Iyer", "Ajay Sharma", "Suresh Patil",
   "Neha Joshi", "Karan Verma", "Riya Kapoor", "Aditya Singh", "Vikram Rao",
   "Anjali Deshmukh", "Rahul Mehta", "Pooja Mehta", "Manish Yadav", "Sneha Iyer",
   "Rohit Chauhan", "Deepika Jain", "Amit Kulkarni", "Sunita Bhatt", "Vijay Nair",
@@ -121,6 +121,15 @@ function generateCitizens(): CitizenEntry[] {
     const prevRank = Math.max(1, rank + (i % 3 === 0 ? -(1 + (i % 4)) : i % 4 === 0 ? 0 : (1 + (i % 3))));
     const deltaWeek = Math.floor(basePoints * 0.04) + (i % 7) * 15;
 
+    let avatarUrl: string | undefined = undefined;
+    if (rank === 1) {
+      avatarUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80";
+    } else if (rank === 2) {
+      avatarUrl = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80";
+    } else if (rank === 3) {
+      avatarUrl = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&h=150&q=80";
+    }
+
     entries.push({
       rank,
       prevRank,
@@ -132,6 +141,7 @@ function generateCitizens(): CitizenEntry[] {
       reputation,
       isCurrentUser: name === "Rahul Mehta",
       avatarColor: getAvatarColor(i),
+      avatarUrl,
       initial: getInitial(name),
       isVerifiedUser: reputation >= 85,
       district: DISTRICTS[i % DISTRICTS.length],

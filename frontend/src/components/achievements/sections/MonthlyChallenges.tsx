@@ -67,10 +67,6 @@ export function MonthlyChallenges() {
           );
         })}
       </div>
-
-      <button className="w-full mt-4 py-2.5 rounded-xl border border-[var(--color-border)] text-xs font-medium text-[var(--color-info)] hover:bg-[var(--color-surface)] transition-colors duration-200">
-        View all challenges
-      </button>
     </div>
   );
 }

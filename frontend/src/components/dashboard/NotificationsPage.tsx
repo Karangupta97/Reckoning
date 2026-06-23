@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
@@ -136,6 +137,7 @@ function NotificationCard({
   onMarkRead: () => void;
   onDelete: () => void;
 }) {
+  const router = useRouter();
   const [showActions, setShowActions] = useState(false);
   const config = TYPE_CONFIG[notification.type];
   const priorityConfig = PRIORITY_CONFIG[notification.priority];
@@ -270,6 +272,15 @@ function NotificationCard({
                 return (
                   <button
                     key={action}
+                    onClick={() => {
+                      if (action === "open_map") {
+                        router.push("/dashboard/safety-map");
+                      } else if (action === "view_report") {
+                        router.push("/dashboard/my-reports");
+                      } else if (action === "contact_authority") {
+                        window.location.href = "tel:112";
+                      }
+                    }}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-[var(--color-border)] hover:bg-[var(--color-surface)] transition-colors"
                     style={{ color: actionConfig.color }}
                   >

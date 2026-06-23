@@ -33,16 +33,38 @@ export function CommunityImpact() {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Community Impact</h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {metrics.map((m, i) => {
           const Icon = m.icon;
           return (
-            <motion.div key={m.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-              className="flex flex-col items-center justify-center rounded-xl border px-3 py-3 text-center"
-              style={{ borderColor: `${m.color}25`, background: `${m.color}05` }}>
-              <Icon size={18} style={{ color: m.color }} className="mb-1.5" />
-              <span className="text-base font-black tabular-nums" style={{ color: m.color }}>{m.value}</span>
-              <span className="text-[9px] text-[var(--color-text-muted)] mt-0.5 leading-tight">{m.label}</span>
+            <motion.div
+              key={m.label}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ y: -3 }}
+              className="neu-card p-5 flex flex-col gap-3"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wide">
+                  {m.label}
+                </span>
+                <span
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${m.color} 15%, transparent)`,
+                    color: m.color,
+                  }}
+                >
+                  <Icon size={16} strokeWidth={2} />
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-0.5">
+                <span className="text-3xl font-bold text-[var(--color-text-primary)]">
+                  {m.value}
+                </span>
+              </div>
             </motion.div>
           );
         })}

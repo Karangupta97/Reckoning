@@ -15,6 +15,7 @@ export interface CitizenEntry {
   reputation: number;
   isCurrentUser: boolean;
   avatarColor: string;
+  avatarUrl?: string;
   initial: string;
   isVerifiedUser: boolean;
   district: string;
@@ -47,6 +48,7 @@ export interface AdminEntry {
   validationAccuracy: number;
   isCurrentUser: boolean;
   avatarColor: string;
+  avatarUrl?: string;
   initial: string;
   district: string;
   subDistrict?: string;

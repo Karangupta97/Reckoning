@@ -68,9 +68,9 @@ export const CHALLENGES: Challenge[] = [
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
 
 export const LEADERBOARD: LeaderboardEntry[] = [
-  { rank: 1, name: "Blademir Tori", points: 6250, reports: 156, reputation: 98, isCurrentUser: false, avatarColor: "#F59E0B", initial: "B" },
-  { rank: 2, name: "Robert Fox", points: 5480, reports: 134, reputation: 96, isCurrentUser: false, avatarColor: "#3B82F6", initial: "R" },
-  { rank: 3, name: "Molida Glinda", points: 4930, reports: 128, reputation: 94, isCurrentUser: false, avatarColor: "#8B5CF6", initial: "M" },
+  { rank: 1, name: "Arjun Verma", points: 8450, reports: 256, reputation: 98, isCurrentUser: false, avatarColor: "#F59E0B", avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150&q=80", initial: "A" },
+  { rank: 2, name: "Priya", points: 6250, reports: 189, reputation: 96, isCurrentUser: false, avatarColor: "#3B82F6", avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80", initial: "P" },
+  { rank: 3, name: "Sneha Iyer", points: 4930, reports: 149, reputation: 94, isCurrentUser: false, avatarColor: "#8B5CF6", avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=150&h=150&q=80", initial: "S" },
   { rank: 4, name: "Ajay Sharma", points: 4560, reports: 128, reputation: 91, isCurrentUser: false, avatarColor: "#22C55E", initial: "A" },
   { rank: 5, name: "Priya Nair", points: 4210, reports: 114, reputation: 88, isCurrentUser: false, avatarColor: "#EC4899", initial: "P" },
   { rank: 6, name: "Vikram Das", points: 3890, reports: 98, reputation: 93, isCurrentUser: false, avatarColor: "#06B6D4", initial: "V" },

@@ -45,7 +45,7 @@ export function AchievementsPage() {
       </motion.div>
 
       {/* Rank Progress + Points Breakdown */}
-      <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <motion.div variants={fadeUp} className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <RankProgress />
         <PointsBreakdown />
       </motion.div>

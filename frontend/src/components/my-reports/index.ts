@@ -7,6 +7,7 @@ export { HazardBreakdown } from "./HazardBreakdown";
 export { ReportListCard } from "./ReportListCard";
 export { ReportDetailPanel } from "./ReportDetailPanel";
 export { ReportDetailSheet, DesktopDetailPanel } from "./ReportDetailSheet";
+export { ReportDetailModal } from "./ReportDetailModal";
 export { ReportTimeline } from "./ReportTimeline";
 export { StatsOverview, StatsTicker } from "./StatsOverview";
 export { FilterBar } from "./FilterBar";

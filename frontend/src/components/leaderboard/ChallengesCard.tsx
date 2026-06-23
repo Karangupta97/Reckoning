@@ -91,15 +91,6 @@ export function ChallengesCard({ challenges }: ChallengesCardProps) {
           <ChallengeRow key={ch.id} ch={ch} index={i} />
         ))}
       </div>
-
-      {/* CTA */}
-      <button
-        className="btn-outline w-full mt-5 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5"
-        aria-label="View all challenges"
-      >
-        View All Challenges
-        <ArrowUpRight size={13} aria-hidden="true" />
-      </button>
     </div>
   );
 }

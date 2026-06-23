@@ -63,6 +63,7 @@ export interface LeaderboardEntry {
   reputation: number;
   isCurrentUser: boolean;
   avatarColor: string;
+  avatarUrl?: string;
   initial: string;
 }
 

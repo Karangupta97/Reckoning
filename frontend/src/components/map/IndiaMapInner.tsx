@@ -376,7 +376,7 @@ export default function IndiaMapInner({
       </MapContainer>
 
       {/* Legend */}
-      {showLegend && <MapLegend isDark={isDark} />}
+      {showLegend && <MapLegend isDark={isDark} currentLevel={drillState.level} />}
 
       {/* Sidebar */}
       {showSidebar && selectedRegion && (
