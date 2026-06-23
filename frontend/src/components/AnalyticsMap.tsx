@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 /**
@@ -9,6 +9,18 @@ import "mapbox-gl/dist/mapbox-gl.css";
  * cache was built before the token was added to .env.local, the bundle will
  * contain `undefined` or `""`. Solution: delete .next and rebuild/restart.
  */
+
+type AnalyticsMapProps = {
+  compact?: boolean;
+  className?: string;
+  style?: CSSProperties;
+  showAttribution?: boolean;
+};
+
+type MapRef = {
+  current: { resize: () => void } | null;
+};
+
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
 type RiskKind = "accident" | "highRisk" | "weather" | "infrastructure";
@@ -61,7 +73,7 @@ type Status = "loading" | "ready" | "error";
  * - If you see "Token invalid" → check .env.local value starts with "pk."
  * - Console will log [AnalyticsMap] messages to trace initialization.
  */
-export function AnalyticsMap() {
+export function AnalyticsMap({ compact = false, className = "", style, showAttribution = true }: AnalyticsMapProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>("loading");
   const [errorMsg, setErrorMsg] = useState("");
@@ -119,11 +131,28 @@ export function AnalyticsMap() {
         container,
         style: "mapbox://styles/mapbox/dark-v11",
         center: [85, 21],
-        zoom: 3.4,
-        attributionControl: true,
+        zoom: compact ? 3.1 : 3.4,
+        interactive: true,
+        attributionControl: showAttribution && !compact,
+        logoPosition: "bottom-left",
+        fadeDuration: 0,
+        preserveDrawingBuffer: false,
+        scrollZoom: !compact,
+        boxZoom: !compact,
+        doubleClickZoom: !compact,
+        dragRotate: false,
+        touchZoomRotate: compact,
+        dragPan: true,
       });
 
-      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+      const resizeObserver = new ResizeObserver(() => {
+        map.resize();
+      });
+      resizeObserver.observe(container);
+
+      if (!compact) {
+        map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+      }
 
       map.on("load", () => {
         console.log("[AnalyticsMap] Map loaded successfully");
@@ -194,6 +223,7 @@ export function AnalyticsMap() {
 
       // Cleanup on unmount.
       return () => {
+        resizeObserver.disconnect();
         map.remove();
       };
     } catch (err) {
@@ -240,8 +270,8 @@ export function AnalyticsMap() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-2xl border border-[var(--color-border)]"
-      style={{ height: "60vh", minHeight: "400px" }}
+      className={`relative w-full overflow-hidden rounded-2xl border border-[var(--color-border)] ${className}`}
+      style={style ?? { height: "60vh", minHeight: "400px" }}
     >
       {/* Map canvas — explicit height ensures Mapbox can calculate dimensions */}
       <div

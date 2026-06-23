@@ -9,24 +9,24 @@ type Rarity = "common" | "rare" | "epic" | "legendary";
 
 const RARITY_CLASSES: Record<Rarity, { card: string; badge: string; dot: string }> = {
   common: {
-    card: "bg-[#F0FDF4] border-[#BBF7D0] hover:shadow-[0_8px_30px_rgba(34,197,94,0.04)]",
-    badge: "bg-[#E8F8EE] text-[#10B981] border-[#BBF7D0]",
-    dot: "bg-[#22C55E]",
+    card: "bg-[color-mix(in_srgb,_var(--color-success)_12%,_var(--color-card))] border-[var(--color-success)] hover:shadow-[0_8px_30px_rgba(34,197,94,0.04)]",
+    badge: "bg-[color-mix(in_srgb,_var(--color-success)_18%,_var(--color-card))] text-[var(--color-success)] border-[var(--color-success)]",
+    dot: "bg-[var(--color-success)]",
   },
   rare: {
-    card: "bg-[#F0F9FF] border-[#BFDBFE] hover:shadow-[0_8px_30px_rgba(59,130,246,0.04)]",
-    badge: "bg-[#E0F2FE] text-[#0284C7] border-[#BFDBFE]",
-    dot: "bg-[#22C55E]",
+    card: "bg-[color-mix(in_srgb,_var(--color-info)_12%,_var(--color-card))] border-[color-mix(in_srgb,_var(--color-info)_15%,_var(--color-card))] hover:shadow-[0_8px_30px_rgba(59,130,246,0.04)]",
+    badge: "bg-[color-mix(in_srgb,_var(--color-info)_18%,_var(--color-card))] text-[var(--color-info)] border-[color-mix(in_srgb,_var(--color-info)_20%,_var(--color-card))]",
+    dot: "bg-[var(--color-success)]",
   },
   epic: {
-    card: "bg-[#FAF5FF] border-[#E9D5FF] hover:shadow-[0_8px_30px_rgba(139,92,246,0.04)]",
-    badge: "bg-[#F3E8FF] text-[#7C3AED] border-[#E9D5FF]",
-    dot: "bg-[#22C55E]",
+    card: "bg-[color-mix(in_srgb,_var(--color-info)_12%,_var(--color-card))] border-[color-mix(in_srgb,_var(--color-info)_25%,_var(--color-card))] hover:shadow-[0_8px_30px_rgba(139,92,246,0.04)]",
+    badge: "bg-[color-mix(in_srgb,_var(--color-info)_18%,_var(--color-card))] text-[var(--color-info)] border-[color-mix(in_srgb,_var(--color-info)_20%,_var(--color-card))]",
+    dot: "bg-[var(--color-success)]",
   },
   legendary: {
-    card: "bg-[#FFFBEB] border-[#FDE68A] hover:shadow-[0_8px_30px_rgba(245,158,11,0.04)]",
-    badge: "bg-[#FEF3C7] text-[#D97706] border-[#FDE68A]",
-    dot: "bg-[#F97316]",
+    card: "bg-[color-mix(in_srgb,_var(--color-amber)_12%,_var(--color-card))] border-[color-mix(in_srgb,_var(--color-amber)_15%,_var(--color-card))] hover:shadow-[0_8px_30px_rgba(245,158,11,0.04)]",
+    badge: "bg-[color-mix(in_srgb,_var(--color-amber)_18%,_var(--color-card))] text-[var(--color-amber)] border-[color-mix(in_srgb,_var(--color-amber)_20%,_var(--color-card))]",
+    dot: "bg-[var(--color-amber)]",
   },
 };
 
@@ -98,24 +98,30 @@ export function BadgesCollection() {
   const unlockedCount = BADGES.filter((b) => b.unlocked).length;
 
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)] p-4 sm:p-5 flex flex-col gap-5 w-full max-w-5xl mx-auto">
+    <div className="neu-card p-4 sm:p-5 flex flex-col gap-5 w-full max-w-5xl mx-auto">
       {/* ── Header ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
-          <h3 className="text-lg md:text-xl font-extrabold text-[#0F172A] flex items-center gap-1.5 tracking-tight">
-            <span className="text-[#3B82F6] text-base md:text-lg select-none">✦</span>
-            Badges Collection
-            <span className="text-[#3B82F6] text-base md:text-lg select-none">✦</span>
+          <h3 className="text-lg md:text-xl font-extrabold text-[var(--color-text-primary)] flex items-center gap-1.5 tracking-tight">
+          <span className="text-[var(--color-info)] text-base md:text-lg select-none">✦</span>
+          Badges Collection
+          <span className="text-[var(--color-info)] text-base md:text-lg select-none">✦</span>
           </h3>
-          <p className="text-[11px] md:text-xs text-[#64748B] mt-0.5 font-medium">
+          <p className="text-[11px] md:text-xs text-[var(--color-text-secondary)] mt-0.5 font-medium">
             Collect badges by reporting, verifying and contributing to your community safety.
           </p>
         </div>
 
         {/* 4/8 unlocked pill */}
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#F0FDF4] border border-[#DCFCE7] self-start sm:self-center">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
-          <span className="text-[10px] font-bold text-[#16A34A]">{unlockedCount}/8 unlocked</span>
+        <div
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full self-start sm:self-center"
+          style={{
+            background: "color-mix(in srgb, var(--color-success) 12%, var(--color-card))",
+            borderColor: "var(--color-success)",
+          }}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)]" />
+          <span className="text-[10px] font-bold text-[var(--color-success)]">{unlockedCount}/8 unlocked</span>
         </div>
       </div>
 
@@ -132,15 +138,21 @@ export function BadgesCollection() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.32, delay: i * 0.04 }}
               className={`relative flex flex-col items-center text-center rounded-xl p-2.5 sm:p-3 border transition-all duration-300 hover:scale-[1.02] ${
-                badge.unlocked ? styles.card : "bg-[#F8FAFC] border-[#E2E8F0] shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+                badge.unlocked ? styles.card : "bg-[var(--color-surface)] border-[var(--color-border)] shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
               }`}
             >
               {/* Top Right Dot/Lock Status */}
               {badge.unlocked ? (
                 <span className={`absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full ${styles.dot}`} />
               ) : (
-                <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#E2E8F0]/80 border border-[#CBD5E1] flex items-center justify-center shadow-sm">
-                  <Lock size={8} className="text-[#64748B]" />
+                <div
+                  className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center shadow-sm"
+                  style={{
+                    background: "color-mix(in srgb, var(--color-border) 20%, var(--color-card))",
+                    borderColor: "var(--color-border)",
+                  }}
+                >
+                  <Lock size={8} className="text-[var(--color-text-muted)]" />
                 </div>
               )}
 
@@ -168,7 +180,7 @@ export function BadgesCollection() {
               {/* Title */}
               <span
                 className={`text-[11px] sm:text-xs font-bold tracking-tight mb-1 ${
-                  badge.unlocked ? "text-[#0F172A]" : "text-[#64748B]"
+                  badge.unlocked ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
                 }`}
               >
                 {badge.name}
@@ -177,7 +189,7 @@ export function BadgesCollection() {
               {/* Rarity Capsule */}
               <span
                 className={`text-[8px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                  badge.unlocked ? styles.badge : "bg-[#E2E8F0]/50 text-[#64748B] border-[#E2E8F0]"
+                  badge.unlocked ? styles.badge : "bg-[color-mix(in srgb, var(--color-border) 20%, var(--color-card))/50] text-[var(--color-text-muted)] border-[var(--color-border)]"
                 }`}
               >
                 {badge.rarity}
@@ -188,15 +200,28 @@ export function BadgesCollection() {
       </div>
 
       {/* ── Bottom Information Card ── */}
-      <div className="bg-[#F0F5FF] border border-[#E0EAFF] rounded-2xl p-2.5 flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-lg bg-[#E0EAFF] text-[#3B82F6] flex items-center justify-center shrink-0 border border-[#D0DFFF] shadow-sm">
+      <div
+        className="rounded-2xl p-2.5 flex items-center gap-2.5"
+        style={{
+          background: "color-mix(in srgb, var(--color-info) 10%, var(--color-card))",
+          border: "1px solid var(--color-border)",
+        }}
+      >
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border shadow-sm"
+          style={{
+            background: "color-mix(in srgb, var(--color-info) 16%, var(--color-card))",
+            color: "var(--color-info)",
+            borderColor: "var(--color-border)",
+          }}
+        >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
         <div className="flex flex-col gap-0.5 text-left">
-          <span className="text-xs font-bold text-[#0F172A]">Every badge earned makes a difference.</span>
-          <span className="text-[10px] text-[#64748B]">Your actions help build a safer community for everyone.</span>
+          <span className="text-xs font-bold text-[var(--color-text-primary)]">Every badge earned makes a difference.</span>
+          <span className="text-[10px] text-[var(--color-text-secondary)]">Your actions help build a safer community for everyone.</span>
         </div>
       </div>
     </div>

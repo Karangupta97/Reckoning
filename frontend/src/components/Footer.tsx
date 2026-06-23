@@ -8,7 +8,7 @@ const FOOTER_LINKS = [
   { key: "terms", href: "/terms", external: false },
   {
     key: "github",
-    href: "https://github.com/",
+    href: "https://github.com/Karangupta97/Reckoning",
     external: true,
   },
   { key: "contact", href: "mailto:hello@reckoning.app", external: true },
@@ -65,7 +65,6 @@ export function Footer() {
           <p>
             © {year} Reckoning. {t("rights")}
           </p>
-          <p className="font-mono">{t("builtFor")}</p>
         </div>
       </div>
     </footer>

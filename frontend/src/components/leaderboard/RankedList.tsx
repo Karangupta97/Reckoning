@@ -261,13 +261,13 @@ function ListRow({
         <div className="w-20 text-right flex-shrink-0">
           {view === "citizen" && isCitizenEntry(entry) ? (
             <span
-              className="text-sm font-black tabular-nums font-mono text-[#F59E0B]"
+              className="text-sm font-black tabular-nums font-mono text-[var(--color-amber)]"
             >
               {entry.points.toLocaleString()}
             </span>
           ) : !isCitizenEntry(entry) ? (
             <span
-              className="text-sm font-black tabular-nums font-mono text-green-600"
+              className="text-sm font-black tabular-nums font-mono text-[var(--color-success)]"
             >
               {entry.issuesResolved}
             </span>
@@ -278,13 +278,13 @@ function ListRow({
         <div className="w-16 text-right flex-shrink-0 hidden sm:block">
           {view === "citizen" && isCitizenEntry(entry) ? (
             <span
-              className="text-sm font-semibold tabular-nums font-mono text-gray-500"
+              className="text-sm font-semibold tabular-nums font-mono text-[var(--color-text-secondary)]"
             >
               {entry.reputation}
             </span>
           ) : !isCitizenEntry(entry) ? (
             <span
-              className="text-xs font-semibold tabular-nums font-mono text-gray-500"
+              className="text-xs font-semibold tabular-nums font-mono text-[var(--color-text-secondary)]"
             >
               {entry.validationAccuracy}%
             </span>
