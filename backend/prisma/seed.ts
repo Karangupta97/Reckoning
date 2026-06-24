@@ -54,6 +54,19 @@ async function seedDistrictsAndSubDistricts(): Promise<void> {
     });
   }
 
+  const mumbaiSubDistricts = [
+    { id: "bombay", name: "Bombay" }
+  ];
+
+  // Seed Mumbai Sub-Districts
+  for (const sub of mumbaiSubDistricts) {
+    await prisma.subDistrict.upsert({
+      where: { id: sub.id },
+      update: { name: sub.name, districtId: "MUM" },
+      create: { id: sub.id, name: sub.name, districtId: "MUM" },
+    });
+  }
+
   console.log("✅ Districts and Sub-Districts seeded.");
 }
 

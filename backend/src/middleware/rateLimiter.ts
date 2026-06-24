@@ -62,7 +62,16 @@ async function buildRedisStore(): Promise<Store | undefined> {
       import("redis"),
     ]);
 
-    const client = createClient({ url: env.REDIS_URL });
+    const useTls = env.REDIS_URL.startsWith("rediss://");
+    const client = createClient({
+      url: env.REDIS_URL,
+      socket: {
+        keepAlive: true,
+        connectTimeout: 10000,
+        reconnectStrategy: (retries) => Math.min(retries * 500, 10000),
+        ...(useTls ? { rejectUnauthorized: false } : {}),
+      },
+    });
     client.on("error", (error: unknown) => {
       // eslint-disable-next-line no-console
       console.error("[rateLimiter] Redis client error:", error);

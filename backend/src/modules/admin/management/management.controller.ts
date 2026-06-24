@@ -213,6 +213,21 @@ export async function reactivateMySubAdmin(
 }
 
 
+/** `GET /api/admin/my-district/sub-districts` — list sub-districts with boundaries. */
+export async function getMySubDistricts(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const admin = requireAdmin(req);
+    const result = await managementService.getMySubDistricts(admin.districtId ?? null);
+    res.status(200).json({ success: true, data: { subDistricts: result } });
+  } catch (error) {
+    next(error);
+  }
+}
+
 /** `GET /api/admin/my-district/escalations` — ONLY escalated complaints. */
 export async function getMyEscalations(
   req: Request,

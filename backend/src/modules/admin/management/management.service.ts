@@ -722,6 +722,71 @@ export async function getDistrictStats(
   return { escalatedTotal, resolved, rejected, open, slaBreached, resolutionRate };
 }
 
+/**
+ * List sub-districts belonging to the District Admin's district, each with its
+ * GeoJSON boundary (if set). Used by the "Add Sub-District" form to show
+ * existing sub-districts and their boundaries on a map.
+ *
+ * @param districtId The acting admin's district id.
+ * @returns Array of sub-districts with id, name, isActive, createdAt, geofence.
+ * @throws {AppError} 400 when the admin has no district.
+ */
+export async function getMySubDistricts(
+  districtId: string | null,
+): Promise<Array<{
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: Date;
+  adminCount: number;
+  geofence: unknown | null;
+}>> {
+  if (!districtId) {
+    throw new AppError("Your account is not assigned to a district.", 400, {
+      code: "NO_DISTRICT",
+    });
+  }
+
+  const subDistricts = await adminDbGuard(
+    () =>
+      prisma.subDistrict.findMany({
+        where: { districtId },
+        select: {
+          id: true,
+          name: true,
+          isActive: true,
+          createdAt: true,
+          _count: { select: { admins: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    "getMySubDistricts:list",
+  );
+
+  // Fetch GeoJSON boundaries via PostGIS for each sub-district
+  const boundaries = await adminDbGuard(
+    () =>
+      query<{ id: string; geofence: string | null }>(
+        `SELECT id, ST_AsGeoJSON(boundary) AS geofence FROM "sub_districts" WHERE "districtId" = $1`,
+        [districtId],
+      ),
+    "getMySubDistricts:boundaries",
+  );
+
+  const boundaryMap = new Map(
+    boundaries.rows.map((r) => [r.id, r.geofence ? JSON.parse(r.geofence) : null]),
+  );
+
+  return subDistricts.map((sd) => ({
+    id: sd.id,
+    name: sd.name,
+    isActive: sd.isActive,
+    createdAt: sd.createdAt,
+    adminCount: sd._count.admins,
+    geofence: boundaryMap.get(sd.id) ?? null,
+  }));
+}
+
 // ===========================================================================
 // SUB_DISTRICT_ADMIN — geofence-scoped complaints, tickets, stats, actions
 // ===========================================================================

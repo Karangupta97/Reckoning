@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
-import { DISTRICT_CONFIG } from "@/lib/district-config";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 import { filterByDistrictScope } from "@/lib/district-scope";
 import { useEscalationStore } from "@/store/escalationStore";
 import { exportToCsv } from "@/lib/csv-export";
@@ -69,6 +69,7 @@ const stagger = (i: number) => ({
    PAGE COMPONENT
 ═══════════════════════════════════════════════════════════════ */
 export default function EscalationsPage() {
+  const { districtName } = useDistrictInfo();
   const _raw = filterByDistrictScope(
     useEscalationStore((s) => s.escalations),
     (e) => e.district,
@@ -147,7 +148,7 @@ export default function EscalationsPage() {
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] pl-0.5">
               Monitor SLA breaches, critical complaints and district-wide escalations
-              in <span className="font-medium text-teal-400">{DISTRICT_CONFIG.name}</span>.
+              in <span className="font-medium text-teal-400">{districtName}</span>.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">

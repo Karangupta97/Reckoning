@@ -7411,12 +7411,6 @@
   },
   {
     "state": "Maharashtra",
-    "district": "MumbaiCity",
-    "subDistrict": "Bombay",
-    "reason": "SubDistrict 'Bombay' not found in DB under District ID MUM"
-  },
-  {
-    "state": "Maharashtra",
     "district": "MumbaiSuburban",
     "subDistrict": "n.a.(1556)",
     "reason": "District 'MumbaiSuburban' not found in DB"

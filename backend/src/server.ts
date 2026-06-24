@@ -22,6 +22,8 @@ import { adminInvitationsRouter } from "./routes/adminInvitations.js";
 import { superAdminRouter, superAdminCorsOptions } from "./routes/superAdmin.js";
 import { ticketRouter, citizenTicketRouter, superAdminTicketRouter } from "./modules/tickets/tickets.routes.js";
 import { managementRouter } from "./modules/admin/management/management.routes.js";
+import { subDistrictRouter } from "./modules/admin/subDistrict/subDistrict.routes.js";
+import { districtRouter } from "./modules/admin/district/district.routes.js";
 import { pushRouter } from "./modules/push/push.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
@@ -138,6 +140,8 @@ app.use("/api/admin", adminRateLimiter);
 app.use("/api/admin/auth", adminAuthRouter);
 app.use("/api/admin/invitations", adminInvitationsRouter);
 app.use("/api/admin/tickets", superAdminTicketRouter);
+app.use("/api/admin/district", districtRouter);
+app.use("/api/admin/sub-district", subDistrictRouter);
 app.use("/api/admin", managementRouter);
 
 

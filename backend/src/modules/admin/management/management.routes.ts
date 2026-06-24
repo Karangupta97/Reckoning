@@ -100,6 +100,12 @@ managementRouter.get(
 );
 
 managementRouter.get(
+  "/my-district/sub-districts",
+  requireRole("DISTRICT_ADMIN"),
+  ctrl.getMySubDistricts,
+);
+
+managementRouter.get(
   "/my-district/escalations",
   requireRole("DISTRICT_ADMIN"),
   validate({ query: paginationQuerySchema }),

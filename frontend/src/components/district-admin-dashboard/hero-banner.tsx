@@ -5,14 +5,14 @@ import { ShieldAlert, Map, MapPin } from "lucide-react";
 import Link from "next/link";
 import {
   DISTRICT_CONFIG,
-  districtOpsCenter,
-  districtLocationLabel,
 } from "@/lib/district-config";
 import { useDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 
 export default function DistrictHeroBanner() {
   const { subDistrictCount, activeOfficers } = DISTRICT_CONFIG;
   const d = useDistrictDashboardMetrics();
+  const { districtName, districtOpsCenter, districtLocationLabel } = useDistrictInfo();
 
   const metrics = [
     { label: "Critical Escalations", value: String(d.criticalEscalations), color: "text-red-400", border: "border-red-400/20", bg: "bg-red-400/5" },
@@ -111,7 +111,7 @@ export default function DistrictHeroBanner() {
             Monitor complaints, escalations, SLA compliance, and operational
             performance across all sub-districts in{" "}
             <span className="font-medium text-teal-400">
-              {DISTRICT_CONFIG.name}
+              {districtName}
             </span>
             .
           </p>

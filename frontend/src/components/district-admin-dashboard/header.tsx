@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
-import { districtLabel, districtLocationLabel } from "@/lib/district-config";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 import { useAdminDateRange } from "@/hooks/useAdminDateRange";
 
 interface HeaderProps {
@@ -52,11 +52,13 @@ const dropdownMotion = {
 
 export default function DistrictAdminHeader({
   onMenuToggle,
-  title = districtLabel,
+  title,
   subtitle = "Monitoring • Escalations • SLA Compliance",
 }: HeaderProps) {
   const router = useRouter();
   const adminLogout = useAdminAuthStore((s) => s.logout);
+  const { districtLabel, districtLocationLabel } = useDistrictInfo();
+  const resolvedTitle = title ?? districtLabel;
   const [isMobile, setIsMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { period: selectedDate, setPeriod: setSelectedDate } = useAdminDateRange();
@@ -106,7 +108,7 @@ export default function DistrictAdminHeader({
         )}
         <div className="min-w-0">
           <h1 className="text-primary truncate text-base font-bold leading-tight lg:text-lg">
-            {title}
+            {resolvedTitle}
           </h1>
           <p className="text-muted mt-0.5 truncate text-xs">{subtitle}</p>
         </div>

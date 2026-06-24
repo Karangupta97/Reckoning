@@ -44,7 +44,7 @@ export async function invite(
     }
     const body = req.body as SubDistrictInviteBody;
     const result = await subDistrictService.inviteSubDistrictAdmin(
-      req.admin.districtId,
+      req.admin.districtId ?? null,
       req.admin.id,
       {
         fullName: body.fullName,

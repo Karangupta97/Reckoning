@@ -127,26 +127,20 @@ export async function inviteSubDistrictAdmin(
 
         await setSubDistrictGeofence(tx, subDistrict.id, input.geofence);
 
-        const admin = await tx.adminUser.create({
+        const invitation = await tx.adminInvitation.create({
           data: {
-            fullName: input.fullName,
+            token: invite.token,
             email: input.email,
-            phone: input.phone,
-            designation: input.designation,
-            department: input.department,
             role: "SUB_DISTRICT_ADMIN",
-            status: "PENDING",
-            isVerified: false,
-            districtId: actingDistrictId, // inherit from creator
+            districtId: actingDistrictId,
             subDistrictId: subDistrict.id,
-            inviteTokenHash: invite.tokenHash,
-            inviteTokenExpiry: invite.expiresAt,
             invitedById,
+            expiresAt: invite.expiresAt,
           },
           select: { id: true },
         });
 
-        return { subDistrictId: subDistrict.id, adminId: admin.id };
+        return { subDistrictId: subDistrict.id, adminId: invitation.id };
       }),
     "subDistrictInvite:transaction",
   );

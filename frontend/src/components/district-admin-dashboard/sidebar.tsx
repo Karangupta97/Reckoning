@@ -25,7 +25,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { LogoMark } from "@/components/ui/Logo";
-import { districtSidebarSubtitle, DISTRICT_CONFIG } from "@/lib/district-config";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 
 interface SubNavItem {
   label: string;
@@ -162,6 +162,7 @@ export default function DistrictAdminSidebar({
   const [isOpen, setIsOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
+  const { districtName, districtSidebarSubtitle } = useDistrictInfo();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -339,13 +340,13 @@ export default function DistrictAdminSidebar({
           <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5">
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal-400 shadow-[0_0_6px_rgba(20,184,166,0.6)]" />
             <span className="text-[11px] text-[var(--color-text-secondary)] truncate">
-              {DISTRICT_CONFIG.name} Operations Active
+              {districtName} Operations Active
             </span>
           </div>
         </div>
       </div>
     ),
-    [expandedItems, isActive, isParentActive, toggleExpand]
+    [expandedItems, isActive, isParentActive, toggleExpand, districtName, districtSidebarSubtitle]
   );
 
   return (

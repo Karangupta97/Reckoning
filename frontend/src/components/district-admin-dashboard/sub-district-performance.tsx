@@ -6,6 +6,10 @@ import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card
 import { Users } from "lucide-react";
 import { useComplaintStore } from "@/store/complaintStore";
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { shouldUseMock } from "@/lib/useMock";
+import { api } from "@/lib/api";
 
 interface SubDistrictRow {
   id: string;
@@ -48,6 +52,19 @@ function computeRows(complaints: { subDistrict: string; status: string; slaStatu
     .slice(0, 8);
 }
 
+/** Map API sub-district data to display rows */
+function mapApiSubDistricts(subDistricts: any[]): SubDistrictRow[] {
+  return subDistricts.map((sd, i) => ({
+    id: sd.id?.substring(0, 10) || `SD-${String(i + 1).padStart(3, "0")}`,
+    name: sd.name,
+    officer: sd.adminCount > 0 ? `${sd.adminCount} officer${sd.adminCount > 1 ? "s" : ""}` : "Unassigned",
+    complaints: 0, // Would need separate query per sub-district
+    resolved: 0,
+    sla: sd.geofence ? 85 : 50, // Has boundary = healthy setup
+    trend: sd.isActive ? "up" as const : "down" as const,
+  }));
+}
+
 function getSlaClass(sla: number) {
   if (sla >= 85) return "da-sla-bar-fill-good";
   if (sla >= 70) return "da-sla-bar-fill-warn";
@@ -73,8 +90,26 @@ const trendClass: Record<string, string> = {
 };
 
 export default function SubDistrictPerformance() {
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
   const complaints = useComplaintStore((s) => s.complaints);
-  const rows = useMemo(() => computeRows(complaints), [complaints]);
+  const localRows = useMemo(() => computeRows(complaints), [complaints]);
+
+  // Fetch real sub-district data from backend
+  const { data: apiSubDistricts } = useQuery({
+    queryKey: ["mySubDistrictsPerformance"],
+    queryFn: async () => {
+      const res = await api.get("/api/admin/my-district/sub-districts");
+      return res.data?.data?.subDistricts ?? [];
+    },
+    enabled: !isMock,
+  });
+
+  const rows = isMock || !apiSubDistricts || apiSubDistricts.length === 0
+    ? localRows
+    : mapApiSubDistricts(apiSubDistricts);
+
   const router = useRouter();
 
   return (

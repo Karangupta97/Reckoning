@@ -100,25 +100,19 @@ export async function inviteDistrictAdmin(
         // Set the PostGIS polygon (Prisma can't write Unsupported columns).
         await setDistrictGeofence(tx, district.id, input.geofence);
 
-        const admin = await tx.adminUser.create({
+        const invitation = await tx.adminInvitation.create({
           data: {
-            fullName: input.fullName,
+            token: invite.token,
             email: input.email,
-            phone: input.phone,
-            designation: input.designation,
-            department: input.department,
             role: "DISTRICT_ADMIN",
-            status: "PENDING",
-            isVerified: false,
             districtId: district.id,
-            inviteTokenHash: invite.tokenHash,
-            inviteTokenExpiry: invite.expiresAt,
             invitedById,
+            expiresAt: invite.expiresAt,
           },
           select: { id: true },
         });
 
-        return { districtId: district.id, adminId: admin.id };
+        return { districtId: district.id, adminId: invitation.id };
       }),
     "districtInvite:transaction",
   );
@@ -169,51 +163,35 @@ export async function activateDistrictAdmin(
  * @returns The new invite result (adminId, districtId, expiry).
  * @throws {AppError} 404 not found, 400 already activated, 429 cap reached.
  */
-export async function resendDistrictInvite(adminId: string): Promise<InviteResult> {
-  const admin = await adminDbGuard(
+export async function resendDistrictInvite(invitationId: string): Promise<InviteResult> {
+  const invitation = await adminDbGuard(
     () =>
-      prisma.adminUser.findUnique({
-        where: { id: adminId },
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          role: true,
-          status: true,
-          designation: true,
-          resendCount: true,
-          districtId: true,
+      prisma.adminInvitation.findUnique({
+        where: { id: invitationId },
+        include: {
           district: { select: { name: true, country: true } },
         },
       }),
-    "districtResend:findAdmin",
+    "districtResend:findInvitation",
   );
 
-  if (!admin || admin.role !== "DISTRICT_ADMIN") {
-    throw new AppError("District admin not found.", 404, { code: "NOT_FOUND" });
+  if (!invitation || invitation.role !== "DISTRICT_ADMIN") {
+    throw new AppError("District admin invitation not found.", 404, { code: "NOT_FOUND" });
   }
-  if (admin.status !== "PENDING") {
+  if (invitation.usedAt !== null) {
     throw new AppError("This account has already been activated.", 400, {
       code: "ALREADY_ACTIVATED",
     });
-  }
-  if (admin.resendCount >= MAX_INVITE_RESENDS) {
-    throw new AppError(
-      "Resend limit reached for this invite. Create a new invite instead.",
-      429,
-      { code: "RESEND_LIMIT_REACHED" },
-    );
   }
 
   const invite = generateInvite();
   await adminDbGuard(
     () =>
-      prisma.adminUser.update({
-        where: { id: adminId },
+      prisma.adminInvitation.update({
+        where: { id: invitationId },
         data: {
-          inviteTokenHash: invite.tokenHash,
-          inviteTokenExpiry: invite.expiresAt,
-          resendCount: { increment: 1 },
+          token: invite.token,
+          expiresAt: invite.expiresAt,
         },
       }),
     "districtResend:update",
@@ -221,19 +199,19 @@ export async function resendDistrictInvite(adminId: string): Promise<InviteResul
 
   const activationUrl = buildActivationUrl(env.ADMIN_ACTIVATION_BASE_URL, invite.token);
   await sendDistrictInviteEmail({
-    to: admin.email,
-    fullName: admin.fullName,
-    districtName: admin.district?.name ?? "your district",
-    country: (admin.district?.country ?? "INDIA") as string,
-    designation: admin.designation ?? "District Administrator",
+    to: invitation.email,
+    fullName: invitation.email.split("@")[0]?.replace(/[._]/g, " ") ?? "District Admin",
+    districtName: invitation.district?.name ?? "your district",
+    country: (invitation.district?.country ?? "INDIA") as string,
+    designation: "District Administrator",
     activationUrl,
     expiryHours: INVITE_TTL_HOURS,
   });
 
   return {
-    message: `Invite re-sent to ${admin.email}`,
-    adminId: admin.id,
-    ...(admin.districtId ? { districtId: admin.districtId } : {}),
+    message: `Invite re-sent to ${invitation.email}`,
+    adminId: invitation.id,
+    ...(invitation.districtId ? { districtId: invitation.districtId } : {}),
     inviteExpiresAt: invite.expiresAt.toISOString(),
   };
 }
@@ -259,73 +237,73 @@ export async function activateAdminByToken(
   expectedRole: "DISTRICT_ADMIN" | "SUB_DISTRICT_ADMIN",
   ctx: RequestContext,
 ): Promise<AdminAuthResult> {
-  const tokenHash = hashInviteToken(token);
-
-  const admin = await adminDbGuard(
+  const invitation = await adminDbGuard(
     () =>
-      prisma.adminUser.findUnique({
-        where: { inviteTokenHash: tokenHash },
-        select: {
-          id: true,
-          email: true,
-          role: true,
-          status: true,
-          districtId: true,
-          subDistrictId: true,
-          inviteTokenExpiry: true,
+      prisma.adminInvitation.findUnique({
+        where: { token },
+        include: {
           district: { select: { country: true } },
         },
       }),
     "activate:findByToken",
   );
 
-  if (!admin || admin.role !== expectedRole) {
+  if (!invitation || invitation.role !== expectedRole) {
     throw new AppError("Invalid or unknown activation link.", 404, {
       code: "INVALID_INVITE",
     });
   }
-  if (admin.status !== "PENDING") {
+  if (invitation.usedAt !== null) {
     throw new AppError("This account has already been activated.", 400, {
       code: "ALREADY_ACTIVATED",
     });
   }
-  if (!admin.inviteTokenExpiry || admin.inviteTokenExpiry.getTime() < Date.now()) {
+  if (invitation.expiresAt.getTime() < Date.now()) {
     throw new AppError("Invite link expired.", 410, { code: "INVITE_EXPIRED" });
   }
 
   const passwordHash = await bcrypt.hash(password, ADMIN_PASSWORD_SALT_ROUNDS);
-  const country = (admin.district?.country ?? null) as AdminCountry | null;
+  const country = (invitation.district?.country ?? null) as AdminCountry | null;
 
   const { profile, tokens } = await adminDbGuard(
     () =>
       prisma.$transaction(async (tx) => {
-        const updated = await tx.adminUser.update({
-          where: { id: admin.id },
+        const created = await tx.adminUser.create({
           data: {
+            email: invitation.email,
             passwordHash,
-            status: "ACTIVE",
-            isVerified: true,
-            inviteTokenHash: null,
-            inviteTokenExpiry: null,
-            inviteAcceptedAt: new Date(),
+            role: invitation.role,
+            districtId: invitation.districtId,
+            subDistrictId: invitation.subDistrictId,
+            invitedById: invitation.invitedById,
+            isActive: true,
           },
+        });
+
+        await tx.adminInvitation.update({
+          where: { id: invitation.id },
+          data: { usedAt: new Date() },
+        });
+
+        const adminProfile = await tx.adminUser.findUniqueOrThrow({
+          where: { id: created.id },
           select: ADMIN_PROFILE_SELECT,
         });
 
         const session = await issueAdminSession(
           tx,
           {
-            id: admin.id,
-            email: admin.email,
-            role: admin.role,
-            districtId: admin.districtId,
-            subDistrictId: admin.subDistrictId,
+            id: created.id,
+            email: created.email,
+            role: created.role,
+            districtId: created.districtId,
+            subDistrictId: created.subDistrictId,
             country,
           },
           ctx,
         );
 
-        return { profile: updated, tokens: session };
+        return { profile: adminProfile, tokens: session };
       }),
     "activate:transaction",
   );
