@@ -11,8 +11,9 @@ import {
   Users, TrendingUp,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
-import { SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
 import { useThemeStore, type ThemeMode } from "@/stores/theme-store";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
 /* ─── Tab config ─────────────────────────────────────────────── */
 const TABS = [
@@ -113,6 +114,10 @@ function Toggle({ defaultOn = false, onChange }: { defaultOn?: boolean; onChange
 
 /* ─── Personal Info Tab ──────────────────────────────────────── */
 function PersonalInfoTab() {
+  const { subDistrictName, districtName } = useSubDistrictInfo();
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const adminName = currentAdmin?.email?.split("@")[0] ?? "Admin User";
+  const adminEmail = currentAdmin?.email ?? "";
   const recentActivity = [
     { icon: FileWarning, color: "text-amber-400",  text: "Complaint #CMP-1024 assigned",         time: "2h ago" },
     { icon: Ticket,      color: "text-blue-400",   text: "Ticket #TKT-0501 updated",             time: "5h ago" },
@@ -147,8 +152,8 @@ function PersonalInfoTab() {
               SA
             </div>
             <div>
-              <p className="text-sm font-bold text-[var(--color-text-primary)]">Suresh Ambulkar</p>
-              <p className="text-xs text-[var(--color-text-muted)]">Sub-District Infrastructure Officer · Panvel Taluka</p>
+              <p className="text-sm font-bold text-[var(--color-text-primary)]">{adminName}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Sub-District Infrastructure Officer · {subDistrictName}</p>
               <button className="mt-1 text-xs font-medium hover:underline transition-colors" style={{ color: "var(--sda-amber)" }}>
                 Change Photo
               </button>
@@ -156,8 +161,8 @@ function PersonalInfoTab() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <FieldRow label="Full Name"><InputField defaultValue="Suresh Ambulkar" /></FieldRow>
-            <FieldRow label="Email Address"><InputField defaultValue="suresh.ambulkar@raigad.gov.in" type="email" /></FieldRow>
+            <FieldRow label="Full Name"><InputField defaultValue={adminName} /></FieldRow>
+            <FieldRow label="Email Address"><InputField defaultValue={adminEmail} type="email" /></FieldRow>
             <FieldRow label="Phone Number"><InputField defaultValue="+91 97632 11890" type="tel" /></FieldRow>
             <FieldRow label="Designation"><InputField value="Sub-District Infrastructure Officer" /></FieldRow>
           </div>
@@ -177,11 +182,11 @@ function PersonalInfoTab() {
               <span className="text-xs font-bold text-[var(--color-text-primary)]">Territory Information</span>
             </div>
             {[
-              { label: "District",       value: SUB_DISTRICT_CONFIG.district  },
-              { label: "Sub-District",   value: SUB_DISTRICT_CONFIG.name      },
-              { label: "Zone",           value: SUB_DISTRICT_CONFIG.zone      },
-              { label: "Population",     value: "~2.4 Lakh"                   },
-              { label: "Active Officers",value: String(SUB_DISTRICT_CONFIG.activeOfficers) },
+              { label: "District",       value: districtName },
+              { label: "Sub-District",   value: subDistrictName },
+              { label: "Zone",           value: "Zone A" },
+              { label: "Population",     value: "~2.4 Lakh"    },
+              { label: "Active Officers",value: "12" },
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between py-1 border-b border-[var(--color-border)] last:border-0">
                 <span className="text-[11px] text-[var(--color-text-muted)]">{r.label}</span>

@@ -4,16 +4,15 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SubDistrictAdminSidebar, SubDistrictAdminHeader } from "@/components/sub-district-admin-dashboard";
 import "@/components/sub-district-admin-dashboard/sub-district-admin-theme.css";
-import { subDistrictLabel } from "@/lib/sub-district-config";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 import { useStoreSync } from "@/hooks/useStoreSync";
+import QueryProvider from "@/app/query-provider";
 
-export default function SubDistrictAdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+/** Inner shell — must be a child of QueryProvider so useQuery works. */
+function SubDistrictAdminShell({ children }: { children: React.ReactNode }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const { subDistrictLabel } = useSubDistrictInfo();
 
   useStoreSync();
 
@@ -74,5 +73,17 @@ export default function SubDistrictAdminLayout({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function SubDistrictAdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <QueryProvider>
+      <SubDistrictAdminShell>{children}</SubDistrictAdminShell>
+    </QueryProvider>
   );
 }

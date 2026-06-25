@@ -12,6 +12,7 @@ import {
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useThemeStore, type ThemeMode } from "@/stores/theme-store";
 import { DemoResetButton } from "@/components/admin/DemoResetButton";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 
 /* ─── Tab config ──────────────────────────────────────────────── */
 const TABS = [
@@ -139,6 +140,7 @@ function SectionHeader({ title, desc }: { title: string; desc?: string }) {
 
 /* ─── General Tab ─────────────────────────────────────────────── */
 function GeneralTab() {
+  const { subDistrictName, districtName } = useSubDistrictInfo();
   const [language, setLanguage] = useState("en");
   const [timezone, setTimezone] = useState("Asia/Kolkata");
   const [dateFormat, setDateFormat] = useState("DD/MM/YYYY");
@@ -151,10 +153,10 @@ function GeneralTab() {
         <SectionHeader title="Zone Information" desc="Read-only details about your assigned operational zone." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 max-w-lg">
           <FieldRow label="Sub-District">
-            <InputField defaultValue="Panvel Taluka" readOnly />
+            <InputField defaultValue={subDistrictName} readOnly />
           </FieldRow>
           <FieldRow label="District">
-            <InputField defaultValue="Raigad" readOnly />
+            <InputField defaultValue={districtName} readOnly />
           </FieldRow>
           <FieldRow label="State">
             <InputField defaultValue="Maharashtra" readOnly />

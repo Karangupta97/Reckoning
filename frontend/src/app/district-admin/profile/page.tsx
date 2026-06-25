@@ -9,6 +9,8 @@ import {
   Eye, EyeOff, Save, Sun, Moon, Monitor, Check,
 } from "lucide-react";
 import { useThemeStore } from "@/stores/theme-store";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
 type TabId = "profile" | "security" | "notifications" | "preferences";
 
@@ -58,6 +60,9 @@ function ProfileContent() {
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [saved, setSaved] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const { districtName } = useDistrictInfo();
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const adminEmail = currentAdmin?.email ?? "admin@district.gov.in";
 
   const handleSave = () => {
     setSaved(true);
@@ -139,9 +144,9 @@ function ProfileContent() {
               {[
                 { label: "Full Name", placeholder: "District Infrastructure Commissioner", value: "District Infrastructure Commissioner" },
                 { label: "Employee ID", placeholder: "DA-2026-DCO", value: "DA-2026-DCO" },
-                { label: "Official Email", placeholder: "admin@district.gov.in", value: "admin@district.gov.in", type: "email" },
+                { label: "Official Email", placeholder: adminEmail, value: adminEmail, type: "email" },
                 { label: "Phone", placeholder: "+91 98765 00000", value: "+91 98765 00000", type: "tel" },
-                { label: "District", placeholder: "Raigad District", value: "Raigad District" },
+                { label: "District", placeholder: `${districtName} District`, value: `${districtName} District` },
                 { label: "Designation", placeholder: "District Infrastructure Commissioner", value: "District Infrastructure Commissioner" },
               ].map((f) => (
                 <div key={f.label} className="flex flex-col gap-1.5">

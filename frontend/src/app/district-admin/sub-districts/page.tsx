@@ -21,6 +21,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { shouldUseMock } from "@/lib/useMock";
 import { api } from "@/lib/api";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 
 
 type OfficerStatus = "Active" | "Suspended" | "Pending";
@@ -38,14 +39,29 @@ interface SubDistrictAdmin {
   sla: number;
 }
 
-const DATA: SubDistrictAdmin[] = [
-  { id: "SDA-001", name: "Rajesh Sharma", subDistrict: "Panvel Taluka", email: "r.sharma@raigad.gov.in", phone: "+91 98765 43210", status: "Active", joinDate: "12 Jan 2025", complaints: 142, resolved: 118, sla: 83 },
-  { id: "SDA-002", name: "Priya Iyer", subDistrict: "Alibag", email: "p.iyer@raigad.gov.in", phone: "+91 98765 43211", status: "Active", joinDate: "03 Mar 2025", complaints: 96, resolved: 79, sla: 82 },
-  { id: "SDA-003", name: "Amit Singh", subDistrict: "Karjat", email: "a.singh@raigad.gov.in", phone: "+91 98765 43212", status: "Active", joinDate: "20 Jun 2024", complaints: 201, resolved: 185, sla: 92 },
-  { id: "SDA-004", name: "Sunita Gupta", subDistrict: "Mahad", email: "s.gupta@raigad.gov.in", phone: "+91 98765 43213", status: "Suspended", joinDate: "08 Sep 2024", complaints: 178, resolved: 132, sla: 74 },
-  { id: "SDA-005", name: "Mohammed Khan", subDistrict: "Mangaon", email: "m.khan@raigad.gov.in", phone: "+91 98765 43214", status: "Active", joinDate: "15 Nov 2024", complaints: 115, resolved: 94, sla: 82 },
-  { id: "SDA-006", name: "Tanvi Verma", subDistrict: "Murud", email: "t.verma@raigad.gov.in", phone: "+91 98765 43215", status: "Pending", joinDate: "02 Jun 2026", complaints: 87, resolved: 55, sla: 63 },
-];
+const MOCK_SUB_DISTRICTS: Record<string, SubDistrictAdmin[]> = {
+  "Mumbai Suburban": [
+    { id: "SDA-101", name: "Siddharth Patil", subDistrict: "Andheri", email: "s.patil@suburban.gov.in", phone: "+91 98765 40101", status: "Active", joinDate: "10 Jan 2025", complaints: 120, resolved: 102, sla: 85 },
+    { id: "SDA-102", name: "Rohit Naik", subDistrict: "Bandra", email: "r.naik@suburban.gov.in", phone: "+91 98765 40102", status: "Active", joinDate: "15 Feb 2025", complaints: 95, resolved: 81, sla: 83 },
+    { id: "SDA-103", name: "Aditya Mehta", subDistrict: "Borivali", email: "a.mehta@suburban.gov.in", phone: "+91 98765 40103", status: "Active", joinDate: "01 Mar 2025", complaints: 110, resolved: 98, sla: 88 },
+    { id: "SDA-104", name: "Vikram Joshi", subDistrict: "Kurla", email: "v.joshi@suburban.gov.in", phone: "+91 98765 40104", status: "Suspended", joinDate: "12 Apr 2025", complaints: 88, resolved: 61, sla: 69 },
+    { id: "SDA-105", name: "Meera Gupta", subDistrict: "Malad", email: "m.gupta@suburban.gov.in", phone: "+91 98765 40105", status: "Active", joinDate: "20 May 2025", complaints: 130, resolved: 112, sla: 86 },
+    { id: "SDA-106", name: "Tushar Desai", subDistrict: "Goregaon", email: "t.desai@suburban.gov.in", phone: "+91 98765 40106", status: "Pending", joinDate: "22 Jun 2026", complaints: 10, resolved: 4, sla: 40 },
+  ],
+  "Mumbai City": [
+    { id: "SDA-201", name: "Rahul Desai", subDistrict: "Colaba", email: "r.desai@city.gov.in", phone: "+91 98765 50101", status: "Active", joinDate: "12 Jan 2025", complaints: 85, resolved: 78, sla: 91 },
+    { id: "SDA-202", name: "Pooja Mehta", subDistrict: "Fort", email: "p.mehta@city.gov.in", phone: "+91 98765 50102", status: "Active", joinDate: "20 Feb 2025", complaints: 70, resolved: 65, sla: 92 },
+    { id: "SDA-203", name: "Suresh Rao", subDistrict: "Marine Lines", email: "s.rao@city.gov.in", phone: "+91 98765 50103", status: "Active", joinDate: "05 Mar 2025", complaints: 92, resolved: 80, sla: 87 },
+  ],
+  "Raigad": [
+    { id: "SDA-001", name: "Rajesh Sharma", subDistrict: "Panvel Taluka", email: "r.sharma@raigad.gov.in", phone: "+91 98765 43210", status: "Active", joinDate: "12 Jan 2025", complaints: 142, resolved: 118, sla: 83 },
+    { id: "SDA-002", name: "Priya Iyer", subDistrict: "Alibag", email: "p.iyer@raigad.gov.in", phone: "+91 98765 43211", status: "Active", joinDate: "03 Mar 2025", complaints: 96, resolved: 79, sla: 82 },
+    { id: "SDA-003", name: "Amit Singh", subDistrict: "Karjat", email: "a.singh@raigad.gov.in", phone: "+91 98765 43212", status: "Active", joinDate: "20 Jun 2024", complaints: 201, resolved: 185, sla: 92 },
+    { id: "SDA-004", name: "Sunita Gupta", subDistrict: "Mahad", email: "s.gupta@raigad.gov.in", phone: "+91 98765 43213", status: "Suspended", joinDate: "08 Sep 2024", complaints: 178, resolved: 132, sla: 74 },
+    { id: "SDA-005", name: "Mohammed Khan", subDistrict: "Mangaon", email: "m.khan@raigad.gov.in", phone: "+91 98765 43214", status: "Active", joinDate: "15 Nov 2024", complaints: 115, resolved: 94, sla: 82 },
+    { id: "SDA-006", name: "Tanvi Verma", subDistrict: "Murud", email: "t.verma@raigad.gov.in", phone: "+91 98765 43215", status: "Pending", joinDate: "02 Jun 2026", complaints: 87, resolved: 55, sla: 63 },
+  ]
+};
 
 const statusConfig: Record<OfficerStatus, { badge: string; icon: typeof CheckCircle2 }> = {
   Active: { badge: "dashboard-table-badge-status-resolved", icon: CheckCircle2 },
@@ -62,6 +78,8 @@ function getSlaTextClass(sla: number) {
 export default function SubDistrictsPage() {
   const currentAdmin = useAdminAuthStore((s) => s.admin);
   const isMock = shouldUseMock(currentAdmin?.email);
+  const { districtName } = useDistrictInfo();
+  const DATA = MOCK_SUB_DISTRICTS[districtName] || MOCK_SUB_DISTRICTS["Raigad"];
 
   const { data: serverAdmins, refetch, isLoading } = useQuery({
     queryKey: ["subAdmins"],

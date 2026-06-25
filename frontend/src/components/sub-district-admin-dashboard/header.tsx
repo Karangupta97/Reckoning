@@ -10,8 +10,8 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { AdminNotificationBell } from "@/components/admin/AdminNotificationBell";
-import { subDistrictLabel, subDistrictLocationLabel } from "@/lib/sub-district-config";
 import { useAdminDateRange } from "@/hooks/useAdminDateRange";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -57,11 +57,13 @@ function useDropdownClose(onClose: () => void) {
 
 export default function SubDistrictAdminHeader({
   onMenuToggle,
-  title    = subDistrictLabel,
+  title,
   subtitle = "Field Operations • Complaint Resolution • SLA Management",
 }: HeaderProps) {
   const router = useRouter();
   const adminLogout = useAdminAuthStore((s) => s.logout);
+  const { subDistrictLabel, subDistrictLocationLabel } = useSubDistrictInfo();
+  const resolvedTitle = title ?? subDistrictLabel;
 
   const [isMobile,         setIsMobile]         = useState(false);
   const [searchQuery,      setSearchQuery]       = useState("");
@@ -102,7 +104,7 @@ export default function SubDistrictAdminHeader({
         )}
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-primary truncate text-base font-bold leading-tight lg:text-lg">{title}</h1>
+            <h1 className="text-primary truncate text-base font-bold leading-tight lg:text-lg">{resolvedTitle}</h1>
             <div className="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-green-500/20 bg-green-500/8">
               <span className="relative flex h-1.5 w-1.5 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />

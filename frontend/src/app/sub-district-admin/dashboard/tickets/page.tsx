@@ -7,6 +7,7 @@ import { Eye, ClipboardCheck, ClipboardList, Clock, CheckCircle2, AlertTriangle,
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { useComplaintWorkflowStore, type TicketStatus } from "@/store/complaintWorkflowStore";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 
 const STATUS_COLORS: Record<string, string> = {
   Open: "dashboard-table-badge-status-open",
@@ -29,6 +30,7 @@ const KPI_META = [
 ];
 
 export default function TicketsPage() {
+  const { subDistrictName } = useSubDistrictInfo();
   const searchParams = useSearchParams();
   const showCreate = searchParams.get("create") === "1";
   const storeTickets = useComplaintWorkflowStore((s) => s.tickets);
@@ -92,7 +94,7 @@ export default function TicketsPage() {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[var(--color-text-primary)]">Work Order Management Console</h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">Track and manage all field work tickets for Panvel Taluka</p>
+          <p className="text-sm text-[var(--color-text-muted)] mt-0.5">Track and manage all field work tickets for {subDistrictName}</p>
         </div>
         <button type="button" onClick={() => setCreateOpen(!createOpen)}
           className="flex items-center gap-1.5 h-9 px-3 rounded-lg border text-xs font-semibold"

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { DistrictAdminSidebar, DistrictAdminHeader } from "@/components/district-admin-dashboard";
 import "@/components/district-admin-dashboard/district-admin-theme.css";
-import { districtLabel } from "@/lib/district-config";
 import { useStoreSync } from "@/hooks/useStoreSync";
 import { api } from "@/lib/api";
 import { useAdminAuthStore } from "@/stores/adminAuthStore";
@@ -23,6 +22,7 @@ export default function DistrictAdminLayout({
   const router = useRouter();
 
   const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const setAdmin = useAdminAuthStore((s) => s.setAdmin);
   const isMock = shouldUseMock(currentAdmin?.email);
 
   useStoreSync();
@@ -58,7 +58,12 @@ export default function DistrictAdminLayout({
       try {
         const res = await api.get("/api/admin/auth/me");
         if (cancelled) return;
-        if (res.data?.success && res.data?.data?.role === "DISTRICT_ADMIN") {
+        const adminData = res.data?.data;
+        if (res.data?.success && adminData?.role === "DISTRICT_ADMIN") {
+          // Hydrate store with district name so useDistrictInfo resolves immediately
+          if (adminData.districtName && setAdmin) {
+            setAdmin({ ...adminData });
+          }
           setAuthStatus("authenticated");
         } else {
           setAuthStatus("unauthenticated");
@@ -108,7 +113,6 @@ export default function DistrictAdminLayout({
           <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
             <DistrictAdminHeader
               onMenuToggle={() => setIsMobileSidebarOpen(true)}
-              title={districtLabel}
               subtitle="Monitoring • Escalations • SLA Compliance"
             />
             <main className="flex-1 overflow-y-auto p-4 lg:p-6">

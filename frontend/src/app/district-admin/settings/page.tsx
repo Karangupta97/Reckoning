@@ -10,6 +10,7 @@ import {
 import { DemoResetButton } from "@/components/admin/DemoResetButton";
 import { useComplaintStore } from "@/store/complaintStore";
 import { useEscalationStore } from "@/store/escalationStore";
+import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 
 function SaveButton({ saved, onClick }: { saved: boolean; onClick: () => void }) {
   return (
@@ -59,6 +60,7 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void 
 }
 
 export default function DistrictSettingsPage() {
+  const { districtName } = useDistrictInfo();
   const [saved, setSaved] = useState(false);
   const [autoEscalate, setAutoEscalate]   = useState(true);
   const [publicDashboard, setPublicDashboard] = useState(false);
@@ -105,7 +107,7 @@ export default function DistrictSettingsPage() {
               <Field label="District Name">
                 <div className="relative">
                   <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-                  <input type="text" defaultValue="Raigad" className={`${inputCls} pl-9`} style={inputStyle} />
+                  <input type="text" defaultValue={districtName} className={`${inputCls} pl-9`} style={inputStyle} />
                 </div>
               </Field>
               <Field label="State">

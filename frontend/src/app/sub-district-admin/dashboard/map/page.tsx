@@ -5,6 +5,7 @@ import { Map, Layers, Info } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import IndiaMap from "@/components/map/IndiaMap";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 
 const LEGEND = [
   { label: "Boundary",  color: "#14b8a6" },
@@ -22,6 +23,7 @@ const mapStats = [
 ];
 
 export default function MapPage() {
+  const { subDistrictName } = useSubDistrictInfo();
   return (
     <div className="flex flex-col gap-4">
       {/* Breadcrumb */}
@@ -37,7 +39,7 @@ export default function MapPage() {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center gap-2">
           <Map size={20} className="text-amber-400 shrink-0" />
-          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">My Zone Map — Panvel Taluka</h1>
+          <h1 className="text-xl font-bold text-[var(--color-text-primary)]">My Zone Map — {subDistrictName}</h1>
         </div>
         <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
           Interactive map showing sub-district boundary, complaint heatmap and escalation hotspots

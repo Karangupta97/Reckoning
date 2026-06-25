@@ -324,15 +324,21 @@ export default function NewSubDistrictAdminPage() {
                 className="w-full h-10 rounded-lg border px-3 text-sm outline-none appearance-none"
                 style={{ background: "var(--color-surface)", borderColor: errors.subDistrict ? "rgba(239,68,68,0.5)" : "var(--color-border)", color: "var(--color-text-primary)" }}>
                 <option value="">Select sub-district…</option>
-                <optgroup label="Mumbai Suburban">
-                  {MUMBAI_SUB_DISTRICT_NAMES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </optgroup>
-                <optgroup label="Mumbai City">
-                  {MUMBAI_CITY_SUB_DISTRICT_NAMES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </optgroup>
-                <optgroup label="Raigad">
-                  {RAIGAD_SUB_DISTRICT_NAMES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </optgroup>
+                {(!districtName || districtName.toLowerCase().includes("suburban")) && (
+                  <optgroup label="Mumbai Suburban">
+                    {MUMBAI_SUB_DISTRICT_NAMES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </optgroup>
+                )}
+                {(!districtName || districtName.toLowerCase().includes("city") || (districtName.toLowerCase().includes("mumbai") && !districtName.toLowerCase().includes("suburban"))) && (
+                  <optgroup label="Mumbai City">
+                    {MUMBAI_CITY_SUB_DISTRICT_NAMES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </optgroup>
+                )}
+                {(!districtName || districtName.toLowerCase().includes("raigad")) && (
+                  <optgroup label="Raigad">
+                    {RAIGAD_SUB_DISTRICT_NAMES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </optgroup>
+                )}
               </select>
               {errors.subDistrict && <p className="text-[10px] text-red-400 mt-1">{errors.subDistrict}</p>}
             </div>

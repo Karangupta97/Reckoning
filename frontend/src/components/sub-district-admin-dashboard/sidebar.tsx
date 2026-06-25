@@ -9,7 +9,7 @@ import {
   TrendingUp, ShieldCheck, Clock, Trophy, Award, IndianRupee, MessageSquare,
 } from "lucide-react";
 import { LogoMark } from "@/components/ui/Logo";
-import { subDistrictSidebarSubtitle, SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 
 interface NavItem {
@@ -48,6 +48,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
   const pathname = usePathname();
   const activePath = activePathProp ?? pathname ?? "/sub-district-admin/dashboard";
   const metrics = useSubDistrictDashboardMetrics();
+  const { subDistrictSidebarSubtitle, subDistrictName } = useSubDistrictInfo();
   const [isOpen,  setIsOpen]  = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -124,7 +125,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
           {/* Zone label */}
           <div className="px-3 pb-1.5">
             <span className="text-[10px] text-[var(--color-text-muted)]">Zone: </span>
-            <span className="text-[10px] font-medium" style={{ color: "var(--sda-amber)" }}>{SUB_DISTRICT_CONFIG.name}</span>
+            <span className="text-[10px] font-medium" style={{ color: "var(--sda-amber)" }}>{subDistrictName}</span>
           </div>
           {/* Stats grid */}
           <div className="grid grid-cols-2 gap-px border-t border-amber-500/10">
@@ -146,7 +147,7 @@ export default function SubDistrictAdminSidebar({ activePath: activePathProp }: 
         </div>
       </div>
     </div>
-  ), [isActive, router, metrics]);
+  ), [isActive, router, metrics, subDistrictSidebarSubtitle, subDistrictName]);
 
   return (
     <>

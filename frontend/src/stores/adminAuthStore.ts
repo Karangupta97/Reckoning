@@ -16,6 +16,7 @@ interface AdminAuthActions {
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
+  setAdmin: (admin: AdminUser) => void;
 }
 
 type AdminAuthStore = AdminAuthState & AdminAuthActions;
@@ -124,6 +125,8 @@ export const useAdminAuthStore = create<AdminAuthStore>()(
       },
 
       clearError: () => set({ error: null }),
+
+      setAdmin: (admin) => set((state) => ({ admin: { ...state.admin, ...admin } })),
     }),
     {
       name: "reckoning-admin-auth",

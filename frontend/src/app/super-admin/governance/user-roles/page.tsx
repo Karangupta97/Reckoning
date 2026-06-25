@@ -18,6 +18,7 @@ import { shouldUseMock } from "@/lib/useMock";
 const DISTRICTS_DATA = [
   { name: "Raigad", division: "Konkan", code: "RGD", id: "RGD" },
   { name: "Mumbai City", division: "Konkan", code: "MUM", id: "MUM" },
+  { name: "Mumbai Suburban", division: "Konkan", code: "MSB", id: "MSB" },
   { name: "Pune", division: "Pune", code: "PUN", id: "PUN" },
   { name: "Nagpur", division: "Nagpur", code: "NGP", id: "NGP" },
   { name: "Thane", division: "Konkan", code: "THN", id: "THN" },

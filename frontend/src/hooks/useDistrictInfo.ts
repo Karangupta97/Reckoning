@@ -16,7 +16,8 @@ export interface DistrictInfo {
 
 /**
  * Hook to fetch the real district name/info from the backend.
- * Falls back to the static DISTRICT_CONFIG when in mock mode or on error.
+ * Falls back to the admin store's districtName (populated at login),
+ * then to static DISTRICT_CONFIG when in mock mode or on error.
  */
 export function useDistrictInfo() {
   const currentAdmin = useAdminAuthStore((s) => s.admin);
@@ -32,7 +33,11 @@ export function useDistrictInfo() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const districtName = data?.name ?? DISTRICT_CONFIG.name;
+  // Priority: live API data → store admin's districtName (from login/me) → static fallback
+  const districtName =
+    data?.name ??
+    (currentAdmin?.districtName as string | null | undefined) ??
+    (isMock ? DISTRICT_CONFIG.name : DISTRICT_CONFIG.name);
 
   return {
     district: data ?? null,

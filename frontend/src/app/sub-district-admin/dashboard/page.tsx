@@ -15,6 +15,7 @@ import { ComplaintTrendChart, ResolutionRateChart } from "@/components/district-
 import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 import { formatSlaLabel } from "@/lib/dashboard-metrics";
 import { PendingClarificationsWidget } from "@/components/admin/PendingClarificationsWidget";
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 import type { ComplaintRecord } from "@/store/complaintStore";
 
 // Lazy load the map component with no server-side rendering
@@ -26,6 +27,7 @@ type SubDistrictMetrics = ReturnType<typeof useSubDistrictDashboardMetrics>;
 
 /* ─── Hero — compact ─────────────────────────────────────────── */
 function HeroBanner({ m }: { m: SubDistrictMetrics }) {
+  const { subDistrictName, districtName, subDistrictOpsLabel } = useSubDistrictInfo();
   const zoneLabel = m.zoneHealth >= 85 ? "Excellent" : m.zoneHealth >= 70 ? "Good" : "At Risk";
   const zoneColor = m.zoneHealth >= 85 ? "text-green-400" : m.zoneHealth >= 70 ? "text-amber-400" : "text-red-400";
   const barColor = m.zoneHealth >= 85 ? "bg-green-400" : m.zoneHealth >= 70 ? "bg-amber-400" : "bg-red-400";
@@ -52,11 +54,11 @@ function HeroBanner({ m }: { m: SubDistrictMetrics }) {
             </span>
             <span className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium"
               style={{ borderColor: "var(--sda-border-amber)", color: "var(--sda-amber)", background: "var(--sda-amber-glow)" }}>
-              <MapPin size={9} /> Raigad • Panvel Taluka
+              <MapPin size={9} /> {districtName} • {subDistrictName}
             </span>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">Panvel Taluka Operations Desk</h2>
+            <h2 className="text-lg font-bold text-[var(--color-text-primary)]">{subDistrictOpsLabel}</h2>
             <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Manage complaints, inspections, tickets and field resolution workflows.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -610,13 +612,14 @@ function RecentResolutions({ items }: { items: ComplaintRecord[] }) {
 
 /* ─── Full-width Heatmap Panel (Section D) ───────────────────── */
 function HeatmapPanel({ m }: { m: SubDistrictMetrics }) {
+  const { subDistrictName } = useSubDistrictInfo();
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-3 pb-2.5 border-b border-[var(--color-border)]">
         <div>
           <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Complaint Heatmap — Zone A</h3>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Panvel Taluka · {m.open} active complaints · Live data</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{subDistrictName} · {m.open} active complaints · Live data</p>
         </div>
         <Link href="/sub-district-admin/dashboard/map"
           className="flex items-center gap-1 text-[11px] font-medium transition-colors hover:underline"

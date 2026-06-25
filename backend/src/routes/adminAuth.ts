@@ -490,6 +490,10 @@ router.get("/me", requireAdminAuth, async (req: any, res: any) => {
   try {
     const admin = await prisma.adminUser.findUnique({
       where: { id: req.admin.sub },
+      include: {
+        district: { select: { name: true } },
+        subDistrict: { select: { name: true } },
+      },
     });
 
     if (!admin) {
@@ -502,11 +506,15 @@ router.get("/me", requireAdminAuth, async (req: any, res: any) => {
       });
     }
 
-    const { passwordHash, failedLoginAttempts, lockedUntil, ...safeAdmin } = admin;
+    const { passwordHash, failedLoginAttempts, lockedUntil, district, subDistrict, ...safeAdmin } = admin;
 
     return res.status(200).json({
       success: true,
-      data: safeAdmin,
+      data: {
+        ...safeAdmin,
+        districtName: district?.name ?? null,
+        subDistrictName: subDistrict?.name ?? null,
+      },
     });
   } catch (err) {
     logger.error("Unhandled error during admin profile fetch", { error: String(err) });

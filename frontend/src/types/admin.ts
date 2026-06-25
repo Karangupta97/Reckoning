@@ -5,7 +5,9 @@ export interface AdminUser {
   email: string;
   role: AdminRole;
   districtId?: string;
+  districtName?: string | null;
   subDistrictId?: string;
+  subDistrictName?: string | null;
   lastLoginAt?: string;
   createdAt: string;
 }

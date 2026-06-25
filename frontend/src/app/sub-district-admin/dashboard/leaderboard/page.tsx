@@ -12,7 +12,7 @@ import {
   useLeaderboardStore,
   type SubDistrictOfficerEntry,
 } from "@/store/leaderboardStore";
-
+import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type TimeFilter = "all-time" | "this-month" | "this-week";
@@ -105,7 +105,7 @@ function DetailModal({ entry, onClose }: { entry: SubDistrictOfficerEntry; onClo
 
 // ─── Podium ───────────────────────────────────────────────────────────────────
 
-function Podium({ top3, onSelect }: { top3: SubDistrictOfficerEntry[]; onSelect: (e: SubDistrictOfficerEntry) => void }) {
+function Podium({ top3, onSelect, subDistrictName }: { top3: SubDistrictOfficerEntry[]; onSelect: (e: SubDistrictOfficerEntry) => void; subDistrictName: string }) {
   return (
     <DashboardCard className="overflow-hidden">
       <div className="relative px-4 pt-10 pb-0"
@@ -162,7 +162,7 @@ function Podium({ top3, onSelect }: { top3: SubDistrictOfficerEntry[]; onSelect:
       <div className="flex items-center justify-between px-4 py-3 border-t"
         style={{ borderColor: "var(--color-border)", background: "var(--color-card)" }}>
         <span className="text-xs text-[var(--color-text-muted)]">Top 3 Field Officers</span>
-        <span className="text-xs text-amber-400 font-medium">Panvel Taluka Rankings</span>
+        <span className="text-xs text-amber-400 font-medium">{subDistrictName} Rankings</span>
       </div>
     </DashboardCard>
   );
@@ -258,6 +258,7 @@ function LeaderboardTable({ entries, onSelect }: { entries: SubDistrictOfficerEn
 
 export default function SubDistrictLeaderboardPage() {
   const { subDistrictOfficers } = useLeaderboardStore();
+  const { subDistrictName } = useSubDistrictInfo();
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all-time");
   const [selected,   setSelected]   = useState<SubDistrictOfficerEntry | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -285,7 +286,7 @@ export default function SubDistrictLeaderboardPage() {
             <h1 className="text-lg font-bold text-[var(--color-text-primary)]">Sub-District Leaderboard</h1>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)] mt-0.5">
-            Field officer performance rankings for Panvel Taluka
+            Field officer performance rankings for {subDistrictName}
           </p>
         </div>
         {/* Time filter */}
@@ -364,7 +365,7 @@ export default function SubDistrictLeaderboardPage() {
 
       {/* Podium */}
       <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Podium top3={top3} onSelect={setSelected} />
+        <Podium top3={top3} onSelect={setSelected} subDistrictName={subDistrictName} />
       </motion.div>
 
       {/* Table */}

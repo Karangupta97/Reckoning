@@ -18,6 +18,7 @@ async function seedDistrictsAndSubDistricts(): Promise<void> {
   const districtsData = [
     { id: "RGD", name: "Raigad", country: "INDIA" as const },
     { id: "MUM", name: "Mumbai City", country: "INDIA" as const },
+    { id: "MSB", name: "Mumbai Suburban", country: "INDIA" as const },
     { id: "PUN", name: "Pune", country: "INDIA" as const },
     { id: "NGP", name: "Nagpur", country: "INDIA" as const },
     { id: "THN", name: "Thane", country: "INDIA" as const },
@@ -64,6 +65,30 @@ async function seedDistrictsAndSubDistricts(): Promise<void> {
       where: { id: sub.id },
       update: { name: sub.name, districtId: "MUM" },
       create: { id: sub.id, name: sub.name, districtId: "MUM" },
+    });
+  }
+
+  const mumbaiSuburbanSubDistricts = [
+    { id: "andheri", name: "Andheri" },
+    { id: "bandra", name: "Bandra" },
+    { id: "borivali", name: "Borivali" },
+    { id: "kurla", name: "Kurla" },
+    { id: "malad", name: "Malad" },
+    { id: "goregaon", name: "Goregaon" },
+    { id: "jogeshwari", name: "Jogeshwari" },
+    { id: "kandivali", name: "Kandivali" },
+    { id: "dahisar", name: "Dahisar" },
+    { id: "vile-parle", name: "Vile Parle" },
+    { id: "santacruz", name: "Santacruz" },
+    { id: "chembur", name: "Chembur" },
+  ];
+
+  // Seed Mumbai Suburban Sub-Districts
+  for (const sub of mumbaiSuburbanSubDistricts) {
+    await prisma.subDistrict.upsert({
+      where: { id: sub.id },
+      update: { name: sub.name, districtId: "MSB" },
+      create: { id: sub.id, name: sub.name, districtId: "MSB" },
     });
   }
 
