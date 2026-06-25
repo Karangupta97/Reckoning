@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import {
   AlertTriangle, ClipboardList, Clock3, CheckCircle2,
   MapPin, Ticket, Eye, TrendingUp, TrendingDown, Minus,
   Activity, Users, FileWarning, Upload, Map, Plus,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
@@ -16,6 +17,7 @@ import { useSubDistrictDashboardMetrics } from "@/hooks/use-dashboard-metrics";
 import { formatSlaLabel } from "@/lib/dashboard-metrics";
 import { PendingClarificationsWidget } from "@/components/admin/PendingClarificationsWidget";
 import { useSubDistrictInfo } from "@/hooks/useSubDistrictInfo";
+import { useSubDistrictComplaintStore } from "@/store/subDistrictComplaintStore";
 import type { ComplaintRecord } from "@/store/complaintStore";
 
 // Lazy load the map component with no server-side rendering
@@ -226,57 +228,105 @@ function complaintRow(c: ComplaintRecord) {
   };
 }
 
-/* ─── Urgent Actions Table ───────────────────────────────────── */
-function UrgentActionsTable({ rows }: { rows: ReturnType<typeof complaintRow>[] }) {
+const SEVERITY_PRIORITY: Record<string, string> = {
+  CRITICAL: "Critical",
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
+};
+
+const API_STATUS_LABEL: Record<string, string> = {
+  SUBMITTED: "Open",
+  UNDER_REVIEW: "Under Review",
+  VERIFIED: "Verified",
+  ASSIGNED: "Assigned",
+  IN_PROGRESS: "In Progress",
+  RESOLVED: "Resolved",
+  REJECTED: "Rejected",
+  ESCALATED: "Escalated",
+  DRAFT: "Draft",
+};
+
+/* ─── Urgent Actions Table (real data from backend) ──────────── */
+function UrgentActionsTable() {
+  const { complaints, isLoading, fetchComplaints } = useSubDistrictComplaintStore();
+
+  useEffect(() => {
+    fetchComplaints({ limit: 10 });
+  }, [fetchComplaints]);
+
+  // Sort: CRITICAL first, then HIGH, then by date
+  const sorted = useMemo(() => {
+    const severityOrder: Record<string, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    return [...complaints]
+      .sort((a, b) => (severityOrder[a.severity] ?? 9) - (severityOrder[b.severity] ?? 9))
+      .slice(0, 10);
+  }, [complaints]);
+
   return (
     <DashboardCard initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="flex flex-col">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div>
           <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Urgent Actions</h3>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Sorted by urgency — act on critical first</p>
+          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Real complaints — sorted by severity</p>
         </div>
+        <Link href="/sub-district-admin/dashboard/complaints"
+          className="text-[11px] font-medium hover:underline" style={{ color: "var(--sda-amber)" }}>
+          View All →
+        </Link>
       </div>
       <div className="dashboard-table-scroll flex-1">
-        <table className="dashboard-table">
-          <thead>
-            <tr>{["ID", "Priority", "SLA", "Officer", "Status", "Action"].map((h) => (
-              <th key={h} className="dashboard-table-th">{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} className="dashboard-table-row sda-table-row">
-                <td className="dashboard-table-td dashboard-table-td-primary font-mono text-xs">{row.id}</td>
-                <td className="dashboard-table-td">
-                  <span className={`dashboard-table-badge ${row.priority === "Critical" ? "dashboard-table-badge-status-open" : "dashboard-table-badge-status-escalated"}`}>
-                    {row.priority}
-                  </span>
-                </td>
-                <td className="dashboard-table-td">
-                  {row.sla === "BREACHED"
-                    ? <span className="dashboard-table-badge dashboard-table-badge-status-open animate-pulse">BREACHED</span>
-                    : <span className="text-xs font-mono text-amber-400">{row.sla}</span>}
-                </td>
-                <td className="dashboard-table-td text-xs">{row.officer}</td>
-                <td className="dashboard-table-td">
-                  <span className={`dashboard-table-badge ${
-                    row.status === "Open" ? "dashboard-table-badge-status-open" :
-                    row.status === "In Progress" ? "dashboard-table-badge-status-review" : "dashboard-table-badge-status-escalated"
-                  }`}>{row.status}</span>
-                </td>
-                <td className="dashboard-table-td">
-                  <Link href={`/sub-district-admin/dashboard/complaints/${row.id}`}>
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                      className="flex items-center gap-1 h-7 px-2.5 rounded-md border text-[11px] font-medium"
-                      style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 10%, transparent)", color: "var(--sda-amber)" }}>
-                      <Eye size={11} /> View
-                    </motion.button>
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8 gap-2">
+            <Loader2 size={14} className="animate-spin text-amber-400" />
+            <span className="text-xs text-[var(--color-text-muted)]">Loading complaints…</span>
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <span className="text-xs text-[var(--color-text-muted)]">No complaints in your jurisdiction yet.</span>
+          </div>
+        ) : (
+          <table className="dashboard-table">
+            <thead>
+              <tr>{["ID", "Severity", "Description", "Status", "Action"].map((h) => (
+                <th key={h} className="dashboard-table-th">{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {sorted.map((row) => {
+                const priority = SEVERITY_PRIORITY[row.severity] ?? "Medium";
+                const status = API_STATUS_LABEL[row.status] ?? row.status;
+                return (
+                  <tr key={row.id} className="dashboard-table-row sda-table-row">
+                    <td className="dashboard-table-td dashboard-table-td-primary font-mono text-[10px]">{row.id.slice(0, 10)}…</td>
+                    <td className="dashboard-table-td">
+                      <span className={`dashboard-table-badge ${priority === "Critical" ? "dashboard-table-badge-status-open" : priority === "High" ? "dashboard-table-badge-status-escalated" : "dashboard-table-badge-status-review"}`}>
+                        {priority}
+                      </span>
+                    </td>
+                    <td className="dashboard-table-td text-xs max-w-[200px] truncate">{row.description?.slice(0, 50) ?? "—"}</td>
+                    <td className="dashboard-table-td">
+                      <span className={`dashboard-table-badge ${
+                        status === "Open" || status === "Escalated" ? "dashboard-table-badge-status-open" :
+                        status === "In Progress" || status === "Under Review" ? "dashboard-table-badge-status-review" :
+                        status === "Resolved" ? "dashboard-table-badge-status-resolved" : "dashboard-table-badge-status-escalated"
+                      }`}>{status}</span>
+                    </td>
+                    <td className="dashboard-table-td">
+                      <Link href={`/sub-district-admin/dashboard/complaints/${row.id}`}>
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                          className="flex items-center gap-1 h-7 px-2.5 rounded-md border text-[11px] font-medium"
+                          style={{ borderColor: "var(--sda-border-amber)", background: "color-mix(in srgb, var(--sda-amber) 10%, transparent)", color: "var(--sda-amber)" }}>
+                          <Eye size={11} /> View
+                        </motion.button>
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </DashboardCard>
   );
@@ -664,7 +714,6 @@ function HeatmapPanel({ m }: { m: SubDistrictMetrics }) {
 export default function SubDistrictAdminDashboard() {
   const m = useSubDistrictDashboardMetrics();
   const kpiCards = buildKpiCards(m);
-  const urgentRows = m.urgent.map(complaintRow);
 
   return (
     <div className="flex flex-col gap-3">
@@ -683,7 +732,7 @@ export default function SubDistrictAdminDashboard() {
       <PendingClarificationsWidget portal="sub-district" compact />
 
       {/* Urgent Actions — full width */}
-      <UrgentActionsTable rows={urgentRows} />
+      <UrgentActionsTable />
 
       {/* 70/30 — Officer Workload | Quick Actions */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[65fr_35fr] lg:[&>*]:self-stretch">
