@@ -711,9 +711,31 @@ function HeatmapPanel({ m }: { m: SubDistrictMetrics }) {
 }
 
 /* ─── Page ───────────────────────────────────────────────────── */
+/* ─── Page ───────────────────────────────────────────────────── */
 export default function SubDistrictAdminDashboard() {
   const m = useSubDistrictDashboardMetrics();
+  const { complaints: realComplaints, isLoading: realLoading, fetchComplaints } = useSubDistrictComplaintStore();
   const kpiCards = buildKpiCards(m);
+
+  // Fetch all real complaints for accurate KPI (if not already loaded)
+  useEffect(() => {
+    fetchComplaints({ limit: 100 });
+  }, [fetchComplaints]);
+
+  // Override KPI values with real API data when available
+  const realOpen = realComplaints.filter(c => c.status === "SUBMITTED" || c.status === "UNDER_REVIEW" || c.status === "VERIFIED" || c.status === "ASSIGNED").length;
+  const realResolved = realComplaints.filter(c => c.status === "RESOLVED").length;
+  const realEscalated = realComplaints.filter(c => c.status === "ESCALATED").length;
+  const realInProgress = realComplaints.filter(c => c.status === "IN_PROGRESS").length;
+  const realCritical = realComplaints.filter(c => c.severity === "CRITICAL" && c.status !== "RESOLVED" && c.status !== "REJECTED").length;
+
+  // Build real KPI cards when API data is available
+  const realKpiCards: KpiCardData[] = realComplaints.length > 0 ? [
+    { title: "Open Complaints", value: String(realOpen), change: `${realEscalated} escalated`, trend: "up", icon: AlertTriangle, iconColor: "var(--color-danger)", borderColor: "rgba(239,68,68,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+    { title: "In Progress", value: String(realInProgress), change: `${realCritical} critical`, trend: "neutral", icon: ClipboardList, iconColor: "var(--color-info)", borderColor: "rgba(59,130,246,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+    { title: "Total Complaints", value: String(realComplaints.length), change: `${realCritical} critical`, trend: realCritical > 0 ? "up" : "down", icon: Clock3, iconColor: "var(--sda-amber)", borderColor: "rgba(245,158,11,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+    { title: "Resolved", value: String(realResolved), change: `${realOpen} pending`, trend: "down", icon: CheckCircle2, iconColor: "var(--color-success)", borderColor: "rgba(34,197,94,0.3)", href: "/sub-district-admin/dashboard/complaints" },
+  ] : kpiCards;
 
   return (
     <div className="flex flex-col gap-3">
@@ -722,7 +744,7 @@ export default function SubDistrictAdminDashboard() {
 
       {/* 4-col KPI strip — 2 cols on mobile, 4 on desktop */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpiCards.map((card, i) => <KpiCard key={card.title} card={card} index={i} />)}
+        {realKpiCards.map((card, i) => <KpiCard key={card.title} card={card} index={i} />)}
       </div>
 
       {/* SLA Command Center — full width */}
@@ -731,7 +753,7 @@ export default function SubDistrictAdminDashboard() {
       {/* Pending Clarifications — compact widget */}
       <PendingClarificationsWidget portal="sub-district" compact />
 
-      {/* Urgent Actions — full width */}
+      {/* Urgent Actions — full width (real API data) */}
       <UrgentActionsTable />
 
       {/* 70/30 — Officer Workload | Quick Actions */}
@@ -754,12 +776,6 @@ export default function SubDistrictAdminDashboard() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:[&>*]:self-stretch">
         <ResolutionRateChart compact />
         <ComplaintTrendChart compact tall />
-      </div>
-
-      {/* 50/50 — Upcoming SLA | Recent Resolutions */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:[&>*]:self-stretch">
-        <UpcomingSLABreaches items={m.upcomingSla} />
-        <RecentResolutions items={m.recentResolved} />
       </div>
     </div>
   );

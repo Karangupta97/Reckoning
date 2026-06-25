@@ -920,15 +920,10 @@ export default function ComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
   const complaintId = id ?? "CMP-1024";
 
-  // If the ID exists in the mock complaints store, render the mock detail view.
-  // Otherwise, treat it as a live database complaint.
-  const isMock = useComplaintStore((s) => s.complaints.some((x) => x.id === complaintId));
-
-  if (!isMock) {
-    return <LiveComplaintDetail complaintId={complaintId} />;
-  }
-
-  return <MockComplaintDetail complaintId={complaintId} />;
+  // Always use LiveComplaintDetail — it fetches real data from the backend.
+  // This ensures sub-district admins (e.g. Goregaon) always see real complaint
+  // data and actual uploaded images rather than mock/placeholder data.
+  return <LiveComplaintDetail complaintId={complaintId} />;
 }
 
 /* ─── Mock Complaint Detail (existing CMP-XXXX flow) ─────────── */

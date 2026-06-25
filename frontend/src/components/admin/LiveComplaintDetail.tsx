@@ -301,6 +301,9 @@ export function LiveComplaintDetail({ complaintId }: LiveComplaintDetailProps) {
         <DashboardCard className="p-6 flex flex-col items-center gap-3">
           <AlertTriangle size={24} className="text-amber-400" />
           <p className="text-sm text-[var(--color-text-secondary)]">{error ?? "Complaint not found."}</p>
+          <p className="text-xs text-[var(--color-text-muted)] text-center max-w-sm">
+            This complaint does not exist in the database. Use the complaints list to view real complaints with uploaded evidence.
+          </p>
           <Link href="/sub-district-admin/dashboard/complaints"
             className="text-xs text-amber-400 hover:underline">← Back to Complaints</Link>
         </DashboardCard>
