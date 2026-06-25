@@ -177,3 +177,59 @@ export async function updateStatus(
     next(error);
   }
 }
+
+/**
+ * `POST /api/admin/subdistrict/complaints/:id/evidence`
+ *
+ * Links pre-uploaded media IDs to a complaint as officer evidence.
+ * mediaIds must belong to the admin's session (validated by the service).
+ */
+export async function addEvidence(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const user = req.user || req.admin;
+    const subDistrictId = user?.subDistrictId;
+    const districtId = user?.districtId;
+
+    if (!subDistrictId || !districtId) {
+      res.status(403).json({
+        error: "INSUFFICIENT_SCOPE",
+        message: "Admin profile is missing jurisdiction assignment",
+      });
+      return;
+    }
+
+    const { id: complaintId } = req.params as { id: string };
+    const { mediaIds } = req.body as { mediaIds: string[] };
+
+    if (!Array.isArray(mediaIds) || mediaIds.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: { message: "mediaIds array is required.", code: "VALIDATION_ERROR" },
+      });
+      return;
+    }
+
+    const { addEvidenceToComplaint } = await import("./subDistrictComplaints.service.js");
+    const updated = await addEvidenceToComplaint(
+      subDistrictId,
+      districtId,
+      complaintId,
+      mediaIds,
+    );
+
+    res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({
+        success: false,
+        error: { message: error.message, code: error.code },
+      });
+      return;
+    }
+    next(error);
+  }
+}

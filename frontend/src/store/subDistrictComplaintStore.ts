@@ -77,6 +77,15 @@ interface SubDistrictComplaintState {
     id: string,
     status: ApiComplaintStatus
   ) => Promise<void>;
+  /**
+   * Upload files as officer evidence and attach them to a complaint.
+   * Files are uploaded to POST /api/admin/upload (admin auth), then linked
+   * via POST /api/admin/subdistrict/complaints/:id/evidence.
+   */
+  uploadEvidence: (
+    complaintId: string,
+    files: File[],
+  ) => Promise<string[]>; // returns new media URLs
 }
 
 export const useSubDistrictComplaintStore = create<SubDistrictComplaintState>(
@@ -141,8 +150,39 @@ export const useSubDistrictComplaintStore = create<SubDistrictComplaintState>(
         const msg =
           err instanceof Error ? err.message : "Failed to update status.";
         set({ error: msg });
-        throw err; // let the page surface the error
+        throw err;
       }
+    },
+
+    uploadEvidence: async (complaintId, files) => {
+      // Step 1: upload files to POST /api/admin/upload using admin JWT (via adminAxios)
+      // Pass complaintId so the backend can resolve the citizen userId for the
+      // MediaUpload FK constraint.
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+      formData.append("complaintId", complaintId);
+
+      const uploadRes = await adminAxios.post<{
+        success: boolean;
+        data: { media: Array<{ mediaId: string; url: string }> };
+      }>("/api/admin/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const mediaIds = uploadRes.data.data.media.map((m) => m.mediaId);
+
+      // Step 2: link the media IDs to the complaint
+      const res = await adminAxios.post<{
+        success: boolean;
+        data: ApiComplaint;
+      }>(`/api/admin/subdistrict/complaints/${complaintId}/evidence`, { mediaIds });
+
+      const updated = res.data.data;
+      set((s) => ({
+        complaints: s.complaints.map((c) => (c.id === complaintId ? updated : c)),
+      }));
+
+      return updated.mediaUrls;
     },
   })
 );

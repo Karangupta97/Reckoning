@@ -364,3 +364,88 @@ export async function updateSubDistrictComplaintStatus(
 
   return toListItem(updated);
 }
+
+/**
+ * Link pre-uploaded media IDs to a complaint as officer evidence.
+ *
+ * Verifies complaint jurisdiction, then creates ComplaintMedia join rows
+ * and marks each MediaUpload as linked. Returns fresh pre-signed URLs.
+ */
+export async function addEvidenceToComplaint(
+  subDistrictId: string,
+  districtId: string,
+  complaintId: string,
+  mediaIds: string[],
+): Promise<SubDistrictComplaintItem> {
+  const existing = await adminDbGuard(
+    () =>
+      prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: { id: true, subDistrictId: true, districtId: true, deletedAt: true },
+      }),
+    "addEvidenceToComplaint:find",
+  );
+
+  if (!existing || existing.deletedAt) {
+    throw new AppError("Complaint not found.", 404, { code: "NOT_FOUND" });
+  }
+
+  if (existing.subDistrictId !== subDistrictId || existing.districtId !== districtId) {
+    throw new AppError("Complaint is out of jurisdiction.", 403, {
+      code: "COMPLAINT_OUT_OF_JURISDICTION",
+    });
+  }
+
+  // Validate media IDs exist and aren't already linked to a different complaint
+  const mediaRecords = await adminDbGuard(
+    () =>
+      prisma.mediaUpload.findMany({
+        where: { id: { in: mediaIds }, isDeleted: false },
+        select: { id: true, linkedAt: true },
+      }),
+    "addEvidenceToComplaint:media",
+  );
+
+  if (mediaRecords.length !== mediaIds.length) {
+    throw new AppError("One or more media files not found.", 404, {
+      code: "MEDIA_NOT_FOUND",
+    });
+  }
+
+  // Create ComplaintMedia join rows (skip existing to be idempotent)
+  await adminDbGuard(
+    () =>
+      prisma.$transaction(
+        mediaIds.map((mediaId) =>
+          prisma.complaintMedia.upsert({
+            where: { complaintId_mediaId: { complaintId, mediaId } },
+            create: { complaintId, mediaId },
+            update: {},
+          }),
+        ),
+      ),
+    "addEvidenceToComplaint:link",
+  );
+
+  // Mark media as linked
+  await adminDbGuard(
+    () =>
+      prisma.mediaUpload.updateMany({
+        where: { id: { in: mediaIds }, linkedAt: null },
+        data: { linkedAt: new Date() },
+      }),
+    "addEvidenceToComplaint:markLinked",
+  );
+
+  const row = await adminDbGuard(
+    () =>
+      prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: LIST_SELECT,
+      }),
+    "addEvidenceToComplaint:reload",
+  );
+
+  if (!row) throw new AppError("Complaint not found.", 404, { code: "NOT_FOUND" });
+  return toListItem(row);
+}
