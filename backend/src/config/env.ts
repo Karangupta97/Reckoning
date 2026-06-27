@@ -179,6 +179,15 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().min(1).optional(),
   VAPID_PRIVATE_KEY: z.string().min(1).optional(),
   VAPID_SUBJECT: z.string().min(1).default("mailto:noreply@roadwatch.ai"),
+
+  // Demo mode — enables an OTP bypass for the demo citizen account only.
+  // When true, POST /api/auth/verify-otp accepts otp=123456 for
+  // demo@reckoning.dev without a real pending verification in the DB.
+  // MUST be false in production.
+  DEMO_MODE_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 })
   .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",

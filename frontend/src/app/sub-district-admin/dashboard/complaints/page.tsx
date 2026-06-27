@@ -30,15 +30,16 @@ const TABS: { label: string; value: ApiComplaintStatus | "ALL" }[] = [
 ];
 
 const STATUS_STYLE: Record<ApiComplaintStatus, { cls: string; label: string; color: string }> = {
-  DRAFT:        { cls: "dashboard-table-badge-status-review",    label: "Draft",        color: "#94a3b8" },
-  SUBMITTED:    { cls: "dashboard-table-badge-status-open",      label: "Submitted",    color: "#ef4444" },
-  UNDER_REVIEW: { cls: "dashboard-table-badge-status-review",    label: "Under Review", color: "#a78bfa" },
-  VERIFIED:     { cls: "dashboard-table-badge-status-review",    label: "Verified",     color: "#60a5fa" },
-  ASSIGNED:     { cls: "dashboard-table-badge-status-escalated", label: "Assigned",     color: "#f97316" },
-  IN_PROGRESS:  { cls: "dashboard-table-badge-status-review",    label: "In Progress",  color: "#f59e0b" },
-  RESOLVED:     { cls: "dashboard-table-badge-status-resolved",  label: "Resolved",     color: "#10b981" },
-  REJECTED:     { cls: "dashboard-table-badge-priority-high",    label: "Rejected",     color: "#ef4444" },
-  ESCALATED:    { cls: "dashboard-table-badge-status-escalated", label: "Escalated",    color: "#f97316" },
+  DRAFT:                  { cls: "dashboard-table-badge-status-review",    label: "Draft",                  color: "#94a3b8" },
+  SUBMITTED:              { cls: "dashboard-table-badge-status-open",      label: "Submitted",              color: "#ef4444" },
+  UNDER_REVIEW:           { cls: "dashboard-table-badge-status-review",    label: "Under Review",           color: "#a78bfa" },
+  VERIFIED:               { cls: "dashboard-table-badge-status-review",    label: "Verified",               color: "#60a5fa" },
+  ASSIGNED:               { cls: "dashboard-table-badge-status-escalated", label: "Assigned",               color: "#f97316" },
+  IN_PROGRESS:            { cls: "dashboard-table-badge-status-review",    label: "In Progress",            color: "#f59e0b" },
+  RESOLVED:               { cls: "dashboard-table-badge-status-resolved",  label: "Resolved",               color: "#10b981" },
+  REJECTED:               { cls: "dashboard-table-badge-priority-high",    label: "Rejected",               color: "#ef4444" },
+  ESCALATED:              { cls: "dashboard-table-badge-status-escalated", label: "Escalated",              color: "#f97316" },
+  ESCALATED_TO_DISTRICT:  { cls: "dashboard-table-badge-status-escalated", label: "Escalated to District",  color: "#14b8a6" },
 };
 
 const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {

@@ -24,7 +24,8 @@ export type ApiComplaintStatus =
   | "IN_PROGRESS"
   | "RESOLVED"
   | "REJECTED"
-  | "ESCALATED";
+  | "ESCALATED"
+  | "ESCALATED_TO_DISTRICT";
 
 export type ApiSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
@@ -86,6 +87,23 @@ interface SubDistrictComplaintState {
     complaintId: string,
     files: File[],
   ) => Promise<string[]>; // returns new media URLs
+  /**
+   * Escalate a complaint to district level via the backend API.
+   * Sets status to ESCALATED_TO_DISTRICT and returns the updated complaint fields.
+   */
+  escalateToDistrict: (
+    complaintId: string,
+    reason?: string,
+  ) => Promise<{
+    id: string;
+    status: ApiComplaintStatus;
+    escalatedAt: string;
+    escalatedBy: string;
+    escalatedToDistrictId: string;
+    escalationLevel: number;
+    escalationReason: string | null;
+    ticketNumber: string;
+  }>;
 }
 
 export const useSubDistrictComplaintStore = create<SubDistrictComplaintState>(
@@ -183,6 +201,33 @@ export const useSubDistrictComplaintStore = create<SubDistrictComplaintState>(
       }));
 
       return updated.mediaUrls;
+    },
+
+    escalateToDistrict: async (complaintId, reason) => {
+      const res = await adminAxios.patch<{
+        success: boolean;
+        data: {
+          id: string;
+          status: ApiComplaintStatus;
+          escalatedAt: string;
+          escalatedBy: string;
+          escalatedToDistrictId: string;
+          escalationLevel: number;
+          escalationReason: string | null;
+          ticketNumber: string;
+        };
+      }>(`/api/admin/subdistrict/complaints/${complaintId}/escalate`, { reason });
+
+      const result = res.data.data;
+
+      // Patch the complaint status in the local store.
+      set((s) => ({
+        complaints: s.complaints.map((c) =>
+          c.id === complaintId ? { ...c, status: result.status } : c,
+        ),
+      }));
+
+      return result;
     },
   })
 );

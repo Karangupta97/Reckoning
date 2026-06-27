@@ -289,8 +289,61 @@ export const MUMBAI_CITY_DISTRICT: DistrictDefinition = {
   ],
 };
 
+/**
+ * Chennai District — Tamil Nadu, India.
+ * Used by the demo accounts:
+ *   district.demo@reckoning.dev      — DISTRICT_ADMIN
+ *   subdistrict.demo@reckoning.dev   — SUB_DISTRICT_ADMIN (Velachery Taluk)
+ */
+export const CHENNAI_DISTRICT: DistrictDefinition = {
+  name: "Chennai",
+  state: "Tamil Nadu",
+  subDistricts: [
+    {
+      id: "velachery",
+      name: "Velachery",
+      taluka: "Velachery Taluk",
+      zone: "Zone South",
+      officers: ["S. Rajan", "P. Kumar", "M. Devi"],
+      center: [12.9810, 80.2200],
+    },
+    {
+      id: "adyar",
+      name: "Adyar",
+      taluka: "Adyar Taluk",
+      zone: "Zone South-West",
+      officers: ["R. Krishnan", "A. Nair"],
+      center: [13.0067, 80.2576],
+    },
+    {
+      id: "tambaram",
+      name: "Tambaram",
+      taluka: "Tambaram Taluk",
+      zone: "Zone South",
+      officers: ["K. Selvam", "N. Pillai"],
+      center: [12.9249, 80.1000],
+    },
+    {
+      id: "ambattur",
+      name: "Ambattur",
+      taluka: "Ambattur Taluk",
+      zone: "Zone North-West",
+      officers: ["V. Balaji", "L. Murugan"],
+      center: [13.1143, 80.1548],
+    },
+    {
+      id: "avadi",
+      name: "Avadi",
+      taluka: "Avadi Taluk",
+      zone: "Zone North",
+      officers: ["T. Sundaram"],
+      center: [13.1152, 80.0984],
+    },
+  ],
+};
+
 /** All known districts */
-export const ALL_DISTRICTS = [RAIGAD_DISTRICT, MUMBAI_SUBURBAN_DISTRICT, MUMBAI_CITY_DISTRICT] as const;
+export const ALL_DISTRICTS = [RAIGAD_DISTRICT, MUMBAI_SUBURBAN_DISTRICT, MUMBAI_CITY_DISTRICT, CHENNAI_DISTRICT] as const;
 
 export const RAIGAD_SUB_DISTRICTS = RAIGAD_DISTRICT.subDistricts;
 export const MUMBAI_SUB_DISTRICTS = MUMBAI_SUBURBAN_DISTRICT.subDistricts;

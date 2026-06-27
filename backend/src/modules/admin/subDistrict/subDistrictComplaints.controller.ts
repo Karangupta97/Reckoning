@@ -13,8 +13,10 @@ import {
   listSubDistrictComplaints,
   updateSubDistrictComplaintStatus,
   getSubDistrictComplaintDetail,
+  escalateComplaintToDistrict,
   type SubDistrictComplaintFilters,
 } from "./subDistrictComplaints.service.js";
+import { sendWebPushToUser } from "../../../services/webpush.service.js";
 
 /** Require a valid admin session or throw 401. */
 function getAdmin(req: Request) {
@@ -173,6 +175,149 @@ export async function updateStatus(
         });
         return;
       }
+    }
+    next(error);
+  }
+}
+
+/**
+ * `PATCH /api/admin/complaints/:complaintId/escalate`
+ * Alias handled via the management router as:
+ * `PATCH /api/admin/subdistrict/complaints/:id/escalate`
+ *
+ * Protected: SUB_DISTRICT_ADMIN or DISTRICT_ADMIN.
+ * - SUB_DISTRICT_ADMIN: complaint must belong to their subDistrictId.
+ * - DISTRICT_ADMIN:     complaint must belong to their districtId.
+ *
+ * Sets status to ESCALATED_TO_DISTRICT, stamps escalatedAt / escalatedBy /
+ * escalatedToDistrictId, then sends a best-effort web-push to the citizen.
+ *
+ * @param req Express request with authenticated admin in `req.admin`.
+ * @param res Express response.
+ * @param next Express next function.
+ */
+export async function escalateComplaint(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const user = req.user ?? req.admin;
+    const subDistrictId = user?.subDistrictId;
+    const districtId = user?.districtId;
+    const role = user?.role;
+
+    if (!districtId) {
+      res.status(403).json({
+        success: false,
+        error: { code: "INSUFFICIENT_SCOPE", message: "Admin profile is missing jurisdiction assignment." },
+      });
+      return;
+    }
+
+    // DISTRICT_ADMIN may escalate complaints that are already in their district —
+    // they must still own the districtId but don't need a subDistrictId.
+    const effectiveSubDistrictId = role === "DISTRICT_ADMIN" ? (subDistrictId ?? "") : subDistrictId;
+
+    if (role !== "DISTRICT_ADMIN" && !effectiveSubDistrictId) {
+      res.status(403).json({
+        success: false,
+        error: { code: "INSUFFICIENT_SCOPE", message: "Admin profile is missing sub-district assignment." },
+      });
+      return;
+    }
+
+    const { id: complaintId } = req.params as { id: string };
+    const { reason } = req.body as { reason?: string };
+
+    const adminId: string = user.id ?? (user as { sub?: string }).sub ?? "";
+
+    // For DISTRICT_ADMIN, perform a looser jurisdiction check (districtId only).
+    let result;
+    if (role === "DISTRICT_ADMIN") {
+      const { prisma } = await import("../../../config/prisma.js");
+      const { AppError: AE } = await import("../../../utils/AppError.js");
+      const existing = await prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: { id: true, districtId: true, status: true, deletedAt: true, userId: true, ticketNumber: true, escalationLevel: true, escalatedAt: true, escalatedBy: true, escalatedToDistrictId: true, escalationReason: true },
+      });
+      if (!existing || existing.deletedAt) {
+        res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Complaint not found." } });
+        return;
+      }
+      if (existing.districtId !== districtId) {
+        res.status(403).json({ success: false, error: { code: "COMPLAINT_OUT_OF_JURISDICTION", message: "Complaint is out of jurisdiction." } });
+        return;
+      }
+      if (existing.status === "ESCALATED_TO_DISTRICT" || existing.status === "RESOLVED" || existing.status === "REJECTED") {
+        res.status(400).json({ success: false, error: { code: "INVALID_TRANSITION", message: "Complaint cannot be escalated in its current state." } });
+        return;
+      }
+      const now = new Date();
+      const updated = await prisma.complaint.update({
+        where: { id: complaintId },
+        data: {
+          status: "ESCALATED_TO_DISTRICT",
+          escalatedAt: now,
+          escalatedBy: adminId,
+          escalatedToDistrictId: districtId,
+          escalationLevel: 1,
+          escalationReason: reason ?? "MANUAL_ESCALATION",
+        },
+        select: { id: true, status: true, escalatedAt: true, escalatedBy: true, escalatedToDistrictId: true, escalationLevel: true, escalationReason: true, ticketNumber: true, userId: true },
+      });
+      result = { ...updated, userId: updated.userId };
+    } else {
+      result = await escalateComplaintToDistrict(
+        effectiveSubDistrictId!,
+        districtId,
+        adminId,
+        complaintId,
+        { reason },
+      );
+    }
+
+    // Best-effort web-push to the citizen reporting the complaint.
+    if (result.userId) {
+      sendWebPushToUser(result.userId, {
+        title: `Complaint Update — ${result.ticketNumber}`,
+        body: `Your complaint #${result.ticketNumber} has been escalated to district authorities for review.`,
+        icon: "/android-chrome-192x192.png",
+        badge: "/android-chrome-192x192.png",
+        tag: `complaint-escalated-${complaintId}`,
+        url: "/dashboard/my-reports",
+        data: {
+          complaintId,
+          ticketNumber: result.ticketNumber,
+          status: "ESCALATED_TO_DISTRICT",
+        },
+      }).catch((err: unknown) => {
+        // eslint-disable-next-line no-console
+        console.warn("[escalateComplaint] Web Push failed (non-fatal):", err);
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: result.id,
+        status: result.status,
+        escalatedAt: result.escalatedAt,
+        escalatedBy: result.escalatedBy,
+        escalatedToDistrictId: result.escalatedToDistrictId,
+        escalationLevel: result.escalationLevel,
+        escalationReason: result.escalationReason,
+        ticketNumber: result.ticketNumber,
+      },
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      if (error.code === "COMPLAINT_OUT_OF_JURISDICTION") {
+        res.status(403).json({ success: false, error: { code: error.code, message: error.message } });
+        return;
+      }
+      res.status(error.statusCode).json({ success: false, error: { code: error.code, message: error.message } });
+      return;
     }
     next(error);
   }

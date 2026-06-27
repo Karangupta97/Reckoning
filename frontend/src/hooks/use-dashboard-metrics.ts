@@ -6,6 +6,8 @@ import { useEscalationStore } from "@/store/escalationStore";
 import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
 import { useEvidenceStore } from "@/store/evidenceStore";
 import { useDateRangeStore } from "@/store/dateRangeStore";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import { SUB_DISTRICT_CONFIG } from "@/lib/sub-district-config";
 import {
   filterComplaintsByPeriod,
   filterEscalationsByPeriod,
@@ -43,17 +45,25 @@ export function useSubDistrictDashboardMetrics() {
   const tickets = useComplaintWorkflowStore((s) => s.tickets);
   const resolutions = useComplaintWorkflowStore((s) => s.resolutions);
 
+  // Read the real sub-district name from the logged-in admin's profile.
+  // Falls back to the static config (Panvel) for dev/non-demo accounts.
+  const admin = useAdminAuthStore((s) => s.admin);
+  const activeSubDistrictName: string =
+    admin?.subDistrictName ?? SUB_DISTRICT_CONFIG.name;
+
   return useMemo(() => {
     const scopedComplaints = filterSubDistrictComplaints(
-      filterComplaintsByPeriod(complaints, period)
+      filterComplaintsByPeriod(complaints, period),
+      activeSubDistrictName,
     );
     const subEscalations = filterSubDistrictEscalations(
-      filterEscalationsByPeriod(escalations, period)
+      filterEscalationsByPeriod(escalations, period),
+      activeSubDistrictName,
     );
     const open = countOpenComplaints(scopedComplaints);
-    const escalated = countEscalatedCases(scopedComplaints, subEscalations);
+    const escalated = countEscalatedCases(scopedComplaints, subEscalations, activeSubDistrictName);
     const pendingResolutions = countPendingResolutions(resolutions);
-    const slaWarning = countSlaWarnings(scopedComplaints, subEscalations);
+    const slaWarning = countSlaWarnings(scopedComplaints, subEscalations, activeSubDistrictName);
     const sla = slaBuckets(scopedComplaints);
     const activeTickets = countActiveTickets(tickets);
     const workload = workloadStats(scopedComplaints, resolutions);
@@ -78,7 +88,7 @@ export function useSubDistrictDashboardMetrics() {
       totalComplaints: scopedComplaints.length,
       period,
     };
-  }, [complaints, escalations, tickets, resolutions, period]);
+  }, [complaints, escalations, tickets, resolutions, period, activeSubDistrictName]);
 }
 
 export function useDistrictDashboardMetrics() {

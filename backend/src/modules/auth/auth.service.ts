@@ -244,6 +244,63 @@ export async function register(input: RegisterInput): Promise<OtpDispatchResult>
 export async function verifyOtp(input: VerifyOtpInput): Promise<AuthResult> {
   const { email, otp } = input;
 
+  // ── Demo mode bypass ──────────────────────────────────────────────────────
+  // When DEMO_MODE_ENABLED=true, the demo citizen can activate/login with a
+  // fixed OTP without a real pending verification record.
+  // This bypass is only active when explicitly opt-in via the env flag.
+  if (env.DEMO_MODE_ENABLED && email === "demo@reckoning.dev" && otp === "123456") {
+    const demoUser = await dbGuard(
+      () =>
+        prisma.user.findUnique({
+          where: { email: "demo@reckoning.dev" },
+          select: {
+            id: true,
+            email: true,
+            fullName: true,
+            country: true,
+            role: true,
+            createdAt: true,
+          },
+        }),
+      "verifyOtp:demo:findUser",
+    ) as Awaited<ReturnType<typeof prisma.user.findUnique>> | null;
+
+    if (!demoUser) {
+      throw new AppError("Demo account not found. Please run the seed script.", 404);
+    }
+
+    const tokens = signTokenPair({
+      id: demoUser.id,
+      email: demoUser.email,
+      role: demoUser.role as UserRole,
+    });
+
+    // Persist the refresh token so the session is valid.
+    const decoded = verifyRefreshToken(tokens.refreshToken);
+    const refreshExpiresAt = decoded.exp
+      ? new Date(decoded.exp * 1000)
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await dbGuard(
+      () =>
+        prisma.refreshToken.create({
+          data: {
+            tokenHash: createHash("sha256").update(tokens.refreshToken).digest("hex"),
+            userId: demoUser.id,
+            expiresAt: refreshExpiresAt,
+          },
+        }),
+      "verifyOtp:demo:storeRefresh",
+    );
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      user: toPublicUser({ ...demoUser, country: demoUser.country as CountryEnum }),
+    };
+  }
+  // ── End demo bypass ───────────────────────────────────────────────────────
+
   const pending = (await dbGuard(
     () => prisma.pendingVerification.findUnique({
       where: { email },

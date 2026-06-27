@@ -65,6 +65,12 @@ export const useAdminAuthStore = create<AdminAuthStore>()(
           if (res.data?.success && res.data?.data) {
             const { admin, accessToken, refreshToken } = res.data.data;
             set({ admin, accessToken, refreshToken, isLoading: false });
+            // Re-scope budget mock data to this admin's district so the budget
+            // page never shows another district's entries after login.
+            // Lazy-import avoids a circular-dependency at module level.
+            import("@/store/budgetApprovalStore").then(({ useBudgetApprovalStore }) => {
+              useBudgetApprovalStore.getState().rehydrateForAdmin(admin.districtName);
+            }).catch(() => { /* non-fatal */ });
           } else {
             throw new Error("Invalid response format from server.");
           }
@@ -136,6 +142,16 @@ export const useAdminAuthStore = create<AdminAuthStore>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
       }),
+      // After the persisted state is rehydrated (page reload while logged in),
+      // re-scope the budget store to the admin's district so stale data from
+      // a previous session with a different account is never shown.
+      onRehydrateStorage: () => (state) => {
+        if (state?.admin?.districtName) {
+          import("@/store/budgetApprovalStore").then(({ useBudgetApprovalStore }) => {
+            useBudgetApprovalStore.getState().rehydrateForAdmin(state.admin?.districtName);
+          }).catch(() => { /* non-fatal */ });
+        }
+      },
     }
   )
 );

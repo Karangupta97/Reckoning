@@ -197,6 +197,15 @@ managementRouter.post(
 );
 
 // New: sub-district complaint endpoints (subDistrictId-scoped, not geofence)
+
+// Escalate to District — must be registered BEFORE enforceSubDistrictScope
+// because DISTRICT_ADMIN callers don't have a subDistrictId claim.
+managementRouter.patch(
+  "/subdistrict/complaints/:id/escalate",
+  requireRole("SUB_DISTRICT_ADMIN", "DISTRICT_ADMIN"),
+  subDistrictComplaintsCtrl.escalateComplaint,
+);
+
 managementRouter.use("/subdistrict", enforceSubDistrictScope);
 
 managementRouter.get(

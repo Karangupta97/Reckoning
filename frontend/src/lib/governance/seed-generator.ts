@@ -8,7 +8,7 @@ import type { BudgetRequest, BudgetRequestStatus } from "@/store/budgetApprovalS
 import type { EvidenceRecord, EvidenceStatus } from "@/store/evidenceStore";
 import type { AdminUser } from "@/store/adminUserStore";
 import { DETAILED_COMPLAINT_SEED } from "@/lib/governance/detailed-complaints";
-import { RAIGAD_DISTRICT, RAIGAD_SUB_DISTRICTS, type SubDistrictDefinition } from "@/lib/governance/district-structure";
+import { RAIGAD_DISTRICT, RAIGAD_SUB_DISTRICTS, CHENNAI_DISTRICT, type SubDistrictDefinition } from "@/lib/governance/district-structure";
 
 const REFERENCE = new Date(2026, 5, 9);
 const DISTRICT_LABEL = `${RAIGAD_DISTRICT.name} District`;
@@ -127,6 +127,28 @@ export function generateExtendedComplaints(): ComplaintRecord[] {
       const priority = COMPLAINT_PRIORITIES[(idNum + i) % COMPLAINT_PRIORITIES.length];
       const category = COMPLAINT_CATEGORIES[(idNum + i) % COMPLAINT_CATEGORIES.length];
       out.push(buildComplaint(idNum, sub, daysAgo, status, priority, category));
+      idNum++;
+    }
+  }
+
+  // ── Chennai / Velachery mock complaints ───────────────────────────────────
+  // These are scoped to Chennai district so the demo sub-district admin
+  // (subdistrict.demo@reckoning.dev) sees real-looking data for their area.
+  // idNum starts at 1800 to avoid collisions with Raigad records.
+  idNum = 1800;
+  for (const sub of CHENNAI_DISTRICT.subDistricts) {
+    const count = sub.id === "velachery" ? 14 : 5; // more data for demo sub-district
+    for (let i = 0; i < count; i++) {
+      const daysAgo = 2 + i * 6 + CHENNAI_DISTRICT.subDistricts.indexOf(sub) * 2;
+      const status = COMPLAINT_STATUSES[(idNum + i) % COMPLAINT_STATUSES.length];
+      const priority = COMPLAINT_PRIORITIES[(idNum + i) % COMPLAINT_PRIORITIES.length];
+      const category = COMPLAINT_CATEGORIES[(idNum + i) % COMPLAINT_CATEGORIES.length];
+      const complaint = buildComplaint(idNum, sub, daysAgo, status, priority, category);
+      // Override coordinates to Chennai region
+      out.push({
+        ...complaint,
+        coordinates: `${(12.95 + (i % 7) * 0.008).toFixed(4)}° N, ${(80.20 + (i % 5) * 0.007).toFixed(4)}° E`,
+      });
       idNum++;
     }
   }
@@ -330,7 +352,8 @@ export function generateGovernanceBudgets(escalations: Escalation[]): BudgetRequ
     "Under Audit",
   ];
 
-  return escalations.slice(0, 18).map((e, index) => {
+  // Raigad budgets (from escalations — legacy path)
+  const raigadBudgets: BudgetRequest[] = escalations.slice(0, 18).map((e, index) => {
     const status = statuses[index % statuses.length];
     const requestedAmount = 12 + (index % 8) * 7.5;
     const submittedOn = e.escalatedOn;
@@ -363,6 +386,64 @@ export function generateGovernanceBudgets(escalations: Escalation[]): BudgetRequ
       auditTrail: [{ time: submittedOn, actor: "System", event: "Request Created" }],
     };
   });
+
+  // ── Chennai / Velachery budgets ────────────────────────────────────────────
+  // Demo data for district.demo@reckoning.dev and subdistrict.demo@reckoning.dev.
+  const CHENNAI_DISTRICT_LABEL = `${CHENNAI_DISTRICT.name} District`;
+  const CHENNAI_PROJECTS = [
+    "Road resurfacing — Velachery Main Road",
+    "Stormwater drain repair — 100 Feet Road",
+    "Pothole patching — Velachery–Tambaram Road",
+    "Street light upgrade — Inner Ring Road",
+    "Footpath restoration — Velachery Lake Road",
+    "Traffic signal overhaul — Taramani Junction",
+    "Waterlogging remediation — Velachery Bypass",
+    "Civic amenity renovation — Perungudi",
+    "Road marking renewal — OMR Slip Road",
+    "Infrastructure repair — Pallikaranai Marsh edge",
+  ];
+  const CHENNAI_SUBMITTED_ON = [
+    "4 Jun 2026", "15 May 2026", "29 Apr 2026", "25 Apr 2026", "8 Jun 2026",
+    "19 May 2026", "1 May 2026", "22 Apr 2026", "12 Apr 2026", "4 Apr 2026",
+  ];
+  const CHENNAI_AMOUNTS = [19, 18.5, 27, 34.5, 43, 48.5, 57, 64.5, 12, 18.5];
+
+  const chennaiBudgets: BudgetRequest[] = CHENNAI_PROJECTS.map((project, index) => {
+    const status = statuses[index % statuses.length];
+    const requestedAmount = CHENNAI_AMOUNTS[index] ?? 20 + index * 3;
+    const submittedOn = CHENNAI_SUBMITTED_ON[index] ?? "1 Jun 2026";
+    const escId = `ESC-CHN-${String(4100 + index).padStart(4, "0")}`;
+
+    return {
+      id: `BUD-CHN-${String(index + 1).padStart(3, "0")}`,
+      district: CHENNAI_DISTRICT_LABEL,
+      state: CHENNAI_DISTRICT.state,
+      project,
+      requestedAmount,
+      approvedAmount: status === "Approved" ? Math.round(requestedAmount * 0.93 * 10) / 10 : undefined,
+      status,
+      priority: (["Critical", "High", "Medium", "Low"] as const)[index % 4],
+      requestType: index % 5 === 0 ? "Emergency" : "Standard",
+      submittedOn,
+      submittedBy: "District Officer S. Rajan",
+      fiscalYear: "2025-26",
+      justification: `Infrastructure remediation budget for ${project} under Chennai jurisdiction SLA policy.`,
+      notes: status === "Clarification Requested" ? "Awaiting PWD clearance documents." : "",
+      linkedEscalationIds: [escId],
+      documents: [{ name: "Cost Estimate", size: "1.1 MB", type: "pdf" }],
+      timeline: [
+        { label: "Request Submitted", date: submittedOn, done: true, note: "District admin submitted" },
+        { label: "Super Admin Review", date: status === "Pending Approval" ? "Pending" : submittedOn, done: status !== "Pending Approval", note: "" },
+        { label: "Decision", date: status === "Pending Approval" ? "Pending" : submittedOn, done: status !== "Pending Approval", note: status },
+        { label: "Funds Disbursed", date: status === "Approved" ? "Pending" : "—", done: false, note: "" },
+      ],
+      activityLog: [{ time: submittedOn, actor: "District Officer S. Rajan", action: `Submitted budget for ${escId}` }],
+      approvalHistory: [],
+      auditTrail: [{ time: submittedOn, actor: "System", event: "Request Created" }],
+    };
+  });
+
+  return [...raigadBudgets, ...chennaiBudgets];
 }
 
 export function generateGovernanceAdminUsers(): AdminUser[] {

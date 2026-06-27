@@ -7,8 +7,20 @@ import type { EvidenceRecord } from "@/store/evidenceStore";
 
 const OPEN_COMPLAINT_STATUSES = new Set(["Open", "Assigned", "In Progress", "Escalated"]);
 
-export function filterSubDistrictComplaints(complaints: ComplaintRecord[]): ComplaintRecord[] {
-  return complaints.filter((c) => c.subDistrict === SUB_DISTRICT_CONFIG.name);
+/**
+ * Filter complaints to those belonging to a specific sub-district.
+ *
+ * @param complaints  Full complaint list from the store.
+ * @param subDistrictName  The sub-district to scope to (e.g. "Velachery Taluk").
+ *                         Falls back to the static SUB_DISTRICT_CONFIG.name when omitted
+ *                         so existing call-sites that don't pass a name keep working.
+ */
+export function filterSubDistrictComplaints(
+  complaints: ComplaintRecord[],
+  subDistrictName?: string,
+): ComplaintRecord[] {
+  const name = subDistrictName ?? SUB_DISTRICT_CONFIG.name;
+  return complaints.filter((c) => c.subDistrict === name);
 }
 
 export function countOpenComplaints(complaints: ComplaintRecord[]): number {
@@ -19,8 +31,8 @@ export function countResolvedComplaints(complaints: ComplaintRecord[]): number {
   return complaints.filter((c) => c.status === "Resolved").length;
 }
 
-export function countEscalatedCases(complaints: ComplaintRecord[], escalations: Escalation[]): number {
-  const subEsc = filterSubDistrictEscalations(escalations);
+export function countEscalatedCases(complaints: ComplaintRecord[], escalations: Escalation[], subDistrictName?: string): number {
+  const subEsc = filterSubDistrictEscalations(escalations, subDistrictName);
   const active = subEsc.filter((e) => e.status !== "Resolved" && e.status !== "Closed");
   const fromComplaints = complaints.filter(
     (c) => c.status === "Escalated" || !!c.escalationId
@@ -28,9 +40,15 @@ export function countEscalatedCases(complaints: ComplaintRecord[], escalations: 
   return Math.max(active.length, fromComplaints);
 }
 
-export function filterSubDistrictEscalations(escalations: Escalation[]): Escalation[] {
-  const name = SUB_DISTRICT_CONFIG.name;
-  const short = name.replace(" Taluka", "");
+/**
+ * Filter escalations to those belonging to a specific sub-district.
+ *
+ * @param escalations      Full escalation list.
+ * @param subDistrictName  Falls back to SUB_DISTRICT_CONFIG.name when omitted.
+ */
+export function filterSubDistrictEscalations(escalations: Escalation[], subDistrictName?: string): Escalation[] {
+  const name = subDistrictName ?? SUB_DISTRICT_CONFIG.name;
+  const short = name.replace(" Taluka", "").replace(" Taluk", "");
   return escalations.filter(
     (e) =>
       e.subDistrict === name ||
@@ -55,14 +73,15 @@ export function slaBuckets(complaints: ComplaintRecord[]) {
 
 export function countSlaWarnings(
   complaints: ComplaintRecord[],
-  escalations: Escalation[] = []
+  escalations: Escalation[] = [],
+  subDistrictName?: string,
 ): number {
   const complaintWarnings = complaints.filter(
     (c) =>
       OPEN_COMPLAINT_STATUSES.has(c.status) &&
       (c.slaStatus === "Breached" || c.slaStatus === "At Risk")
   ).length;
-  const escWarnings = filterSubDistrictEscalations(escalations).filter(
+  const escWarnings = filterSubDistrictEscalations(escalations, subDistrictName).filter(
     (e) =>
       e.status !== "Resolved" &&
       e.status !== "Closed" &&

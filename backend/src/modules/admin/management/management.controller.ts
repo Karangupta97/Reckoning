@@ -236,11 +236,12 @@ export async function getMyEscalations(
 ): Promise<void> {
   try {
     const admin = requireAdmin(req);
-    const q = req.query as unknown as PaginationQuery;
+    const q = req.query as unknown as PaginationQuery & { status?: string };
     const result = await managementService.getDistrictEscalations(
       admin.districtId ?? null,
       q.page,
       q.limit,
+      q.status,
     );
     res.status(200).json({ success: true, data: result });
   } catch (error) {

@@ -172,6 +172,31 @@ function seedTimeline(submittedOn: string, status: BudgetRequestStatus): BudgetT
 
 const SEED = GOVERNANCE_BUDGETS;
 
+// Determine the active district at store initialisation time.
+// For demo accounts the budget seed contains both Raigad and Chennai entries;
+// we filter to the currently persisted admin's district so the sub-district
+// admin only sees their own data.
+function getSeedForActiveAdmin(): BudgetRequest[] {
+  // Read from localStorage directly (store hasn't hydrated yet at module init)
+  try {
+    const raw = typeof window !== "undefined"
+      ? window.localStorage.getItem("reckoning-admin-auth")
+      : null;
+    if (raw) {
+      const parsed = JSON.parse(raw) as { state?: { admin?: { districtName?: string } } };
+      const districtName = parsed?.state?.admin?.districtName;
+      if (districtName) {
+        const label = `${districtName} District`;
+        const scoped = SEED.filter((b) => b.district === label);
+        if (scoped.length > 0) return scoped;
+      }
+    }
+  } catch {
+    // localStorage unavailable or parse error — fall through to full seed
+  }
+  return SEED;
+}
+
 function patchTimeline(
   timeline: BudgetTimelineStep[],
   label: string,
@@ -199,6 +224,8 @@ interface BudgetApprovalState {
   releaseFunds: (id: string, amount: number, note: string) => void;
   appendActivity: (id: string, actor: string, action: string) => void;
   appendNote: (id: string, note: string) => void;
+  /** Re-scope seed data to the supplied district. Called after admin login. */
+  rehydrateForAdmin: (districtName: string | null | undefined) => void;
 }
 
 function updateRequest(
@@ -212,7 +239,7 @@ function updateRequest(
 export const useBudgetApprovalStore = create<BudgetApprovalState>()(
   persist(
     (set, get) => ({
-  requests: SEED,
+  requests: getSeedForActiveAdmin(),
   nextBudgetId: 9,
 
   submitBudgetRequest: (entry) => {
@@ -454,6 +481,20 @@ export const useBudgetApprovalStore = create<BudgetApprovalState>()(
         notes: req.notes ? `${req.notes}\n\n[${nowStr()}] ${note}` : note,
       }),
     });
+  },
+
+  rehydrateForAdmin: (districtName) => {
+    if (!districtName) return;
+    const label = `${districtName} District`;
+    // Only keep seed entries that match this district OR were submitted at runtime
+    // (runtime entries have ids that won't be in the seed, so we preserve them).
+    const seedIds = new Set(SEED.map((b) => b.id));
+    const userSubmitted = get().requests.filter((r) => !seedIds.has(r.id));
+    const scoped = SEED.filter((b) => b.district === label);
+    // If there's no matching seed data fall back to the full seed so the UI
+    // isn't empty (e.g. Super Admin who sees everything).
+    const base = scoped.length > 0 ? scoped : SEED;
+    set({ requests: [...userSubmitted, ...base] });
   },
 }),
     adminPersistOptions("budget-approval", (s) => ({

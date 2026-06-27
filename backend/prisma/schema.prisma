@@ -307,6 +307,7 @@ model Complaint {
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
   escalatedAt           DateTime?
+  escalatedBy           String?
   escalatedToDistrictId String?
   escalationLevel       Int                       @default(0)
   escalationReason      String?
@@ -519,6 +520,7 @@ enum ComplaintStatus {
   RESOLVED
   REJECTED
   ESCALATED
+  ESCALATED_TO_DISTRICT
 
   @@schema("public")
 }

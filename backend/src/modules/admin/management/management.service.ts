@@ -544,6 +544,7 @@ export interface AdminComplaintView {
   country: string;
   escalationLevel: number;
   escalatedAt: Date | null;
+  escalatedBy: string | null;
   escalationReason: string | null;
   slaDeadline: Date | null;
   createdAt: Date;
@@ -575,6 +576,7 @@ function toAdminComplaintView(c: {
   country: string;
   escalationLevel: number;
   escalatedAt: Date | null;
+  escalatedBy: string | null;
   escalationReason: string | null;
   slaDeadline: Date | null;
   createdAt: Date;
@@ -593,6 +595,7 @@ function toAdminComplaintView(c: {
     country: c.country,
     escalationLevel: c.escalationLevel,
     escalatedAt: c.escalatedAt,
+    escalatedBy: c.escalatedBy,
     escalationReason: c.escalationReason,
     slaDeadline: c.slaDeadline,
     createdAt: c.createdAt,
@@ -614,6 +617,7 @@ const ADMIN_COMPLAINT_SELECT = {
   country: true,
   escalationLevel: true,
   escalatedAt: true,
+  escalatedBy: true,
   escalationReason: true,
   slaDeadline: true,
   createdAt: true,
@@ -625,16 +629,19 @@ const ADMIN_COMPLAINT_SELECT = {
  *
  * Returns complaints `WHERE escalatedToDistrictId = districtId` — never the
  * non-escalated sub-district traffic. Citizen identity is never exposed.
+ * Optionally filter by `status` (e.g. `ESCALATED_TO_DISTRICT`).
  *
  * @param districtId The acting admin's district id.
  * @param page       1-based page.
  * @param limit      Page size.
+ * @param status     Optional status filter string.
  * @returns A paginated list of escalated complaints.
  */
 export async function getDistrictEscalations(
   districtId: string | null,
   page: number,
   limit: number,
+  status?: string,
 ): Promise<AdminComplaintListResult> {
   if (!districtId) {
     throw new AppError("Your account is not assigned to a district.", 400, {
@@ -645,6 +652,7 @@ export async function getDistrictEscalations(
   const where: Prisma.ComplaintWhereInput = {
     escalatedToDistrictId: districtId,
     deletedAt: null,
+    ...(status ? { status: status as Prisma.EnumComplaintStatusFilter } : {}),
   };
 
   const [total, rows] = await adminDbGuard(

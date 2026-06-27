@@ -23,6 +23,7 @@ import {
   Trophy,
   Award,
   MessageSquare,
+  ClipboardList,
 } from "lucide-react";
 import { LogoMark } from "@/components/ui/Logo";
 import { useDistrictInfo } from "@/hooks/useDistrictInfo";
@@ -52,6 +53,12 @@ const navItems: NavItem[] = [
     label: "Escalations",
     icon: <ShieldAlert size={18} />,
     href: "/district-admin/dashboard/escalation",
+    color: "text-[var(--color-text-muted)]",
+  },
+  {
+    label: "Complaints",
+    icon: <ClipboardList size={18} />,
+    href: "/district-admin/dashboard/complaints",
     color: "text-[var(--color-text-muted)]",
   },
   {

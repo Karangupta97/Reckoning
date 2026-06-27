@@ -18,6 +18,7 @@ import {
   Loader2, ExternalLink, Sparkles, RefreshCw,
   UserCheck, Wrench, ShieldAlert, Share2, Search,
   ClipboardCheck, TrendingUp, CircleDot, Upload,
+  Info,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { AdminAIAnnotatedPanel } from "@/components/admin/AdminAIAnnotatedPanel";
@@ -27,21 +28,24 @@ import {
   type ApiComplaintStatus,
 } from "@/store/subDistrictComplaintStore";
 import { adminAxios } from "@/lib/adminAxios";
+import { withMockFallback } from "@/lib/api/withMockFallback";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
 
 // ---------------------------------------------------------------------------
 // Types & Constants
 // ---------------------------------------------------------------------------
 
 const STATUS_STYLE: Record<ApiComplaintStatus, { cls: string; label: string; color: string }> = {
-  DRAFT:        { cls: "dashboard-table-badge-status-review",    label: "Draft",        color: "#94a3b8" },
-  SUBMITTED:    { cls: "dashboard-table-badge-status-open",      label: "Submitted",    color: "#ef4444" },
-  UNDER_REVIEW: { cls: "dashboard-table-badge-status-review",    label: "Under Review", color: "#a78bfa" },
-  VERIFIED:     { cls: "dashboard-table-badge-status-review",    label: "Verified",     color: "#60a5fa" },
-  ASSIGNED:     { cls: "dashboard-table-badge-status-escalated", label: "Assigned",     color: "#f97316" },
-  IN_PROGRESS:  { cls: "dashboard-table-badge-status-review",    label: "In Progress",  color: "#f59e0b" },
-  RESOLVED:     { cls: "dashboard-table-badge-status-resolved",  label: "Resolved",     color: "#10b981" },
-  REJECTED:     { cls: "dashboard-table-badge-priority-high",    label: "Rejected",     color: "#ef4444" },
-  ESCALATED:    { cls: "dashboard-table-badge-status-escalated", label: "Escalated",    color: "#f97316" },
+  DRAFT:                  { cls: "dashboard-table-badge-status-review",    label: "Draft",                  color: "#94a3b8" },
+  SUBMITTED:              { cls: "dashboard-table-badge-status-open",      label: "Submitted",              color: "#ef4444" },
+  UNDER_REVIEW:           { cls: "dashboard-table-badge-status-review",    label: "Under Review",           color: "#a78bfa" },
+  VERIFIED:               { cls: "dashboard-table-badge-status-review",    label: "Verified",               color: "#60a5fa" },
+  ASSIGNED:               { cls: "dashboard-table-badge-status-escalated", label: "Assigned",               color: "#f97316" },
+  IN_PROGRESS:            { cls: "dashboard-table-badge-status-review",    label: "In Progress",            color: "#f59e0b" },
+  RESOLVED:               { cls: "dashboard-table-badge-status-resolved",  label: "Resolved",               color: "#10b981" },
+  REJECTED:               { cls: "dashboard-table-badge-priority-high",    label: "Rejected",               color: "#ef4444" },
+  ESCALATED:              { cls: "dashboard-table-badge-status-escalated", label: "Escalated",              color: "#f97316" },
+  ESCALATED_TO_DISTRICT:  { cls: "dashboard-table-badge-status-escalated", label: "Escalated to District",  color: "#14b8a6" },
 };
 
 const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
@@ -369,22 +373,206 @@ function UploadEvidenceModal({
   );
 }
 
+/**
+ * EscalateToDistrictDialog — Framer Motion animated confirm dialog.
+ *
+ * Shows a neu-card-lg style modal asking for an optional reason, then calls
+ * the backend PATCH /api/admin/subdistrict/complaints/:id/escalate.
+ * On success: toasts "Escalated to district successfully." and disables the button.
+ */
+function EscalateToDistrictDialog({
+  complaint,
+  onClose,
+  onConfirm,
+}: {
+  complaint: ApiComplaint;
+  onClose: () => void;
+  onConfirm: (ticketNumber: string) => void;
+}) {
+  const escalateToDistrict = useSubDistrictComplaintStore((s) => s.escalateToDistrict);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await withMockFallback(
+        () => escalateToDistrict(complaint.id, reason.trim() || undefined),
+        () => ({
+          id: complaint.id,
+          status: "ESCALATED_TO_DISTRICT" as const,
+          escalatedAt: new Date().toISOString(),
+          escalatedBy: "mock-admin",
+          escalatedToDistrictId: "mock-district",
+          escalationLevel: 1,
+          escalationReason: reason || "MANUAL_ESCALATION",
+          ticketNumber: "RW-MOCK",
+        }),
+      );
+      setDone(true);
+      setTimeout(() => onConfirm(result.ticketNumber), 900);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to escalate. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget && !loading) onClose(); }}
+    >
+      <motion.div
+        initial={{ scale: 0.94, opacity: 0, y: 12 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.94, opacity: 0 }}
+        transition={{ type: "spring", damping: 24, stiffness: 320 }}
+        className="w-full max-w-md rounded-2xl border shadow-xl flex flex-col neu-card-lg"
+        style={{ background: "var(--color-card)", borderColor: "var(--color-border)", maxHeight: "90vh" }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border"
+              style={{ background: "rgba(20,184,166,0.1)", borderColor: "rgba(20,184,166,0.3)" }}>
+              <ShieldAlert size={15} style={{ color: "#14b8a6" }} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Escalate to District</h3>
+              <p className="text-[10px] text-[var(--color-text-muted)] font-mono mt-0.5">
+                {complaint.id.slice(0, 14)}…
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-colors disabled:opacity-40"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+          {/* Context strip */}
+          <div className="rounded-lg border px-3 py-2.5 flex items-start gap-2"
+            style={{ borderColor: "rgba(20,184,166,0.25)", background: "rgba(20,184,166,0.06)" }}>
+            <Info size={12} className="shrink-0 mt-0.5" style={{ color: "#14b8a6" }} />
+            <p className="text-[11px] text-[var(--color-text-secondary)] leading-relaxed">
+              This complaint was submitted by{" "}
+              <span className="font-semibold text-[var(--color-text-primary)]">{complaint.citizenName}</span>.
+              Escalating will notify the citizen and route the case to district authorities for review.
+            </p>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <label className="text-xs font-semibold text-[var(--color-text-secondary)] block mb-1.5">
+              Reason for Escalation{" "}
+              <span className="text-[var(--color-text-muted)] font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="Describe why this complaint needs district-level attention…"
+              className="w-full rounded-lg border px-3 py-2 text-xs text-[var(--color-text-secondary)] resize-none focus:outline-none transition-colors"
+              style={{
+                background: "var(--color-surface)",
+                borderColor: "var(--color-border)",
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(20,184,166,0.5)"; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; }}
+            />
+          </div>
+
+          {/* Warning info strip */}
+          <div className="rounded-lg border px-3 py-2 flex items-center gap-2"
+            style={{ borderColor: "rgba(245,158,11,0.2)", background: "rgba(245,158,11,0.05)" }}>
+            <AlertTriangle size={11} className="shrink-0 text-amber-400" />
+            <p className="text-[10px] text-[var(--color-text-muted)]">
+              The citizen will receive a web-push notification:{" "}
+              <em className="text-[var(--color-text-secondary)]">
+                "Your complaint has been escalated to district authorities for review."
+              </em>
+            </p>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-lg border px-3 py-2 flex items-center gap-2"
+              style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.06)", color: "var(--color-danger)" }}>
+              <AlertTriangle size={12} className="shrink-0" />
+              <p className="text-[11px]">{error}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3 shrink-0">
+          <button
+            onClick={onClose}
+            disabled={loading || done}
+            className="h-9 px-4 rounded-lg border text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-40"
+            style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+          >
+            Cancel
+          </button>
+          <motion.button
+            whileHover={{ scale: done || loading ? 1 : 1.02 }}
+            whileTap={{ scale: done || loading ? 1 : 0.97 }}
+            onClick={handleConfirm}
+            disabled={loading || done}
+            className="flex items-center gap-2 h-9 px-5 rounded-lg border text-sm font-semibold transition-all disabled:opacity-60 btn-amber"
+            style={{
+              borderColor: done ? "rgba(20,184,166,0.4)"  : "rgba(20,184,166,0.45)",
+              background:  done ? "rgba(20,184,166,0.15)" : "rgba(20,184,166,0.12)",
+              color:       done ? "#14b8a6"               : "#14b8a6",
+            }}
+          >
+            {done ? (
+              <><CheckCircle2 size={14} /> Escalated!</>
+            ) : loading ? (
+              <><motion.span
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent"
+              /> Escalating…</>
+            ) : (
+              <><ShieldAlert size={14} /> Confirm Escalation</>
+            )}
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 /** Case Actions panel — Assign, Mark In Progress, Upload Evidence, Resolve, Reject, Escalate */
 function CaseActionsPanel({
   complaint,
   onUpdateStatus,
   isUpdating,
   onEvidenceUploaded,
+  onEscalated,
 }: {
   complaint: ApiComplaint;
   onUpdateStatus: (status: ApiComplaintStatus) => void;
   isUpdating: boolean;
   onEvidenceUploaded: (urls: string[], status: string, reason: string) => void;
+  onEscalated: (ticketNumber: string) => void;
 }) {
   const isResolved = complaint.status === "RESOLVED" || complaint.status === "REJECTED";
-  const isEscalated = complaint.status === "ESCALATED";
+  const isEscalated = complaint.status === "ESCALATED" || complaint.status === "ESCALATED_TO_DISTRICT";
   const isInProgress = complaint.status === "IN_PROGRESS";
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [escalateOpen, setEscalateOpen] = useState(false);
 
   return (
     <>
@@ -447,12 +635,12 @@ function CaseActionsPanel({
       <motion.button whileHover={{ x: isResolved || isEscalated ? 0 : 2 }}
         whileTap={{ scale: isResolved || isEscalated ? 1 : 0.97 }}
         disabled={isResolved || isEscalated}
-        onClick={() => onUpdateStatus("ESCALATED")}
+        onClick={() => setEscalateOpen(true)}
         className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
         style={{
-          borderColor: isEscalated ? "rgba(249,115,22,0.5)" : "rgba(249,115,22,0.3)",
-          background: isEscalated ? "rgba(249,115,22,0.12)" : "rgba(249,115,22,0.07)",
-          color: "#f97316",
+          borderColor: isEscalated ? "rgba(20,184,166,0.5)" : "rgba(249,115,22,0.3)",
+          background:  isEscalated ? "rgba(20,184,166,0.12)" : "rgba(249,115,22,0.07)",
+          color: isEscalated ? "#14b8a6" : "#f97316",
         }}>
         <ShieldAlert size={14} /> {isEscalated ? "Escalated to District ✓" : "Escalate to District"}
       </motion.button>
@@ -467,6 +655,20 @@ function CaseActionsPanel({
           onSuccess={(urls, status, reason) => {
             setUploadOpen(false);
             onEvidenceUploaded(urls, status, reason);
+          }}
+        />
+      )}
+    </AnimatePresence>
+
+    {/* Escalate to District Confirm Dialog */}
+    <AnimatePresence>
+      {escalateOpen && (
+        <EscalateToDistrictDialog
+          complaint={complaint}
+          onClose={() => setEscalateOpen(false)}
+          onConfirm={(ticketNumber) => {
+            setEscalateOpen(false);
+            onEscalated(ticketNumber);
           }}
         />
       )}
@@ -867,8 +1069,16 @@ export function LiveComplaintDetail({ complaintId }: LiveComplaintDetailProps) {
   }, [complaint, updateComplaintStatus, showToast]);
 
   const handleEscalate = useCallback(() => {
-    handleStatusUpdate("ESCALATED");
+    // Legacy path used by ComplaintProgressSLA button — opens the confirm dialog indirectly
+    // by triggering the ESCALATED_TO_DISTRICT status update path.
+    handleStatusUpdate("ESCALATED_TO_DISTRICT");
   }, [handleStatusUpdate]);
+
+  const handleEscalatedCallback = useCallback((ticketNumber: string) => {
+    // Update local complaint state immediately so the UI reflects the new status.
+    setComplaint((prev) => prev ? { ...prev, status: "ESCALATED_TO_DISTRICT" } : prev);
+    showToast("Escalated to district successfully.");
+  }, [showToast]);
 
   const handleEvidenceUploaded = useCallback((newUrls: string[], status: string, reason: string) => {
     const uploadedAt = new Date().toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -1256,6 +1466,7 @@ export function LiveComplaintDetail({ complaintId }: LiveComplaintDetailProps) {
               onUpdateStatus={handleStatusUpdate}
               isUpdating={isUpdating}
               onEvidenceUploaded={handleEvidenceUploaded}
+              onEscalated={handleEscalatedCallback}
             />
           </motion.div>
 

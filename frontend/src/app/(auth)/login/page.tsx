@@ -2,10 +2,14 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { CitizenDemoCard } from '@/components/demo/CitizenDemoCard';
+
+const DEMO_EMAIL = 'demo@reckoning.dev';
+const DEMO_PASSWORD = 'Demo@1234';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,38 +21,46 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
+  // Ref so demo handler can set fields and immediately submit without stale closure
+  const emailRef = useRef(email);
+  const passwordRef = useRef(password);
+  emailRef.current = email;
+  passwordRef.current = password;
+
   useEffect(() => {
     let cancelled = false;
 
     async function maybeRedirect() {
-      if (!hasHydrated || !isAuthenticated) {
-        return;
-      }
-
+      if (!hasHydrated || !isAuthenticated) return;
       const valid = await validateCitizenSession();
-      if (cancelled || !valid) {
-        return;
-      }
-
+      if (cancelled || !valid) return;
       router.replace('/dashboard');
     }
 
     void maybeRedirect();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [hasHydrated, isAuthenticated, router, validateCitizenSession]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     try {
       await login(email.trim(), password, rememberMe);
       router.push(redirectTo);
     } catch {
-      // Error message is exposed from useAuth.
+      // error surfaced via useAuth
     }
+  };
+
+  /**
+   * Demo login handler — fills email + password then calls the real login API.
+   * The citizen demo account is pre-verified so no OTP step is needed.
+   */
+  const handleDemoLogin = async () => {
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    // Use refs to get the just-set values synchronously
+    await login(DEMO_EMAIL, DEMO_PASSWORD, false);
+    router.push('/dashboard');
   };
 
   return (
@@ -142,8 +154,14 @@ export default function LoginPage() {
               )}
             </button>
 
-            {error ? <p className="text-sm text-red-500">{error}</p> : null}
+            {error !== null ? <p className="text-sm text-red-500">{error}</p> : null}
           </form>
+
+          {/* Demo Account Card */}
+          <CitizenDemoCard
+            onFillEmail={setEmail}
+            onDemoLogin={handleDemoLogin}
+          />
 
           {/* Footer */}
           <div className="mt-8 text-center">

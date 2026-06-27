@@ -13,6 +13,7 @@
     "db:postgis": "tsx prisma/migrations/applyPostgis.ts",
     "db:postgis:admin": "tsx prisma/migrations/applyAdminPostgis.ts",
     "seed": "npx tsx prisma/seed.ts",
+    "seed:chennai": "npx tsx prisma/migrations/seedChennaiBoundaries.ts",
     "seed:boundaries": "node scripts/seed-boundaries.mjs",
     "seed:boundaries:dry": "node scripts/seed-boundaries.mjs --dry-run",
     "seed:boundaries:state": "node scripts/seed-boundaries.mjs --state",

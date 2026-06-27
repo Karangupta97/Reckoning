@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { Shield, Eye, EyeOff, ShieldAlert, Lock, Mail } from 'lucide-react';
 import { useAdminAuthStore } from '@/stores/adminAuthStore';
+import { AdminDemoPanel } from '@/components/demo/AdminDemoPanel';
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -27,13 +28,11 @@ export default function AdminLoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginInputs>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+    defaultValues: { email: '', password: '' },
   });
 
   useEffect(() => {
@@ -53,7 +52,6 @@ export default function AdminLoginPage() {
     clearError();
     try {
       await login(data.email, data.password);
-      
       const currentAdmin = useAdminAuthStore.getState().admin;
       if (currentAdmin) {
         if (currentAdmin.role === 'SUPER_ADMIN') {
@@ -66,35 +64,47 @@ export default function AdminLoginPage() {
           router.push('/admin/login');
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setAnimationState('shake');
-      const responseData = err.response?.data;
+      const responseData = (err as { response?: { data?: { error?: { code?: string; retryAfter?: number; meta?: { retryAfter?: number } } } } })?.response?.data;
       if (responseData?.error?.code === 'ACCOUNT_LOCKED') {
-        const retryAfter = responseData.error.retryAfter || responseData.error.meta?.retryAfter;
-        if (retryAfter) {
+        const retryAfter = responseData.error.retryAfter ?? responseData.error.meta?.retryAfter;
+        if (retryAfter !== undefined) {
           setLockoutSeconds(Number(retryAfter));
         }
       }
     }
   };
 
+  /**
+   * Quick-fill + submit for demo credentials — called from AdminDemoPanel.
+   */
+  const handleQuickFill = (email: string, password: string) => {
+    setValue('email', email, { shouldValidate: true });
+    setValue('password', password, { shouldValidate: true });
+    // Trigger form submit programmatically on next tick so RHF state settles
+    setTimeout(() => {
+      void handleSubmit(onSubmit)();
+    }, 0);
+  };
+
   const cardVariants = {
     hidden: { opacity: 0, y: 30, scale: 0.96 },
-    visible: { 
-      opacity: 1, 
+    visible: {
+      opacity: 1,
       y: 0,
       scale: 1,
-      transition: { type: 'spring' as const, damping: 28, stiffness: 100 }
+      transition: { type: 'spring' as const, damping: 28, stiffness: 100 },
     },
     shake: {
       x: [0, -10, 10, -10, 10, -5, 5, 0],
-      transition: { duration: 0.4 }
-    }
+      transition: { duration: 0.4 },
+    },
   };
 
   return (
     <div className="admin-login-page relative min-h-screen flex items-center justify-center px-4 py-8 font-sans overflow-hidden bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-      {/* Subtle background orbs */}
+      {/* Background orbs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-15%] right-[-10%] w-[500px] h-[500px] bg-teal-100/60 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-15%] left-[-10%] w-[450px] h-[450px] bg-blue-100/40 rounded-full blur-[100px]" />
@@ -102,11 +112,11 @@ export default function AdminLoginPage() {
       </div>
 
       {/* Dot pattern */}
-      <div 
+      <div
         className="absolute inset-0 opacity-[0.4] pointer-events-none"
         style={{
           backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
-          backgroundSize: '32px 32px'
+          backgroundSize: '32px 32px',
         }}
       />
 
@@ -115,16 +125,14 @@ export default function AdminLoginPage() {
         animate={animationState}
         variants={cardVariants}
         onAnimationComplete={(definition) => {
-          if (definition === 'shake') {
-            setAnimationState('visible');
-          }
+          if (definition === 'shake') setAnimationState('visible');
         }}
         className="relative z-10 w-full max-w-[420px]"
       >
         <div className="relative bg-white rounded-2xl border border-gray-200/80 p-8 sm:p-10 shadow-xl shadow-gray-200/50">
           {/* Top accent line */}
           <div className="absolute top-0 left-8 right-8 h-[2px] rounded-full bg-gradient-to-r from-transparent via-teal-500 to-transparent" />
-          
+
           {/* Header */}
           <div className="flex flex-col items-center mb-8 text-center">
             <div className="relative mb-5">
@@ -133,17 +141,13 @@ export default function AdminLoginPage() {
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-[2.5px] border-white shadow-sm" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-              Admin Portal
-            </h1>
-            <p className="text-sm text-gray-500 mt-2">
-              Sign in to access the admin dashboard
-            </p>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Portal</h1>
+            <p className="text-sm text-gray-500 mt-2">Sign in to access the admin dashboard</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Lockout alert */}
+            {/* Lockout / error alert */}
             {lockoutSeconds !== null && lockoutSeconds > 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -152,7 +156,8 @@ export default function AdminLoginPage() {
               >
                 <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
                 <span>
-                  Too many failed attempts. Account locked. Try again in {Math.floor(lockoutSeconds / 60)}m {lockoutSeconds % 60}s.
+                  Too many failed attempts. Account locked. Try again in{' '}
+                  {Math.floor(lockoutSeconds / 60)}m {lockoutSeconds % 60}s.
                 </span>
               </motion.div>
             ) : storeError ? (
@@ -166,14 +171,16 @@ export default function AdminLoginPage() {
               </motion.div>
             ) : null}
 
-            {/* Email Field */}
+            {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-2 ml-1">
-                Email
-              </label>
+              <label className="block text-xs font-medium text-gray-500 mb-2 ml-1">Email</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Mail className={`w-4 h-4 transition-colors duration-200 ${focusedField === 'email' ? 'text-teal-500' : 'text-gray-400'}`} />
+                  <Mail
+                    className={`w-4 h-4 transition-colors duration-200 ${
+                      focusedField === 'email' ? 'text-teal-500' : 'text-gray-400'
+                    }`}
+                  />
                 </div>
                 <input
                   type="email"
@@ -185,20 +192,20 @@ export default function AdminLoginPage() {
                 />
               </div>
               {errors.email && (
-                <p className="text-xs text-red-500 mt-1.5 ml-1 font-medium">
-                  {errors.email.message}
-                </p>
+                <p className="text-xs text-red-500 mt-1.5 ml-1 font-medium">{errors.email.message}</p>
               )}
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-2 ml-1">
-                Password
-              </label>
+              <label className="block text-xs font-medium text-gray-500 mb-2 ml-1">Password</label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <Lock className={`w-4 h-4 transition-colors duration-200 ${focusedField === 'password' ? 'text-teal-500' : 'text-gray-400'}`} />
+                  <Lock
+                    className={`w-4 h-4 transition-colors duration-200 ${
+                      focusedField === 'password' ? 'text-teal-500' : 'text-gray-400'
+                    }`}
+                  />
                 </div>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -217,13 +224,11 @@ export default function AdminLoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-xs text-red-500 mt-1.5 ml-1 font-medium">
-                  {errors.password.message}
-                </p>
+                <p className="text-xs text-red-500 mt-1.5 ml-1 font-medium">{errors.password.message}</p>
               )}
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={isSubmitting || (lockoutSeconds !== null && lockoutSeconds > 0)}
@@ -240,8 +245,11 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
+          {/* Demo Credentials Panel */}
+          <AdminDemoPanel onQuickFill={handleQuickFill} />
+
           {/* Footer */}
-          <div className="mt-8 pt-6 border-t border-gray-100">
+          <div className="mt-6 pt-6 border-t border-gray-100">
             <div className="flex items-center justify-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <p className="text-[11px] text-gray-400 font-medium">
@@ -252,7 +260,6 @@ export default function AdminLoginPage() {
         </div>
       </motion.div>
 
-      {/* Page-scoped styles to override global focus-visible amber outline */}
       <style jsx global>{`
         .admin-login-page *:focus-visible {
           outline: none;

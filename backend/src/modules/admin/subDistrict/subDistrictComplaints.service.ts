@@ -365,6 +365,145 @@ export async function updateSubDistrictComplaintStatus(
   return toListItem(updated);
 }
 
+// ---------------------------------------------------------------------------
+// Escalate to District
+// ---------------------------------------------------------------------------
+
+/** Input accepted by {@link escalateComplaintToDistrict}. */
+export interface EscalateToDistrictInput {
+  /** Optional human-readable reason for the escalation. */
+  reason?: string;
+}
+
+/** Shape returned after a successful escalation. */
+export interface EscalateToDistrictResult {
+  id: string;
+  status: ComplaintStatus;
+  escalatedAt: Date;
+  escalatedBy: string;
+  escalatedToDistrictId: string;
+  escalationLevel: number;
+  escalationReason: string | null;
+  ticketNumber: string;
+  userId: string | null;
+}
+
+/**
+ * Escalate a complaint from sub-district level to district level.
+ *
+ * Jurisdiction is enforced: the complaint MUST belong to the calling admin's
+ * `subDistrictId` and `districtId`. Sets status to `ESCALATED_TO_DISTRICT`,
+ * stamps `escalatedAt`, `escalatedBy`, `escalatedToDistrictId`, and
+ * `escalationLevel = 1`.
+ *
+ * @param subDistrictId  Sub-district id from the authenticated admin's JWT.
+ * @param districtId     District id from the authenticated admin's JWT.
+ * @param adminId        The escalating admin's id (stored in `escalatedBy`).
+ * @param complaintId    Target complaint id.
+ * @param input          Optional escalation reason.
+ * @returns Escalation result with updated fields.
+ * @throws {AppError} 403 out-of-jurisdiction, 404 not found, 400 already escalated.
+ */
+export async function escalateComplaintToDistrict(
+  subDistrictId: string,
+  districtId: string,
+  adminId: string,
+  complaintId: string,
+  input: EscalateToDistrictInput = {},
+): Promise<EscalateToDistrictResult> {
+  if (!subDistrictId || !districtId) {
+    throw new AppError(
+      "Your account is not assigned to a jurisdiction.",
+      403,
+      { code: "INSUFFICIENT_SCOPE" },
+    );
+  }
+
+  // Verify the complaint belongs to this sub-district / district.
+  const existing = await adminDbGuard(
+    () =>
+      prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: {
+          id: true,
+          subDistrictId: true,
+          districtId: true,
+          status: true,
+          deletedAt: true,
+          ticketNumber: true,
+          userId: true,
+        },
+      }),
+    "escalateComplaintToDistrict:find",
+  );
+
+  if (!existing || existing.deletedAt) {
+    throw new AppError("Complaint not found.", 404, { code: "NOT_FOUND" });
+  }
+
+  if (existing.subDistrictId !== subDistrictId || existing.districtId !== districtId) {
+    throw new AppError(
+      "Complaint is out of jurisdiction.",
+      403,
+      { code: "COMPLAINT_OUT_OF_JURISDICTION" },
+    );
+  }
+
+  // Prevent double-escalation.
+  if (
+    existing.status === "ESCALATED_TO_DISTRICT" ||
+    existing.status === "RESOLVED" ||
+    existing.status === "REJECTED"
+  ) {
+    throw new AppError(
+      "Complaint cannot be escalated in its current state.",
+      400,
+      { code: "INVALID_TRANSITION" },
+    );
+  }
+
+  const now = new Date();
+
+  const updated = await adminDbGuard(
+    () =>
+      prisma.complaint.update({
+        where: { id: complaintId },
+        data: {
+          status: "ESCALATED_TO_DISTRICT",
+          escalatedAt: now,
+          escalatedBy: adminId,
+          escalatedToDistrictId: districtId,
+          escalationLevel: 1,
+          escalationReason: input.reason ?? "MANUAL_ESCALATION",
+        },
+        select: {
+          id: true,
+          status: true,
+          escalatedAt: true,
+          escalatedBy: true,
+          escalatedToDistrictId: true,
+          escalationLevel: true,
+          escalationReason: true,
+          ticketNumber: true,
+          userId: true,
+        },
+      }),
+    "escalateComplaintToDistrict:update",
+  );
+
+  return {
+    id: updated.id,
+    status: updated.status,
+    escalatedAt: updated.escalatedAt!,
+    escalatedBy: updated.escalatedBy!,
+    escalatedToDistrictId: updated.escalatedToDistrictId!,
+    escalationLevel: updated.escalationLevel,
+    escalationReason: updated.escalationReason,
+    ticketNumber: updated.ticketNumber,
+    userId: updated.userId,
+  };
+}
+
 /**
  * Link pre-uploaded media IDs to a complaint as officer evidence.
  *
