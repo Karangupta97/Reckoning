@@ -119,8 +119,9 @@ export async function getComplaintDetail(
 /**
  * `PATCH /api/admin/subdistrict/complaints/:id/status`
  *
- * Protected: SUB_DISTRICT_ADMIN only.
- * Accepts `{ status: ComplaintStatus }` body.
+ * Protected: SUB_DISTRICT_ADMIN or DISTRICT_ADMIN.
+ * SUB_DISTRICT_ADMIN: scoped to subDistrictId + districtId.
+ * DISTRICT_ADMIN: scoped to districtId only (complaint must belong to their district).
  */
 export async function updateStatus(
   req: Request,
@@ -129,13 +130,15 @@ export async function updateStatus(
 ): Promise<void> {
   try {
     const user = req.user || req.admin;
+    const role = user?.role;
     const subDistrictId = user?.subDistrictId;
     const districtId = user?.districtId;
+    const adminId: string = user?.id ?? (user as { sub?: string })?.sub ?? "";
 
-    if (!subDistrictId || !districtId) {
+    if (!districtId) {
       res.status(403).json({
         error: "INSUFFICIENT_SCOPE",
-        message: "Admin profile is missing jurisdiction assignment",
+        message: "Admin profile is missing district assignment",
       });
       return;
     }
@@ -151,10 +154,50 @@ export async function updateStatus(
       return;
     }
 
-    const updated = await updateSubDistrictComplaintStatus(
+    let updated;
+
+    if (role === "DISTRICT_ADMIN") {
+      // District admin: verify complaint belongs to this district, then update
+      const { prisma } = await import("../../../config/prisma.js");
+      const existing = await prisma.complaint.findUnique({
+        where: { id: complaintId },
+        select: { id: true, districtId: true, deletedAt: true },
+      });
+      if (!existing || existing.deletedAt) {
+        res.status(404).json({ success: false, error: { message: "Complaint not found.", code: "NOT_FOUND" } });
+        return;
+      }
+      if (existing.districtId !== districtId) {
+        res.status(403).json({ success: false, error: { code: "COMPLAINT_OUT_OF_JURISDICTION", message: "Complaint is out of jurisdiction." } });
+        return;
+      }
+      const isTerminal = status === "RESOLVED" || status === "REJECTED";
+      const raw = await prisma.complaint.update({
+        where: { id: complaintId },
+        data: {
+          status,
+          ...(isTerminal ? { resolvedAt: new Date(), resolvedByAdmin: adminId } : {}),
+        },
+        select: { id: true, status: true, description: true, severity: true, latitude: true, longitude: true, createdAt: true, isAnonymous: true, aiResult: true, media: { select: { media: { select: { s3Key: true } } }, take: 5 } },
+      });
+      // Return a minimal shape consistent with the list response
+      res.status(200).json({ success: true, data: { id: raw.id, status: raw.status } });
+      return;
+    }
+
+    // SUB_DISTRICT_ADMIN path — original scoped check
+    if (!subDistrictId) {
+      res.status(403).json({
+        error: "INSUFFICIENT_SCOPE",
+        message: "Admin profile is missing sub-district assignment",
+      });
+      return;
+    }
+
+    updated = await updateSubDistrictComplaintStatus(
       subDistrictId,
       districtId,
-      user.id || (user as any).sub,
+      adminId,
       complaintId,
       status,
     );
@@ -163,16 +206,11 @@ export async function updateStatus(
   } catch (error) {
     if (error instanceof AppError) {
       if (error.code === "COMPLAINT_OUT_OF_JURISDICTION") {
-        res.status(403).json({
-          error: "COMPLAINT_OUT_OF_JURISDICTION",
-        });
+        res.status(403).json({ error: "COMPLAINT_OUT_OF_JURISDICTION" });
         return;
       }
       if (error.statusCode === 404) {
-        res.status(404).json({
-          success: false,
-          error: { message: error.message, code: error.code },
-        });
+        res.status(404).json({ success: false, error: { message: error.message, code: error.code } });
         return;
       }
     }

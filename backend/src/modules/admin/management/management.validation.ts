@@ -52,10 +52,12 @@ export const listAdminsQuerySchema = z
 /** Generic paginated list query (page + limit only). */
 export const paginationQuerySchema = z
   .object({
-    page: z.coerce.number().int().min(1).default(1),
-    limit: z.coerce.number().int().min(1).max(100).default(20),
+    page:   z.coerce.number().int().min(1).default(1),
+    limit:  z.coerce.number().int().min(1).max(100).default(20),
+    // Allow an optional status filter (used by GET /my-district/escalations)
+    status: z.string().optional(),
   })
-  .strict();
+  .passthrough(); // allow other query params without rejecting
 
 /** `PATCH /tickets/:id/status` body schema — sub-district status transitions. */
 export const updateTicketStatusSchema = z

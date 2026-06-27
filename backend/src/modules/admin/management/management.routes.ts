@@ -235,7 +235,7 @@ managementRouter.get(
 
 managementRouter.patch(
   "/subdistrict/complaints/:id/status",
-  requireRole("SUB_DISTRICT_ADMIN"),
+  requireRole("SUB_DISTRICT_ADMIN", "DISTRICT_ADMIN"),
   subDistrictComplaintsCtrl.updateStatus,
 );
 

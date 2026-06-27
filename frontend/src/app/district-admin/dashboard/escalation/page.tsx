@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShieldAlert, Search, ChevronDown, CheckCircle2, Eye,
+  ShieldAlert, Search, CheckCircle2, Eye,
   ArrowUpRight, Clock, Activity,
   Download, Plus, RotateCcw, Filter, MoreHorizontal,
   TrendingUp, TrendingDown, Timer, Zap, MapPin,
@@ -15,9 +15,15 @@ import { useDistrictInfo } from "@/hooks/useDistrictInfo";
 import { filterByDistrictScope } from "@/lib/district-scope";
 import { useEscalationStore } from "@/store/escalationStore";
 import { exportToCsv } from "@/lib/csv-export";
-import type { EscalationPriority, EscalationStatus, EscalationCategory, EscalationSLAStatus, Escalation } from "@/store/escalationStore";
+import { api } from "@/lib/api";
+import { shouldUseMock } from "@/lib/useMock";
+import { useAdminAuthStore } from "@/stores/adminAuthStore";
+import type {
+  EscalationPriority, EscalationStatus, EscalationCategory,
+  EscalationSLAStatus, Escalation,
+} from "@/store/escalationStore";
 
-/* ─── Local type aliases (keeps all the rest of the file identical) ── */
+/* ─── Local type aliases ─────────────────────────────────────── */
 type Priority  = EscalationPriority;
 type Status    = EscalationStatus;
 type Category  = EscalationCategory;
@@ -25,31 +31,31 @@ type SLAStatus = EscalationSLAStatus;
 
 /* ─── Badge & colour maps ────────────────────────────────────── */
 const PRIORITY_CONFIG: Record<Priority, { badge: string; dot: string; ring: string }> = {
-  Critical: { badge: "bg-red-500/15 text-red-400 border-red-500/30",        dot: "bg-red-400",    ring: "shadow-[0_0_8px_rgba(239,68,68,0.4)]"  },
-  High:     { badge: "bg-orange-500/15 text-orange-400 border-orange-500/30", dot: "bg-orange-400", ring: "shadow-[0_0_8px_rgba(249,115,22,0.35)]" },
-  Medium:   { badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",   dot: "bg-amber-400",  ring: ""                                      },
-  Low:      { badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400", ring: "" },
+  Critical: { badge: "bg-red-500/15 text-red-400 border-red-500/30",           dot: "bg-red-400",    ring: "shadow-[0_0_8px_rgba(239,68,68,0.4)]"  },
+  High:     { badge: "bg-orange-500/15 text-orange-400 border-orange-500/30",  dot: "bg-orange-400", ring: "shadow-[0_0_8px_rgba(249,115,22,0.35)]" },
+  Medium:   { badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",     dot: "bg-amber-400",  ring: ""                                      },
+  Low:      { badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400", ring: ""                                   },
 };
 
 const STATUS_CONFIG: Record<Status, { badge: string; icon: typeof Activity }> = {
-  "Pending Review": { badge: "bg-amber-500/12 text-amber-400 border-amber-500/25",   icon: Clock       },
-  "Assigned":       { badge: "bg-blue-500/12 text-blue-400 border-blue-500/25",      icon: UserCheck   },
-  "Investigating":  { badge: "bg-purple-500/12 text-purple-400 border-purple-500/25",icon: Activity    },
-  "Resolved":       { badge: "bg-teal-500/12 text-teal-400 border-teal-500/25",      icon: CheckCircle2},
-  "Closed":         { badge: "bg-slate-500/12 text-slate-400 border-slate-500/25",   icon: XCircle     },
+  "Pending Review": { badge: "bg-amber-500/12 text-amber-400 border-amber-500/25",   icon: Clock        },
+  "Assigned":       { badge: "bg-blue-500/12 text-blue-400 border-blue-500/25",      icon: UserCheck    },
+  "Investigating":  { badge: "bg-purple-500/12 text-purple-400 border-purple-500/25",icon: Activity     },
+  "Resolved":       { badge: "bg-teal-500/12 text-teal-400 border-teal-500/25",      icon: CheckCircle2 },
+  "Closed":         { badge: "bg-slate-500/12 text-slate-400 border-slate-500/25",   icon: XCircle      },
 };
 
 const SLA_CONFIG: Record<SLAStatus, { text: string; bg: string; bar: string }> = {
-  "On Track": { text: "text-teal-400",   bg: "bg-teal-400/10",   bar: "bg-teal-400"   },
-  "At Risk":  { text: "text-amber-400",  bg: "bg-amber-400/10",  bar: "bg-amber-400"  },
-  "Breached": { text: "text-red-400",    bg: "bg-red-400/10",    bar: "bg-red-400"    },
+  "On Track": { text: "text-teal-400",  bg: "bg-teal-400/10",  bar: "bg-teal-400"  },
+  "At Risk":  { text: "text-amber-400", bg: "bg-amber-400/10", bar: "bg-amber-400" },
+  "Breached": { text: "text-red-400",   bg: "bg-red-400/10",   bar: "bg-red-400"   },
 };
 
 /* ─── Filter options ─────────────────────────────────────────── */
-const PRIORITIES: (Priority | "All")[] = ["All","Critical","High","Medium","Low"];
-const STATUSES:   (Status   | "All")[] = ["All","Pending Review","Assigned","Investigating","Resolved","Closed"];
-const CATEGORIES: (Category | "All")[] = ["All","Sanitation","Infrastructure","Flooding","Road Damage","Utilities","Civic","Safety"];
-const SUB_DISTRICTS = ["All", "Alibag", "Panvel", "Karjat", "Mahad", "Mangaon", "Murud"];
+const PRIORITIES:   (Priority | "All")[]  = ["All","Critical","High","Medium","Low"];
+const STATUSES:     (Status   | "All")[]  = ["All","Pending Review","Assigned","Investigating","Resolved","Closed"];
+const CATEGORIES:   (Category | "All")[]  = ["All","Sanitation","Infrastructure","Flooding","Road Damage","Utilities","Civic","Safety"];
+const SUB_DISTRICTS = ["All","Alibag","Panvel","Karjat","Mahad","Mangaon","Murud"];
 const SLA_STATUSES: (SLAStatus | "All")[] = ["All","On Track","At Risk","Breached"];
 
 /* ─── Animation presets ──────────────────────────────────────── */
@@ -66,20 +72,154 @@ const stagger = (i: number) => ({
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   PAGE COMPONENT
+   API helpers — map backend complaint rows → Escalation shape
+═══════════════════════════════════════════════════════════════ */
+
+interface ApiComplaintRow {
+  id: string;
+  ticketNumber: string;
+  category: string;
+  severity: string;
+  status: string;
+  description: string | null;
+  address: string | null;
+  escalationLevel: number;
+  escalatedAt: string | null;
+  escalatedBy: string | null;
+  escalationReason: string | null;
+  slaDeadline: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function severityToPriority(s: string): EscalationPriority {
+  if (s === "CRITICAL") return "Critical";
+  if (s === "HIGH")     return "High";
+  if (s === "MEDIUM")   return "Medium";
+  return "Low";
+}
+
+function categoryToEscCategory(c: string): EscalationCategory {
+  const map: Record<string, EscalationCategory> = {
+    POTHOLE: "Road Damage", CRACKS_DAMAGE: "Road Damage",
+    FADED_LANE_MARKINGS: "Road Damage", MISSING_BROKEN_SIGNBOARD: "Safety",
+    POOR_STREET_LIGHTING: "Utilities", ENCROACHMENT: "Civic", OTHERS: "Civic",
+  };
+  return map[c] ?? "Infrastructure";
+}
+
+function calcSlaFields(createdAt: string, deadline: string | null): {
+  slaStatus: EscalationSLAStatus; slaLabel: string; slaHours: number;
+} {
+  const now     = Date.now();
+  const created = new Date(createdAt).getTime();
+  const target  = deadline ? new Date(deadline).getTime() : created + 48 * 3600_000;
+  const remainMs = target - now;
+  const remainH  = Math.round(remainMs / 3_600_000);
+  if (remainMs <= 0) return { slaStatus: "Breached", slaLabel: "BREACHED",          slaHours: 0        };
+  if (remainH  <= 8) return { slaStatus: "At Risk",  slaLabel: `${remainH}h Left`,  slaHours: remainH  };
+  return               { slaStatus: "On Track", slaLabel: `${remainH}h Left`,  slaHours: remainH  };
+}
+
+function fmtDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function apiRowToEscalation(row: ApiComplaintRow, districtName: string): Escalation {
+  const priority = severityToPriority(row.severity);
+  const { slaStatus, slaLabel, slaHours } = calcSlaFields(row.createdAt, row.slaDeadline);
+  const escalatedOn = row.escalatedAt ? fmtDateShort(row.escalatedAt) : fmtDateShort(row.createdAt);
+  const daysOpen = Math.floor((Date.now() - new Date(row.createdAt).getTime()) / 86_400_000);
+
+  return {
+    id: row.id,
+    sourceComplaintId: row.id,
+    tier: "district",
+    district: districtName,
+    submittedBy: row.escalatedBy ?? "Sub-District Officer",
+    title: `${row.category.replace(/_/g, " ")} — ${row.address ?? row.ticketNumber}`,
+    subDistrict: row.address?.split(",")[1]?.trim() ?? "Sub-District",
+    category: categoryToEscCategory(row.category),
+    priority,
+    status: "Pending Review" as EscalationStatus,
+    slaStatus,
+    slaLabel,
+    slaHours,
+    assignedTo: "Unassigned",
+    escalatedOn,
+    daysOpen,
+    reason: (row.escalationReason ?? "MANUAL_ESCALATION").replace(/_/g, " "),
+    notes: row.description ?? undefined,
+    activityLog: [{
+      time: escalatedOn,
+      actor: row.escalatedBy ?? "Sub-District Officer",
+      action: `Escalated to district — ${(row.escalationReason ?? "MANUAL_ESCALATION").replace(/_/g, " ")}`,
+    }],
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAGE
 ═══════════════════════════════════════════════════════════════ */
 export default function EscalationsPage() {
   const { districtName } = useDistrictInfo();
-  const _raw = filterByDistrictScope(
+  const currentAdmin = useAdminAuthStore((s) => s.admin);
+  const isMock = shouldUseMock(currentAdmin?.email);
+
+  /* ── Real API data ── */
+  const [apiRows,     setApiRows]     = useState<Escalation[]>([]);
+  const [apiLoading,  setApiLoading]  = useState(!isMock);
+  const [apiError,    setApiError]    = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isMock) { setApiLoading(false); return; }
+    let cancelled = false;
+    (async () => {
+      setApiLoading(true);
+      try {
+        const res = await api.get("/api/admin/my-district/escalations", { params: { limit: "100" } });
+        const rows: ApiComplaintRow[] = res.data?.data?.complaints ?? [];
+        if (!cancelled) {
+          setApiRows(rows.map((r) => apiRowToEscalation(r, districtName ?? "District")));
+          setApiLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          // 400 NO_DISTRICT = admin not yet assigned to district — silently show empty
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          if (status === 400) {
+            setApiRows([]);
+            setApiLoading(false);
+          } else {
+            setApiError(err instanceof Error ? err.message : "Failed to load escalations.");
+            setApiLoading(false);
+          }
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isMock, districtName]);
+
+  /* ── Mock/store data ── */
+  const storeRaw = filterByDistrictScope(
     useEscalationStore((s) => s.escalations),
     (e) => e.district,
-    (e) => e.state
+    (e) => e.state,
   );
-  // Deduplicate by ID — guards against store/seed ID collision after hot reload
-  const ALL = _raw.filter((e, idx, arr) => arr.findIndex((x) => x.id === e.id) === idx);
+  const storeAll = storeRaw.filter((e, idx, arr) => arr.findIndex((x) => x.id === e.id) === idx);
+
+  /* ── Merged list ── */
+  const ALL: Escalation[] = useMemo(() => {
+    if (isMock) return storeAll;
+    const apiIds = new Set(apiRows.map((r) => r.id));
+    const storeOnly = storeAll.filter((s) => !apiIds.has(s.id) && !apiIds.has(s.sourceComplaintId ?? ""));
+    return [...apiRows, ...storeOnly];
+  }, [isMock, apiRows, storeAll]);
+
+  /* ── Filter state ── */
   const [search,      setSearch]      = useState("");
   const [priority,    setPriority]    = useState<Priority | "All">("All");
-  const [status,      setStatus]      = useState<Status | "All">("All");
+  const [status,      setStatus]      = useState<Status   | "All">("All");
   const [category,    setCategory]    = useState<Category | "All">("All");
   const [subDistrict, setSubDistrict] = useState("All");
   const [slaFilter,   setSlaFilter]   = useState<SLAStatus | "All">("All");
@@ -88,11 +228,12 @@ export default function EscalationsPage() {
 
   const filtered = useMemo(() => {
     const seen = new Set<string>();
-    return ALL.filter(e => {
+    return ALL.filter((e) => {
       if (seen.has(e.id)) return false;
       seen.add(e.id);
       const q = search.toLowerCase();
-      const matchSearch = !q || e.id.toLowerCase().includes(q) ||
+      const matchSearch = !q ||
+        e.id.toLowerCase().includes(q) ||
         e.title.toLowerCase().includes(q) ||
         e.subDistrict.toLowerCase().includes(q);
       return matchSearch &&
@@ -114,20 +255,20 @@ export default function EscalationsPage() {
     subDistrict !== "All", slaFilter !== "All", search !== "",
   ].filter(Boolean).length;
 
-  /* ── Derived KPIs ── */
+  /* ── Derived KPIs (live counts from merged data) ── */
   const kpis = [
-    { label: "Critical Escalations", value: String(ALL.filter(e => e.priority === "Critical").length), change: "+3 today", trend: "up" as const, variant: "danger" as const, icon: <ShieldAlert size={20} /> },
-    { label: "Pending Review",        value: String(ALL.filter(e => e.status === "Pending Review").length), change: "+2 today", trend: "up" as const, variant: "warn" as const, icon: <Clock size={20} /> },
-    { label: "SLA Breached",          value: String(ALL.filter(e => e.slaStatus === "Breached").length), change: "+1 today", trend: "up" as const, variant: "danger" as const, icon: <Timer size={20} /> },
-    { label: "Resolved Today",        value: "18", change: "8.3%", trend: "down" as const, variant: "good" as const, icon: <CheckCircle2 size={20} /> },
+    { label: "Critical",      value: String(ALL.filter(e => e.priority === "Critical").length), change: apiRows.length > 0 ? `${apiRows.length} from server` : "stored", trend: "up"   as const, variant: "danger"  as const, icon: <ShieldAlert size={20} /> },
+    { label: "Pending Review", value: String(ALL.filter(e => e.status === "Pending Review").length),  change: "awaiting action",  trend: "up"   as const, variant: "warn"    as const, icon: <Clock size={20} /> },
+    { label: "SLA Breached",   value: String(ALL.filter(e => e.slaStatus === "Breached").length),     change: "needs attention",  trend: "up"   as const, variant: "danger"  as const, icon: <Timer size={20} /> },
+    { label: "Resolved",       value: String(ALL.filter(e => e.status === "Resolved" || e.status === "Closed").length), change: "all time", trend: "down" as const, variant: "good"    as const, icon: <CheckCircle2 size={20} /> },
   ];
 
   const opStats = [
-    { label: "High Priority",          value: "24", color: "text-red-400"    },
-    { label: "In Progress",            value: "38", color: "text-blue-400"   },
-    { label: "Awaiting Assignment",    value: "12", color: "text-amber-400"  },
-    { label: "Resolved Today",         value: "18", color: "text-teal-400"   },
-    { label: "Avg Resolution",         value: "2.4d", color: "text-emerald-400" },
+    { label: "High Priority",      value: String(ALL.filter(e => e.priority === "Critical" || e.priority === "High").length), color: "text-red-400"    },
+    { label: "Investigating",       value: String(ALL.filter(e => e.status === "Investigating").length),                       color: "text-blue-400"   },
+    { label: "Unassigned",          value: String(ALL.filter(e => e.assignedTo === "Unassigned").length),                     color: "text-amber-400"  },
+    { label: "Resolved",            value: String(ALL.filter(e => e.status === "Resolved").length),                           color: "text-teal-400"   },
+    { label: "Total",               value: String(ALL.length),                                                                color: "text-emerald-400"},
   ];
 
   return (
@@ -135,7 +276,7 @@ export default function EscalationsPage() {
       {/* ── Main Column ── */}
       <div className="flex flex-1 min-w-0 flex-col gap-4">
 
-        {/* PAGE HEADER */}
+        {/* HEADER */}
         <motion.div {...fadeUp(0)} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5 mb-1">
@@ -147,58 +288,39 @@ export default function EscalationsPage() {
               </h1>
             </div>
             <p className="text-sm text-[var(--color-text-secondary)] pl-0.5">
-              Monitor SLA breaches, critical complaints and district-wide escalations
-              in <span className="font-medium text-teal-400">{districtName}</span>.
+              Monitor SLA breaches, critical complaints and district-wide escalations in{" "}
+              <span className="font-medium text-teal-400">{districtName}</span>.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+            <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
               onClick={() => exportToCsv("escalations", filtered.map(e => ({
                 ID: e.id, Title: e.title, SubDistrict: e.subDistrict,
                 Category: e.category, Priority: e.priority, Status: e.status,
                 SLA: e.slaLabel, AssignedTo: e.assignedTo, EscalatedOn: e.escalatedOn, DaysOpen: e.daysOpen,
               })))}
-              className="da-btn-secondary flex items-center gap-1.5 !h-9 !px-3 !text-xs"
-            >
-              <Download size={14} />
-              Export Report
+              className="da-btn-secondary flex items-center gap-1.5 !h-9 !px-3 !text-xs">
+              <Download size={14} /> Export Report
             </motion.button>
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-              className="da-btn-primary flex items-center gap-1.5 !h-9 !px-3 !text-xs"
-            >
-              <Plus size={14} />
-              Assign Escalation
+            <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              className="da-btn-primary flex items-center gap-1.5 !h-9 !px-3 !text-xs">
+              <Plus size={14} /> Assign Escalation
             </motion.button>
-            {/* Mobile sidebar toggle */}
-            <motion.button
-              type="button"
-              whileTap={{ scale: 0.95 }}
+            <motion.button type="button" whileTap={{ scale: 0.95 }}
               onClick={() => setSidebarOpen(true)}
               className="xl:hidden da-btn-secondary flex items-center justify-center !h-9 !w-9 !px-0"
-              aria-label="Open operations panel"
-            >
+              aria-label="Open operations panel">
               <Activity size={15} />
             </motion.button>
           </div>
         </motion.div>
 
         {/* KPI CARDS */}
-        <motion.section
-          initial="hidden"
-          animate="visible"
+        <motion.section initial="hidden" animate="visible"
           variants={{ visible: { transition: { staggerChildren: 0.07 } }, hidden: {} }}
-          className="grid grid-cols-2 gap-3 lg:grid-cols-4"
-          aria-label="Key performance indicators"
-        >
+          className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Key performance indicators">
           {kpis.map((k) => (
-            <motion.div
-              key={k.label}
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-            >
+            <motion.div key={k.label} variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}>
               <KpiCard {...k} />
             </motion.div>
           ))}
@@ -209,8 +331,7 @@ export default function EscalationsPage() {
           <DashboardCard className="px-4 py-3">
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
               <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                <Zap size={12} className="text-teal-400" />
-                Live Status
+                <Zap size={12} className="text-teal-400" /> Live Status
               </span>
               <div className="h-4 w-px bg-[var(--color-border)] hidden sm:block" />
               {opStats.map((s, i) => (
@@ -227,13 +348,9 @@ export default function EscalationsPage() {
         {/* FILTER BAR */}
         <motion.div {...fadeUp(0.2)}>
           <DashboardCard className="p-3 sm:p-4">
-            {/* Mobile toggle */}
             <div className="flex items-center justify-between sm:hidden mb-3">
-              <button
-                type="button"
-                onClick={() => setFiltersOpen(p => !p)}
-                className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)]"
-              >
+              <button type="button" onClick={() => setFiltersOpen(p => !p)}
+                className="flex items-center gap-2 text-sm font-medium text-[var(--color-text-secondary)]">
                 <Filter size={14} className="text-teal-400" />
                 Filters
                 {activeFilterCount > 0 && (
@@ -248,50 +365,31 @@ export default function EscalationsPage() {
                 </button>
               )}
             </div>
-
             <div className={`flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center ${!filtersOpen ? "hidden sm:flex" : "flex"}`}>
-              {/* Search */}
-              <div
-                className="flex items-center gap-2 rounded-lg border h-9 px-3 flex-1 min-w-[180px] transition-colors focus-within:border-amber-400"
-                style={{ borderColor: "var(--color-border)", background: "var(--color-surface)", outline: "none" }}
-                onFocusCapture={e => (e.currentTarget.style.outline = "2px solid rgba(251,191,36,0.7)")}
-                onBlurCapture={e => (e.currentTarget.style.outline = "none")}
-              >
+              <div className="flex items-center gap-2 rounded-lg border h-9 px-3 flex-1 min-w-[180px]"
+                style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
                 <Search size={13} className="shrink-0 text-[var(--color-text-muted)]" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search ID, title, location…"
                   className="bg-transparent text-xs outline-none text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] w-full"
-                  aria-label="Search escalations"
-                />
+                  aria-label="Search escalations" />
                 {search && (
                   <button onClick={() => setSearch("")} className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                     <X size={12} />
                   </button>
                 )}
               </div>
-
-              {/* Dropdowns */}
-              <FilterSelect label="Priority"    value={priority}    options={PRIORITIES}    onChange={v => setPriority(v as typeof priority)} />
-              <FilterSelect label="Status"      value={status}      options={STATUSES}      onChange={v => setStatus(v as typeof status)} />
-              <FilterSelect label="Category"    value={category}    options={CATEGORIES}    onChange={v => setCategory(v as typeof category)} />
+              <FilterSelect label="Priority"     value={priority}    options={PRIORITIES}    onChange={v => setPriority(v as typeof priority)} />
+              <FilterSelect label="Status"       value={status}      options={STATUSES}      onChange={v => setStatus(v as typeof status)} />
+              <FilterSelect label="Category"     value={category}    options={CATEGORIES}    onChange={v => setCategory(v as typeof category)} />
               <FilterSelect label="Sub-District" value={subDistrict} options={SUB_DISTRICTS} onChange={setSubDistrict} />
-              <FilterSelect label="SLA"         value={slaFilter}   options={SLA_STATUSES}  onChange={v => setSlaFilter(v as typeof slaFilter)} />
-
-              {/* Desktop reset */}
+              <FilterSelect label="SLA"          value={slaFilter}   options={SLA_STATUSES}  onChange={v => setSlaFilter(v as typeof slaFilter)} />
               {activeFilterCount > 0 && (
-                <motion.button
-                  type="button"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                <motion.button type="button" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                   onClick={resetFilters}
                   className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs text-[var(--color-text-muted)] hover:text-red-400 border border-[var(--color-border)] transition-colors"
-                  style={{ background: "var(--color-surface)" }}
-                >
-                  <RotateCcw size={12} />
-                  Reset
+                  style={{ background: "var(--color-surface)" }}>
+                  <RotateCcw size={12} /> Reset
                   <span className="flex h-4 w-4 items-center justify-center rounded-full bg-teal-500/20 text-[9px] font-bold text-teal-400">
                     {activeFilterCount}
                   </span>
@@ -301,29 +399,43 @@ export default function EscalationsPage() {
           </DashboardCard>
         </motion.div>
 
-        {/* MAIN TABLE / CARDS */}
+        {/* TABLE */}
         <motion.div {...fadeUp(0.25)}>
           <DashboardCard className="flex flex-col p-4 sm:p-5">
             {/* Table header */}
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-sm font-semibold text-[var(--color-text-primary)] lg:text-base">
-                  Active Escalations
-                </h2>
+                <h2 className="text-sm font-semibold text-[var(--color-text-primary)] lg:text-base">Active Escalations</h2>
                 <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                  {filtered.length} of {ALL.length} escalations
-                  {activeFilterCount > 0 && " (filtered)"}
+                  {apiLoading
+                    ? "Loading from server…"
+                    : apiError
+                    ? `${filtered.length} (store only — API error)`
+                    : `${filtered.length} of ${ALL.length}${!isMock && apiRows.length > 0 ? ` · ${apiRows.length} from server` : ""}${activeFilterCount > 0 ? " (filtered)" : ""}`}
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-pulse" />
-                  Live
-                </span>
+                {apiLoading && (
+                  <span className="flex items-center gap-1.5 text-xs text-amber-400">
+                    <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                      className="inline-block h-3 w-3 rounded-full border-2 border-amber-400 border-t-transparent" />
+                    Fetching…
+                  </span>
+                )}
+                {!apiLoading && !isMock && apiRows.length > 0 && (
+                  <span className="flex items-center gap-1.5 text-xs text-teal-400">
+                    <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-pulse" /> Live
+                  </span>
+                )}
+                {!apiLoading && (isMock || apiRows.length === 0) && (
+                  <span className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> Mock
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* ── Desktop Table ── */}
+            {/* Desktop table */}
             <div className="hidden sm:block">
               <div className="dashboard-table-scroll" style={{ maxHeight: "32rem" }}>
                 <table className="dashboard-table">
@@ -336,22 +448,18 @@ export default function EscalationsPage() {
                   <tbody>
                     <AnimatePresence mode="popLayout">
                       {filtered.length === 0 ? (
-                        <tr key="empty">
-                          <td colSpan={10}>
-                            <EmptyState />
-                          </td>
-                        </tr>
+                        <tr key="empty"><td colSpan={10}><EmptyState /></td></tr>
                       ) : (
                         filtered.map((e, i) => (
-                          <motion.tr
-                            key={e.id}
-                            {...stagger(i)}
-                            exit={{ opacity: 0 }}
-                            className="dashboard-table-row da-table-row group"
-                          >
-                            {/* ID */}
+                          <motion.tr key={e.id} {...stagger(i)} exit={{ opacity: 0 }}
+                            className="dashboard-table-row da-table-row group">
+                            {/* ID + title */}
                             <td className="dashboard-table-td">
-                              <Link href={`/district-admin/dashboard/escalation/${e.id}`} className="flex items-center gap-1.5 group/link">
+                              <Link
+                                href={e.sourceComplaintId && !e.id.startsWith("ESC-")
+                                  ? `/district-admin/dashboard/complaints/${e.id}`
+                                  : `/district-admin/dashboard/escalation/${e.id}`}
+                                className="flex items-center gap-1.5 group/link">
                                 <ShieldAlert size={13} className="shrink-0 text-teal-400" />
                                 <span className="text-xs font-mono font-semibold group-hover/link:underline" style={{ color: "var(--da-teal)" }}>
                                   {e.id}
@@ -359,44 +467,21 @@ export default function EscalationsPage() {
                               </Link>
                               <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] max-w-[10rem] truncate pl-5">{e.title}</p>
                             </td>
-
-                            {/* Category */}
                             <td className="dashboard-table-td whitespace-nowrap text-xs">{e.category}</td>
-
-                            {/* Priority */}
-                            <td className="dashboard-table-td">
-                              <PriorityBadge priority={e.priority} />
-                            </td>
-
-                            {/* Sub-District */}
+                            <td className="dashboard-table-td"><PriorityBadge priority={e.priority} /></td>
                             <td className="dashboard-table-td whitespace-nowrap">
                               <span className="flex items-center gap-1 text-xs">
-                                <MapPin size={11} className="text-[var(--color-text-muted)]" />
-                                {e.subDistrict}
+                                <MapPin size={11} className="text-[var(--color-text-muted)]" />{e.subDistrict}
                               </span>
                             </td>
-
-                            {/* Date */}
-                            <td className="dashboard-table-td whitespace-nowrap text-xs text-[var(--color-text-muted)]">
-                              {e.escalatedOn}
-                            </td>
-
-                            {/* Officer */}
+                            <td className="dashboard-table-td whitespace-nowrap text-xs text-[var(--color-text-muted)]">{e.escalatedOn}</td>
                             <td className="dashboard-table-td whitespace-nowrap text-xs">{e.assignedTo}</td>
-
-                            {/* SLA */}
                             <td className="dashboard-table-td">
                               <SlaChip slaStatus={e.slaStatus} slaLabel={e.slaLabel} slaHours={e.slaHours} />
                             </td>
-
-                            {/* Status */}
+                            <td className="dashboard-table-td"><StatusBadge status={e.status} /></td>
                             <td className="dashboard-table-td">
-                              <StatusBadge status={e.status} />
-                            </td>
-
-                            {/* Actions */}
-                            <td className="dashboard-table-td">
-                              <ActionButtons id={e.id} status={e.status} />
+                              <ActionButtons id={e.id} status={e.status} sourceComplaintId={e.sourceComplaintId} />
                             </td>
                           </motion.tr>
                         ))
@@ -407,7 +492,7 @@ export default function EscalationsPage() {
               </div>
             </div>
 
-            {/* ── Mobile Cards ── */}
+            {/* Mobile cards */}
             <div className="flex flex-col gap-2 sm:hidden">
               <AnimatePresence mode="popLayout">
                 {filtered.length === 0 ? (
@@ -423,36 +508,31 @@ export default function EscalationsPage() {
             </div>
           </DashboardCard>
         </motion.div>
+      </div>
 
-      </div>{/* end main column */}
-
-      {/* ── RIGHT SIDEBAR (desktop sticky) ── */}
+      {/* Desktop sidebar */}
       <aside className="hidden xl:flex xl:w-[280px] xl:flex-shrink-0 xl:flex-col xl:gap-3 xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto">
-        <SidebarPanel />
+        <SidebarPanel allEscalations={ALL} />
       </aside>
 
-      {/* ── Mobile Sidebar Drawer ── */}
+      {/* Mobile sidebar drawer */}
       <AnimatePresence>
         {sidebarOpen && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm xl:hidden"
-            />
-            <motion.div
-              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm xl:hidden" />
+            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 320 }}
               className="fixed inset-y-0 right-0 z-50 w-80 overflow-y-auto p-4 xl:hidden"
-              style={{ background: "var(--color-card)", borderLeft: "1px solid var(--color-border)" }}
-            >
+              style={{ background: "var(--color-card)", borderLeft: "1px solid var(--color-border)" }}>
               <div className="flex items-center justify-between mb-4">
                 <span className="text-sm font-semibold text-[var(--color-text-primary)]">Operations Panel</span>
                 <button onClick={() => setSidebarOpen(false)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                   <X size={18} />
                 </button>
               </div>
-              <SidebarPanel />
+              <SidebarPanel allEscalations={ALL} />
             </motion.div>
           </>
         )}
@@ -465,7 +545,6 @@ export default function EscalationsPage() {
    SUB-COMPONENTS
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── KPI Card ── */
 function KpiCard({ label, value, change, trend, variant, icon }: {
   label: string; value: string; change: string;
   trend: "up" | "down"; variant: "good" | "warn" | "danger" | "neutral"; icon: React.ReactNode;
@@ -477,10 +556,7 @@ function KpiCard({ label, value, change, trend, variant, icon }: {
     neutral: "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)]",
   };
   return (
-    <DashboardCard
-      whileHover={{ y: -3, transition: { duration: 0.18 } }}
-      className="min-h-[100px] overflow-hidden p-3 sm:p-4"
-    >
+    <DashboardCard whileHover={{ y: -3, transition: { duration: 0.18 } }} className="min-h-[100px] overflow-hidden p-3 sm:p-4">
       <div className="flex h-full items-center gap-3">
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 sm:h-11 sm:w-11 ${glowMap[variant]}`}>
           {icon}
@@ -492,9 +568,7 @@ function KpiCard({ label, value, change, trend, variant, icon }: {
             {trend === "up"
               ? <TrendingUp size={11} className="shrink-0 text-red-400" />
               : <TrendingDown size={11} className="shrink-0 text-emerald-400" />}
-            <span className={`text-[11px] font-semibold ${trend === "up" ? "text-red-400" : "text-emerald-400"}`}>
-              {change}
-            </span>
+            <span className={`text-[11px] font-semibold ${trend === "up" ? "text-red-400" : "text-emerald-400"}`}>{change}</span>
           </div>
         </div>
       </div>
@@ -502,7 +576,6 @@ function KpiCard({ label, value, change, trend, variant, icon }: {
   );
 }
 
-/* ── Priority Badge ── */
 function PriorityBadge({ priority }: { priority: Priority }) {
   const cfg = PRIORITY_CONFIG[priority];
   return (
@@ -513,33 +586,26 @@ function PriorityBadge({ priority }: { priority: Priority }) {
   );
 }
 
-/* ── Status Badge ── */
 function StatusBadge({ status }: { status: Status }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cfg.badge}`}>
-      <Icon size={11} />
-      {status}
+      <Icon size={11} />{status}
     </span>
   );
 }
 
-/* ── SLA Chip ── */
 function SlaChip({ slaStatus, slaLabel, slaHours }: { slaStatus: SLAStatus; slaLabel: string; slaHours: number }) {
   const cfg = SLA_CONFIG[slaStatus];
-  if (slaLabel === "Resolved" || slaLabel === "Closed") {
-    return <span className="text-xs text-[var(--color-text-muted)]">—</span>;
-  }
+  if (slaLabel === "Resolved" || slaLabel === "Closed") return <span className="text-xs text-[var(--color-text-muted)]">—</span>;
   const isBreached = slaStatus === "Breached";
   const pct = isBreached ? 100 : slaHours <= 0 ? 100 : Math.max(0, Math.min(100, (1 - slaHours / 24) * 100));
   return (
     <div className={`flex min-w-[80px] flex-col gap-1 rounded-lg px-2 py-1.5 ${cfg.bg}`}>
       <div className="flex items-center gap-1">
         <Timer size={10} className={cfg.text} />
-        <span className={`text-[10px] font-bold ${cfg.text} ${isBreached ? "animate-pulse" : ""}`}>
-          {slaLabel}
-        </span>
+        <span className={`text-[10px] font-bold ${cfg.text} ${isBreached ? "animate-pulse" : ""}`}>{slaLabel}</span>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
         <div className={`h-full rounded-full transition-all ${cfg.bar}`} style={{ width: `${pct}%` }} />
@@ -548,74 +614,61 @@ function SlaChip({ slaStatus, slaLabel, slaHours }: { slaStatus: SLAStatus; slaL
   );
 }
 
-/* ── Action Buttons ── */
-function ActionButtons({ id, status }: { id: string; status: Status }) {
+function ActionButtons({ id, status, sourceComplaintId }: { id: string; status: Status; sourceComplaintId?: string }) {
   const isResolved = status === "Resolved" || status === "Closed";
+  const detailHref = sourceComplaintId && !id.startsWith("ESC-")
+    ? `/district-admin/dashboard/complaints/${id}`
+    : `/district-admin/dashboard/escalation/${id}`;
   return (
     <div className="flex items-center gap-1">
-      <Link href={`/district-admin/dashboard/escalation/${id}`}>
-        <motion.span
-          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}
-          title="View Details"
-          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-teal-500/30 bg-teal-500/10 text-teal-400 hover:bg-teal-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 transition-colors"
-        >
+      <Link href={detailHref}>
+        <motion.span whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }} title="View Details"
+          className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-teal-500/30 bg-teal-500/10 text-teal-400 hover:bg-teal-500/25 transition-colors">
           <Eye size={13} />
         </motion.span>
       </Link>
       {!isResolved && (
         <>
-          <motion.button
-            type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}
-            title="Assign Officer"
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 transition-colors"
-          >
+          <motion.button type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }} title="Assign Officer"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/25 transition-colors">
             <UserCheck size={13} />
           </motion.button>
-          <motion.button
-            type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}
-            title="Escalate Further"
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 transition-colors"
-          >
+          <motion.button type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }} title="Escalate Further"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/25 transition-colors">
             <ArrowUpRight size={13} />
           </motion.button>
-          <motion.button
-            type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}
-            title="Mark Resolved"
-            className="flex h-7 w-7 items-center justify-center rounded-md border border-teal-500/30 bg-teal-500/10 text-teal-400 hover:bg-teal-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 transition-colors"
-          >
+          <motion.button type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }} title="Mark Resolved"
+            className="flex h-7 w-7 items-center justify-center rounded-md border border-teal-500/30 bg-teal-500/10 text-teal-400 hover:bg-teal-500/25 transition-colors">
             <CheckCircle2 size={13} />
           </motion.button>
         </>
       )}
-      <motion.button
-        type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}
-        title="More Options"
-        className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60 transition-colors"
-        style={{ background: "var(--color-surface)" }}
-      >
+      <motion.button type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }} title="More Options"
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+        style={{ background: "var(--color-surface)" }}>
         <MoreHorizontal size={13} />
       </motion.button>
     </div>
   );
 }
 
-/* ── Mobile Escalation Card ── */
 function MobileEscalationCard({ escalation: e }: { escalation: Escalation }) {
+  const detailHref = e.sourceComplaintId && !e.id.startsWith("ESC-")
+    ? `/district-admin/dashboard/complaints/${e.id}`
+    : `/district-admin/dashboard/escalation/${e.id}`;
   return (
     <DashboardCard className="p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <ShieldAlert size={14} className="shrink-0 text-teal-400" />
-          <Link href={`/district-admin/dashboard/escalation/${e.id}`}>
+          <Link href={detailHref}>
             <span className="text-xs font-mono font-semibold" style={{ color: "var(--da-teal)" }}>{e.id}</span>
           </Link>
           <PriorityBadge priority={e.priority} />
         </div>
         <StatusBadge status={e.status} />
       </div>
-
       <p className="text-sm font-medium text-[var(--color-text-primary)] mb-2 line-clamp-2">{e.title}</p>
-
       <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mb-3">
         {[
           { icon: MapPin,    val: e.subDistrict },
@@ -624,37 +677,27 @@ function MobileEscalationCard({ escalation: e }: { escalation: Escalation }) {
           { icon: Clock,     val: e.escalatedOn },
         ].map(({ icon: Icon, val }) => (
           <span key={val} className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-            <Icon size={11} className="shrink-0 text-[var(--color-text-muted)]" />
-            {val}
+            <Icon size={11} className="shrink-0 text-[var(--color-text-muted)]" />{val}
           </span>
         ))}
       </div>
-
       <div className="flex items-center justify-between">
         <SlaChip slaStatus={e.slaStatus} slaLabel={e.slaLabel} slaHours={e.slaHours} />
-        <ActionButtons id={e.id} status={e.status} />
+        <ActionButtons id={e.id} status={e.status} sourceComplaintId={e.sourceComplaintId} />
       </div>
     </DashboardCard>
   );
 }
 
-/* ── Empty State ── */
 function EmptyState() {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center justify-center py-16 px-6 text-center"
-    >
-      <div
-        className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border"
-        style={{ background: "color-mix(in srgb, var(--da-teal) 8%, transparent)", borderColor: "var(--da-border-teal)" }}
-      >
+    <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border"
+        style={{ background: "color-mix(in srgb, var(--da-teal) 8%, transparent)", borderColor: "var(--da-border-teal)" }}>
         <Inbox size={28} className="text-teal-400" />
       </div>
-      <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">
-        No Active Escalations
-      </h3>
+      <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-1">No Active Escalations</h3>
       <p className="text-sm text-[var(--color-text-muted)] max-w-xs">
         All district complaints are operating within SLA limits.
       </p>
@@ -662,33 +705,25 @@ function EmptyState() {
   );
 }
 
-/* ── Right Sidebar Panel ── */
-function SidebarPanel() {
-  const raw = filterByDistrictScope(
-    useEscalationStore((s) => s.escalations),
-    (e) => e.district,
-    (e) => e.state
-  );
-  // Deduplicate by ID — guard against store/seed collision after hot reload
-  const seen = new Set<string>();
-  const ALL = raw.filter((e) => { if (seen.has(e.id)) return false; seen.add(e.id); return true; });
-  const critical = ALL.filter(e => e.priority === "Critical" && e.status !== "Resolved" && e.status !== "Closed");
-  const slaRisk  = ALL.filter(e => e.slaStatus === "At Risk").length;
-  const breached = ALL.filter(e => e.slaStatus === "Breached").length;
-  const onTrack  = ALL.filter(e => e.slaStatus === "On Track").length;
+function SidebarPanel({ allEscalations }: { allEscalations: Escalation[] }) {
+  const critical = allEscalations.filter(e => e.priority === "Critical" && e.status !== "Resolved" && e.status !== "Closed");
+  const slaRisk  = allEscalations.filter(e => e.slaStatus === "At Risk").length;
+  const breached = allEscalations.filter(e => e.slaStatus === "Breached").length;
+  const onTrack  = allEscalations.filter(e => e.slaStatus === "On Track").length;
 
-  const recentActivity = [
-    { title: "ESC-4030 escalated to priority",  time: "3m ago",  color: "text-red-400",    icon: ArrowUpRight },
-    { title: "ESC-4026 marked resolved",         time: "12m ago", color: "text-teal-400",   icon: CheckCircle2 },
-    { title: "ESC-4022 assigned to A. Singh",    time: "25m ago", color: "text-blue-400",   icon: UserCheck    },
-    { title: "SLA breach — ESC-4024",            time: "1h ago",  color: "text-amber-400",  icon: Timer        },
-    { title: "New escalation — ESC-4032 raised", time: "1h ago",  color: "text-purple-400", icon: ShieldAlert  },
-  ];
+  // Build recent activity from real data
+  const recent = allEscalations
+    .slice(0, 5)
+    .map((e) => ({
+      title: `${e.id} — ${e.title.slice(0, 40)}${e.title.length > 40 ? "…" : ""}`,
+      time: e.escalatedOn,
+      color: e.priority === "Critical" ? "text-red-400" : e.slaStatus === "Breached" ? "text-amber-400" : "text-teal-400",
+      icon: e.priority === "Critical" ? ShieldAlert : e.status === "Resolved" ? CheckCircle2 : Clock,
+    }));
 
   return (
     <div className="flex flex-col gap-3">
-
-      {/* ── SLA Alerts — 3-col horizontal ── */}
+      {/* SLA Alerts */}
       <DashboardCard className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Timer size={13} className="text-amber-400 shrink-0" />
@@ -696,14 +731,12 @@ function SidebarPanel() {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[
-            { label: "Breached", value: breached, color: "text-red-400",   border: "border-red-500/25",  bg: "bg-red-500/8"   },
-            { label: "At Risk",  value: slaRisk,  color: "text-amber-400", border: "border-amber-500/25",bg: "bg-amber-500/8" },
-            { label: "On Track", value: onTrack,  color: "text-teal-400",  border: "border-teal-500/25", bg: "bg-teal-500/8"  },
+            { label: "Breached", value: breached, color: "text-red-400",   border: "border-red-500/25",   bg: "bg-red-500/8"   },
+            { label: "At Risk",  value: slaRisk,  color: "text-amber-400", border: "border-amber-500/25", bg: "bg-amber-500/8" },
+            { label: "On Track", value: onTrack,  color: "text-teal-400",  border: "border-teal-500/25",  bg: "bg-teal-500/8"  },
           ].map(s => (
-            <div
-              key={s.label}
-              className={`flex flex-col items-center justify-center rounded-xl border py-2.5 px-1 ${s.border} ${s.bg}`}
-            >
+            <div key={s.label}
+              className={`flex flex-col items-center justify-center rounded-xl border py-2.5 px-1 ${s.border} ${s.bg}`}>
               <span className={`text-xl font-bold tabular-nums leading-none ${s.color}`}>{s.value}</span>
               <span className="mt-1 text-[10px] font-medium text-[var(--color-text-muted)] text-center leading-tight">{s.label}</span>
             </div>
@@ -711,7 +744,7 @@ function SidebarPanel() {
         </div>
       </DashboardCard>
 
-      {/* ── Critical Escalations — no scroll, compact rows ── */}
+      {/* Critical Escalations */}
       <DashboardCard className="p-4">
         <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
@@ -722,72 +755,56 @@ function SidebarPanel() {
             {critical.length}
           </span>
         </div>
-
-        <div className="flex flex-col divide-y divide-[var(--color-border)] overflow-y-auto" style={{ maxHeight: "16rem", scrollbarWidth: "thin", scrollbarColor: "color-mix(in srgb, #ef4444 25%, transparent) transparent" }}>
-          {critical.map((e, i) => (
-            <Link key={e.id} href={`/district-admin/dashboard/escalation/${e.id}`}>
-              <motion.div
-                initial={{ opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                whileHover={{ x: 2 }}
-                className="flex items-center gap-2.5 py-2 transition-colors hover:bg-red-500/4 rounded-lg px-1 -mx-1 cursor-pointer group"
-              >
-                {/* Pulse dot */}
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400 animate-pulse" />
-
-                {/* Content */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[11px] font-mono font-bold text-red-400">{e.id}</span>
-                    <SlaChip slaStatus={e.slaStatus} slaLabel={e.slaLabel} slaHours={e.slaHours} />
+        <div className="flex flex-col divide-y divide-[var(--color-border)] overflow-y-auto"
+          style={{ maxHeight: "16rem", scrollbarWidth: "thin" }}>
+          {critical.length === 0 ? (
+            <p className="py-4 text-center text-xs text-[var(--color-text-muted)]">No critical escalations</p>
+          ) : critical.map((e, i) => {
+            const href = e.sourceComplaintId && !e.id.startsWith("ESC-")
+              ? `/district-admin/dashboard/complaints/${e.id}`
+              : `/district-admin/dashboard/escalation/${e.id}`;
+            return (
+              <Link key={e.id} href={href}>
+                <motion.div initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }} whileHover={{ x: 2 }}
+                  className="flex items-center gap-2.5 py-2 rounded-lg px-1 -mx-1 cursor-pointer group">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400 animate-pulse" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[11px] font-mono font-bold text-red-400">{e.id}</span>
+                      <SlaChip slaStatus={e.slaStatus} slaLabel={e.slaLabel} slaHours={e.slaHours} />
+                    </div>
+                    <p className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5 max-w-[160px]">{e.title}</p>
                   </div>
-                  <p className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5 max-w-[160px]">
-                    {e.title}
-                  </p>
-                </div>
-
-                <ChevronRight size={11} className="shrink-0 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
-              </motion.div>
-            </Link>
-          ))}
+                  <ChevronRight size={11} className="shrink-0 text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </motion.div>
+              </Link>
+            );
+          })}
         </div>
       </DashboardCard>
 
-      {/* ── Recent Activity ── */}
+      {/* Recent Activity */}
       <DashboardCard className="p-4">
         <div className="flex items-center gap-2 mb-2.5">
           <Activity size={13} className="text-teal-400 shrink-0" />
           <h3 className="text-xs font-semibold text-[var(--color-text-primary)]">Recent Activity</h3>
         </div>
-
-        <div className="flex flex-col overflow-y-auto" style={{ maxHeight: "14rem", scrollbarWidth: "thin", scrollbarColor: "color-mix(in srgb, var(--da-teal) 25%, transparent) transparent" }}>
-          {recentActivity.map((a, i) => {
+        <div className="flex flex-col overflow-y-auto" style={{ maxHeight: "14rem", scrollbarWidth: "thin" }}>
+          {recent.length === 0 ? (
+            <p className="py-4 text-center text-xs text-[var(--color-text-muted)]">No recent activity</p>
+          ) : recent.map((a, i) => {
             const Icon = a.icon;
             return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -5 }}
-                animate={{ opacity: 1, x: 0 }}
+              <motion.div key={i} initial={{ opacity: 0, x: -5 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.25 + i * 0.06 }}
-                className="flex items-start gap-2.5 py-2 border-b border-[var(--color-border)] last:border-0"
-              >
-                {/* Icon circle */}
-                <div
-                  className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
-                  style={{
-                    background: "var(--color-surface)",
-                    borderColor: "var(--color-border)",
-                  }}
-                >
+                className="flex items-start gap-2.5 py-2 border-b border-[var(--color-border)] last:border-0">
+                <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border"
+                  style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
                   <Icon size={11} className={a.color} />
                 </div>
-
-                {/* Text */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-[var(--color-text-secondary)] leading-snug">
-                    {a.title}
-                  </p>
+                  <p className="text-[11px] font-medium text-[var(--color-text-secondary)] leading-snug">{a.title}</p>
                   <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{a.time}</p>
                 </div>
               </motion.div>
@@ -795,37 +812,33 @@ function SidebarPanel() {
           })}
         </div>
       </DashboardCard>
-
     </div>
   );
 }
 
-/* ── Filter Select ── */
 function FilterSelect({ label, value, options, onChange }: {
   label: string; value: string; options: string[]; onChange: (v: string) => void;
 }) {
   const isActive = value !== "All" && value !== "";
   return (
     <div className="relative">
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        aria-label={label}
+      <select value={value} onChange={e => onChange(e.target.value)} aria-label={label}
         className="h-9 appearance-none rounded-lg border pl-3 pr-8 text-xs outline-none cursor-pointer transition-colors"
         style={{
           borderColor: isActive ? "var(--da-border-teal)" : "var(--color-border)",
           background:  isActive ? "color-mix(in srgb, var(--da-teal) 8%, var(--color-surface))" : "var(--color-surface)",
           color: isActive ? "var(--da-teal)" : "var(--color-text-secondary)",
-        }}
-      >
+        }}>
         {options.map(o => (
           <option key={o} value={o} style={{ background: "var(--color-card)", color: "var(--color-text-primary)" }}>
             {o === "All" ? `All ${label}` : o}
           </option>
         ))}
       </select>
-      <ChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+      <svg className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]"
+        width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
     </div>
   );
 }
-

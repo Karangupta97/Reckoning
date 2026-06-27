@@ -549,6 +549,15 @@ export interface AdminComplaintView {
   slaDeadline: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Pre-signed S3 URLs for citizen + officer media (up to 8). */
+  mediaUrls: string[];
+  /** AI analysis result for the complaint, if available. */
+  aiResult: {
+    annotatedImageUrl: string | null;
+    confidence: number | null;
+    suggestedCategory: string | null;
+    suggestedSeverity: string | null;
+  } | null;
 }
 
 /** Paginated list of admin complaint views. */
@@ -559,11 +568,12 @@ export interface AdminComplaintListResult {
 
 /**
  * Map a Prisma complaint row to the citizen-identity-free admin view.
+ * Async because it generates pre-signed S3 URLs for media and AI images.
  *
  * @param c Complaint row with the selected admin fields.
  * @returns An {@link AdminComplaintView}.
  */
-function toAdminComplaintView(c: {
+async function toAdminComplaintView(c: {
   id: string;
   ticketNumber: string;
   category: string;
@@ -581,7 +591,41 @@ function toAdminComplaintView(c: {
   slaDeadline: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}): AdminComplaintView {
+  isAnonymous?: boolean;
+  media?: { media: { s3Key: string } }[];
+  aiResult?: {
+    annotatedImageS3Key: string | null;
+    confidence: number | null;
+    suggestedCategory: string | null;
+    suggestedSeverity: string | null;
+  } | null;
+}): Promise<AdminComplaintView> {
+  // Generate pre-signed URLs for media attachments (citizen + officer uploads)
+  const { getSignedDownloadUrl } = await import("../../../config/s3.js");
+  const mediaUrls = await Promise.all(
+    (c.media ?? []).map(async (m) => {
+      try {
+        return await getSignedDownloadUrl(m.media.s3Key, 3600);
+      } catch {
+        return null;
+      }
+    }),
+  ).then((urls) => urls.filter((u): u is string => u !== null));
+
+  // AI result with annotated image URL
+  let aiResult: AdminComplaintView["aiResult"] = null;
+  if (c.aiResult) {
+    const annotatedImageUrl = c.aiResult.annotatedImageS3Key
+      ? await getSignedDownloadUrl(c.aiResult.annotatedImageS3Key, 3600).catch(() => null)
+      : null;
+    aiResult = {
+      annotatedImageUrl,
+      confidence: c.aiResult.confidence,
+      suggestedCategory: c.aiResult.suggestedCategory,
+      suggestedSeverity: c.aiResult.suggestedSeverity,
+    };
+  }
+
   return {
     id: c.id,
     ticketNumber: c.ticketNumber,
@@ -600,6 +644,8 @@ function toAdminComplaintView(c: {
     slaDeadline: c.slaDeadline,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
+    mediaUrls,
+    aiResult,
   };
 }
 
@@ -622,6 +668,21 @@ const ADMIN_COMPLAINT_SELECT = {
   slaDeadline: true,
   createdAt: true,
   updatedAt: true,
+  isAnonymous: true,
+  media: {
+    select: {
+      media: { select: { s3Key: true } },
+    },
+    take: 8,
+  },
+  aiResult: {
+    select: {
+      annotatedImageS3Key: true,
+      confidence: true,
+      suggestedCategory: true,
+      suggestedSeverity: true,
+    },
+  },
 } satisfies Prisma.ComplaintSelect;
 
 /**
@@ -643,10 +704,10 @@ export async function getDistrictEscalations(
   limit: number,
   status?: string,
 ): Promise<AdminComplaintListResult> {
+  // No district assigned → return empty list rather than 400
+  // so the district admin dashboard shows a clean empty state.
   if (!districtId) {
-    throw new AppError("Your account is not assigned to a district.", 400, {
-      code: "NO_DISTRICT",
-    });
+    return { complaints: [], pagination: paginate(0, page, limit) };
   }
 
   const where: Prisma.ComplaintWhereInput = {
@@ -671,7 +732,7 @@ export async function getDistrictEscalations(
   );
 
   return {
-    complaints: rows.map(toAdminComplaintView),
+    complaints: await Promise.all(rows.map(toAdminComplaintView)),
     pagination: paginate(total, page, limit),
   };
 }
@@ -695,10 +756,9 @@ export interface DistrictStats {
 export async function getDistrictStats(
   districtId: string | null,
 ): Promise<DistrictStats> {
+  // No district assigned → return zero stats
   if (!districtId) {
-    throw new AppError("Your account is not assigned to a district.", 400, {
-      code: "NO_DISTRICT",
-    });
+    return { escalatedTotal: 0, resolved: 0, rejected: 0, open: 0, slaBreached: 0, resolutionRate: 0 };
   }
 
   const base: Prisma.ComplaintWhereInput = {
@@ -867,10 +927,10 @@ async function hydrateAdminComplaints(
     "hydrateAdminComplaints",
   );
   const byId = new Map(rows.map((r) => [r.id, r]));
-  return ids
+  const ordered = ids
     .map((id) => byId.get(id))
-    .filter((r): r is (typeof rows)[number] => Boolean(r))
-    .map(toAdminComplaintView);
+    .filter((r): r is (typeof rows)[number] => Boolean(r));
+  return Promise.all(ordered.map(toAdminComplaintView));
 }
 
 /**

@@ -278,8 +278,16 @@ export default function DistrictComplaintsPage() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load complaints.");
-          setLoading(false);
+          // 400 NO_DISTRICT = admin not yet assigned to a district — show empty, not an error
+          const status = (err as { response?: { status?: number } })?.response?.status;
+          if (status === 400) {
+            setComplaints([]);
+            setPagination(null);
+            setLoading(false);
+          } else {
+            setError(err instanceof Error ? err.message : "Failed to load complaints.");
+            setLoading(false);
+          }
         }
       }
     };
