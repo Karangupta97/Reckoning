@@ -16,7 +16,7 @@
  * Shows escalatedBy admin name + escalatedAt timestamp.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -26,6 +26,7 @@ import {
   Clock, Loader2, ExternalLink, Activity, Camera,
   TrendingUp, Timer, ArrowUpRight, X, CircleDot,
   ZoomIn, Download, ChevronLeft, ChevronRight, Sparkles,
+  Wrench, MessageSquare, XCircle, CornerDownLeft,
 } from "lucide-react";
 import { DashboardCard } from "@/components/super-admin-dashboard/dashboard-card";
 import { api } from "@/lib/api";
@@ -35,6 +36,9 @@ import { useAdminAuthStore } from "@/stores/adminAuthStore";
 import { useComplaintStore, toComplaintDetailView } from "@/store/complaintStore";
 import { useEscalationStore } from "@/store/escalationStore";
 import { useAdminNotificationStore } from "@/store/adminNotificationStore";
+import { useComplaintWorkflowStore } from "@/store/complaintWorkflowStore";
+import { buildCaseJourney } from "@/lib/case-traceability";
+import { CaseJourneyTimeline } from "@/components/admin/CaseJourneyTimeline";
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -131,11 +135,13 @@ function EvidenceGallery({
   citizenCount,
   aiResult,
   ticketNumber,
+  onRefreshAiAnalysis,
 }: {
   mediaUrls: string[];
   citizenCount: number;
   aiResult: LiveComplaint["aiResult"];
   ticketNumber: string;
+  onRefreshAiAnalysis?: () => void;
 }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const citizenUrls  = mediaUrls.slice(0, citizenCount);
@@ -221,9 +227,22 @@ function EvidenceGallery({
           {aiResult && (
             <div className="rounded-xl border px-3 py-3"
               style={{ borderColor: "rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.05)" }}>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={12} className="text-amber-400" />
-                <span className="text-[10px] font-bold text-[var(--color-text-primary)]">AI Analysis</span>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={12} className="text-amber-400" />
+                  <span className="text-[10px] font-bold text-[var(--color-text-primary)]">AI Analysis</span>
+                </div>
+                {onRefreshAiAnalysis && (
+                  <button
+                    type="button"
+                    onClick={onRefreshAiAnalysis}
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)] disabled:opacity-50"
+                    style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+                  >
+                    <Loader2 size={10} />
+                    Refresh
+                  </button>
+                )}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {aiResult.suggestedCategory && (
@@ -479,15 +498,28 @@ export default function DistrictComplaintDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [superEscOpen, setSuperEscOpen]   = useState(false);
   const [superEscId, setSuperEscId]       = useState<string | null>(null);
+  const [assignOfficer, setAssignOfficer] = useState<string>(() => {
+    // Seed from store record if available (CMP-* IDs)
+    if (!storeRecord) return "";
+    try { return toComplaintDetailView(storeRecord).officer?.name ?? ""; } catch { return ""; }
+  });
+  const [assignOpen, setAssignOpen]       = useState(false);
+  const [clarifyOpen, setClarifyOpen]     = useState(false);
+  const [clarifyMsg, setClarifyMsg]       = useState("");
+  const [reloadTick, setReloadTick] = useState(0);
   const hasFetched = useRef(false);
+
+  // Declare early — used in useEffect hooks below
+  const isMockId = typeof id === "string" && id.startsWith("CMP-");
 
   const showToast = useCallback((msg: string, ok = true) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  // Derive a unified display complaint from either mock store or live API
-  const isMockId = typeof id === "string" && id.startsWith("CMP-");
+  const refreshAiAnalysis = useCallback(() => {
+    setReloadTick((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     if (hasFetched.current) return;
@@ -524,7 +556,7 @@ export default function DistrictComplaintDetailPage() {
     };
     load();
     return () => { mounted = false; };
-  }, [id, isMock, isMockId, storeRecord]);
+  }, [id, isMock, isMockId, storeRecord, reloadTick]);
 
   // ── District Actions ────────────────────────────────────────────────────
 
@@ -561,7 +593,74 @@ export default function DistrictComplaintDetailPage() {
     }
   }, [actionLoading, id, isMockId, live, storeRecord, storeSetStatus, showToast]);
 
-  // ── Build display data from store record or live API ───────────────────
+  // ── Workflow store ─────────────────────────────────────────────────────
+  const approveResolution  = useComplaintWorkflowStore((s) => s.approveResolution);
+  const requestClarification = useComplaintWorkflowStore((s) => s.requestResolutionClarification);
+  const pendingResolution  = useComplaintWorkflowStore((s) =>
+    s.resolutions.find((r) => r.complaintId === id)
+  );
+
+  const handleApproveResolution = useCallback(() => {
+    if (pendingResolution) {
+      approveResolution(pendingResolution.id, "Approved by District Admin");
+    }
+    if (isMockId && storeRecord) {
+      useComplaintStore.getState().setStatus(id, "Resolved", "District Admin", "Resolution approved");
+    }
+    showToast("Resolution approved ✓");
+  }, [pendingResolution, approveResolution, isMockId, storeRecord, id, showToast]);
+
+  const handleRequestClarification = useCallback(() => {
+    if (!clarifyMsg.trim()) return;
+    if (pendingResolution) {
+      requestClarification(pendingResolution.id, clarifyMsg.trim());
+    } else {
+      useAdminNotificationStore.getState().push({
+        portal: "sub-district",
+        type: "clarification_request",
+        title: "Clarification requested",
+        message: `${id} — ${clarifyMsg.trim().slice(0, 80)}`,
+        entityId: id,
+        href: `/sub-district-admin/dashboard/complaints/${id}`,
+      });
+    }
+    setClarifyMsg("");
+    setClarifyOpen(false);
+    showToast("Clarification request sent.");
+  }, [clarifyMsg, pendingResolution, requestClarification, id, showToast]);
+
+  const handleReturnToSubDistrict = useCallback(async () => {
+    setActionLoading("RETURN");
+    try {
+      if (isMockId) {
+        await new Promise((r) => setTimeout(r, 350));
+        if (storeRecord) {
+          useComplaintStore.getState().setStatus(id, "In Progress", "District Admin", "Returned to sub-district for rework");
+        }
+      } else {
+        await adminAxios.patch(`/api/admin/subdistrict/complaints/${id}/status`, { status: "IN_PROGRESS" });
+      }
+      if (live) setLive({ ...live, status: "IN_PROGRESS" });
+      showToast("Returned to sub-district for rework.");
+    } catch {
+      showToast("Action failed.", false);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [isMockId, storeRecord, id, live, showToast]);
+
+  const handleAssignOfficer = useCallback(() => {
+    if (!assignOfficer.trim()) return;
+    useComplaintStore.getState().assignOfficer(id, assignOfficer.trim(), "District Admin");
+    setAssignOpen(false);
+    showToast(`Assigned to ${assignOfficer}`);
+  }, [assignOfficer, id, showToast]);
+
+  // ── Case Journey (mock store) ───────────────────────────────────────────
+  const caseJourneySteps = useMemo(() => {
+    if (!isMockId) return [];
+    try { return buildCaseJourney(id); } catch { return []; }
+  }, [id, isMockId]);
 
   const displayStatus: string = (() => {
     if (storeRecord) return mapStatus(storeRecord.status);
@@ -630,6 +729,7 @@ export default function DistrictComplaintDetailPage() {
   const updatedAt    = live?.updatedAt    ?? detail?.updatedDate ?? new Date().toISOString();
   const sevCfg       = SEVERITY_COLOR[severity] ?? SEVERITY_COLOR.MEDIUM;
   const sla          = calcSla(createdAt, slaDeadline);
+  const aiAnalysisResult = live?.aiResult ?? null;
 
   return (
     <div className="flex flex-col gap-3 pb-6">
@@ -776,8 +876,9 @@ export default function DistrictComplaintDetailPage() {
             <EvidenceGallery
               mediaUrls={live?.mediaUrls ?? []}
               citizenCount={Math.ceil((live?.mediaUrls?.length ?? 0) * 0.6)}
-              aiResult={live?.aiResult ?? null}
+              aiResult={aiAnalysisResult}
               ticketNumber={ticketNumber}
+              onRefreshAiAnalysis={refreshAiAnalysis}
             />
           </motion.div>
 
@@ -864,59 +965,229 @@ export default function DistrictComplaintDetailPage() {
         {/* ── Right 1/3 ── */}
         <div className="flex flex-col gap-3">
 
-          {/* District Actions */}
+          {/* CASE ACTIONS */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}>
             <DashboardCard className="p-4 flex flex-col gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">
-                District Actions
-              </p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)] mb-1">Case Actions</p>
 
-              {/* Mark In Progress */}
-              <motion.button
-                whileHover={{ x: isTerminal || displayStatus === "IN_PROGRESS" ? 0 : 2 }}
+              <motion.button whileHover={{ x: isTerminal ? 0 : 2 }} whileTap={{ scale: isTerminal ? 1 : 0.97 }}
+                disabled={isTerminal} onClick={() => setAssignOpen(true)}
+                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: "rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.08)", color: "var(--color-info)" }}>
+                <UserCheck size={14} /> Assign Officer
+              </motion.button>
+
+              <motion.button whileHover={{ x: isTerminal || displayStatus === "IN_PROGRESS" ? 0 : 2 }}
                 whileTap={{ scale: isTerminal || displayStatus === "IN_PROGRESS" ? 1 : 0.97 }}
                 disabled={isTerminal || displayStatus === "IN_PROGRESS" || !!actionLoading}
                 onClick={() => handleMarkStatus("IN_PROGRESS")}
                 className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ borderColor: "rgba(245,158,11,0.3)", background: "rgba(245,158,11,0.08)", color: "#f59e0b" }}>
-                {actionLoading === "IN_PROGRESS"
-                  ? <Loader2 size={13} className="animate-spin" />
-                  : <Clock size={14} />}
+                {actionLoading === "IN_PROGRESS" ? <Loader2 size={13} className="animate-spin" /> : <Wrench size={14} />}
                 {displayStatus === "IN_PROGRESS" ? "Already In Progress" : "Mark In Progress"}
               </motion.button>
 
-              {/* Mark Resolved */}
-              <motion.button
-                whileHover={{ x: isTerminal ? 0 : 2 }}
-                whileTap={{ scale: isTerminal ? 1 : 0.97 }}
-                disabled={isTerminal || !!actionLoading}
-                onClick={() => handleMarkStatus("RESOLVED")}
-                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ borderColor: "rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.1)", color: "#10b981" }}>
-                {actionLoading === "RESOLVED"
-                  ? <Loader2 size={13} className="animate-spin" />
-                  : <CheckCircle2 size={14} />}
-                {displayStatus === "RESOLVED" ? "Already Resolved ✓" : "Mark Resolved"}
+              <motion.button whileHover={{ x: isTerminal ? 0 : 2 }} whileTap={{ scale: isTerminal ? 1 : 0.97 }}
+                disabled={isTerminal}
+                onClick={() => showToast("Use the Evidence page to upload files.")}
+                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: "rgba(167,139,250,0.3)", background: "rgba(167,139,250,0.08)", color: "#a78bfa" }}>
+                <Camera size={14} /> Upload Evidence
+              </motion.button>
+
+              <motion.button whileHover={{ x: isTerminal ? 0 : 2 }} whileTap={{ scale: isTerminal ? 1 : 0.97 }}
+                disabled={isTerminal}
+                onClick={() => setClarifyOpen(true)}
+                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: "rgba(20,184,166,0.3)", background: "rgba(20,184,166,0.08)", color: "#14b8a6" }}>
+                <MessageSquare size={14} /> Request Clarification
               </motion.button>
 
               <div className="my-1 border-t border-[var(--color-border)]" />
 
-              {/* Escalate to Super Admin */}
-              <motion.button
-                whileHover={{ x: isTerminal || superEscId ? 0 : 2 }}
+              <motion.button whileHover={{ x: isTerminal ? 0 : 2 }} whileTap={{ scale: isTerminal ? 1 : 0.97 }}
+                disabled={isTerminal || !!actionLoading}
+                onClick={handleApproveResolution}
+                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-semibold text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: "rgba(16,185,129,0.35)", background: "rgba(16,185,129,0.1)", color: "#10b981" }}>
+                {actionLoading === "RESOLVED" ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                {displayStatus === "RESOLVED" ? "Already Resolved ✓" : "Approve Resolution"}
+              </motion.button>
+
+              <motion.button whileHover={{ x: isTerminal || superEscId ? 0 : 2 }}
                 whileTap={{ scale: isTerminal || superEscId ? 1 : 0.97 }}
                 disabled={isTerminal || !!superEscId || !!actionLoading}
                 onClick={() => setSuperEscOpen(true)}
                 className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{ borderColor: "rgba(249,115,22,0.3)", background: "rgba(249,115,22,0.08)", color: "#f97316" }}>
                 <ArrowUpRight size={14} />
-                {superEscId ? `Escalated as ${superEscId} ✓` : "Escalate to Super Admin"}
+                {superEscId ? `Escalated as ${superEscId} ✓` : "Escalate Further"}
+              </motion.button>
+
+              <motion.button whileHover={{ x: isTerminal ? 0 : 2 }} whileTap={{ scale: isTerminal ? 1 : 0.97 }}
+                disabled={isTerminal || actionLoading === "RETURN"}
+                onClick={handleReturnToSubDistrict}
+                className="flex items-center gap-2.5 h-9 px-3 rounded-lg border text-xs font-medium text-left transition-all w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ borderColor: "rgba(239,68,68,0.3)", background: "rgba(239,68,68,0.08)", color: "var(--color-danger)" }}>
+                {actionLoading === "RETURN" ? <Loader2 size={13} className="animate-spin" /> : <CornerDownLeft size={14} />}
+                Return to Sub-District
               </motion.button>
             </DashboardCard>
           </motion.div>
 
-          {/* Escalation Details */}
+          {/* Assign Officer dialog */}
+          <AnimatePresence>
+            {assignOpen && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { if (e.target === e.currentTarget) setAssignOpen(false); }}>
+                <motion.div initial={{ scale: 0.94, y: 12, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.94, opacity: 0 }} transition={{ type: "spring", damping: 24, stiffness: 320 }}
+                  className="w-full max-w-sm rounded-2xl border shadow-xl"
+                  style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
+                  <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Assign Officer</h3>
+                      <p className="text-[10px] text-[var(--color-text-muted)] font-mono mt-0.5">{ticketNumber}</p>
+                    </div>
+                    <button onClick={() => setAssignOpen(false)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-colors">
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <div className="px-5 py-4 flex flex-col gap-3">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Officer Name</label>
+                    <input value={assignOfficer} onChange={(e) => setAssignOfficer(e.target.value)}
+                      placeholder="e.g. M. Khan"
+                      className="rounded-lg border px-3 py-2 text-xs focus:outline-none"
+                      style={{ borderColor: "rgba(20,184,166,0.4)", background: "var(--color-surface)", color: "var(--color-text-primary)" }} />
+                  </div>
+                  <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3">
+                    <button onClick={() => setAssignOpen(false)}
+                      className="h-8 px-3 rounded-lg border text-xs font-medium text-[var(--color-text-muted)]"
+                      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>Cancel</button>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={handleAssignOfficer} disabled={!assignOfficer.trim()}
+                      className="flex items-center gap-1.5 h-8 px-4 rounded-lg border text-xs font-semibold disabled:opacity-50"
+                      style={{ borderColor: "rgba(20,184,166,0.4)", background: "rgba(20,184,166,0.12)", color: "#14b8a6" }}>
+                      <UserCheck size={12} /> Assign
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Request Clarification dialog */}
+          <AnimatePresence>
+            {clarifyOpen && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { if (e.target === e.currentTarget) setClarifyOpen(false); }}>
+                <motion.div initial={{ scale: 0.94, y: 12, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.94, opacity: 0 }} transition={{ type: "spring", damping: 24, stiffness: 320 }}
+                  className="w-full max-w-md rounded-2xl border shadow-xl"
+                  style={{ background: "var(--color-card)", borderColor: "var(--color-border)" }}>
+                  <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Request Clarification</h3>
+                      <p className="text-[10px] text-[var(--color-text-muted)] font-mono mt-0.5">{ticketNumber}</p>
+                    </div>
+                    <button onClick={() => setClarifyOpen(false)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-surface)] transition-colors">
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <div className="px-5 py-4 flex flex-col gap-3">
+                    <label className="text-xs font-semibold text-[var(--color-text-secondary)]">Message to Sub-District Officer</label>
+                    <textarea value={clarifyMsg} onChange={(e) => setClarifyMsg(e.target.value)} rows={4}
+                      placeholder="Describe what additional information or action is needed…"
+                      className="w-full rounded-lg border px-3 py-2 text-xs resize-none focus:outline-none"
+                      style={{ borderColor: "rgba(20,184,166,0.3)", background: "var(--color-surface)", color: "var(--color-text-secondary)" }} />
+                  </div>
+                  <div className="flex justify-end gap-2 border-t border-[var(--color-border)] px-5 py-3">
+                    <button onClick={() => setClarifyOpen(false)}
+                      className="h-8 px-3 rounded-lg border text-xs font-medium text-[var(--color-text-muted)]"
+                      style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>Cancel</button>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                      onClick={handleRequestClarification} disabled={!clarifyMsg.trim()}
+                      className="flex items-center gap-1.5 h-8 px-4 rounded-lg border text-xs font-semibold disabled:opacity-50"
+                      style={{ borderColor: "rgba(20,184,166,0.4)", background: "rgba(20,184,166,0.12)", color: "#14b8a6" }}>
+                      <MessageSquare size={12} /> Send Request
+                    </motion.button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Assignment card */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <DashboardCard className="p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <UserCheck size={14} style={{ color: "#14b8a6" }} />
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Assignment</h3>
+              </div>
+              <div className="flex flex-col divide-y divide-[var(--color-border)]">
+                {[
+                  { label: "Officer",    value: assignOfficer || detail?.officer?.name || escalatedBy?.split("(")[0]?.trim() || "Unassigned", hi: true },
+                  { label: "Assigned",   value: escalatedAt ? fmtDT(escalatedAt) : detail?.officer?.assignedDate ?? "—", hi: false },
+                  { label: "Resolution", value: slaDeadline ? fmtDT(slaDeadline) : detail?.resolutionTarget ?? "Per SLA", hi: false },
+                  { label: "Supervisor", value: detail?.officer?.supervisor ?? "Sub-District Officer", hi: false },
+                ].map((r) => (
+                  <div key={r.label} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
+                    <span className="text-[11px] text-[var(--color-text-muted)]">{r.label}</span>
+                    <span className="text-[11px] font-medium" style={{ color: r.hi ? "#14b8a6" : "var(--color-text-primary)" }}>{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            </DashboardCard>
+          </motion.div>
+
+          {/* Case Timeline */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <DashboardCard className="p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Clock size={14} style={{ color: "#14b8a6" }} />
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Case Timeline</h3>
+              </div>
+              {(() => {
+                const officer = assignOfficer || detail?.officer?.name || escalatedBy?.split("(")[0]?.trim() || "District Officer";
+                const resStatus = pendingResolution?.status ?? (isTerminal ? statusLabel(displayStatus) : "Pending Review");
+                const timelineSteps = [
+                  { label: "Escalation Received", date: escalatedAt ? fmtDT(escalatedAt) : (createdAt.includes("T") ? fmtDT(createdAt) : createdAt), note: "Received from sub-district", done: true },
+                  { label: "Assigned",             date: escalatedAt ? fmtDT(escalatedAt) : "—", note: officer, done: !!officer && officer !== "Unassigned" },
+                  { label: "Investigation",        date: displayStatus === "IN_PROGRESS" || isTerminal ? "Active" : "Pending", note: "", done: displayStatus === "IN_PROGRESS" || isTerminal },
+                  { label: "Resolution",           date: isTerminal ? statusLabel(displayStatus) : "Pending", note: resStatus, done: isTerminal },
+                ];
+                return (
+                  <div className="flex flex-col gap-0 relative">
+                    <div className="absolute left-[11px] top-3 bottom-3 w-px"
+                      style={{ background: "linear-gradient(to bottom, #14b8a6, rgba(20,184,166,0.1))" }} />
+                    {timelineSteps.map((step, i) => (
+                      <div key={i} className="flex items-start gap-3 py-2.5 relative z-10">
+                        <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border"
+                          style={{
+                            borderColor: step.done ? "rgba(20,184,166,0.5)" : "var(--color-border)",
+                            background:  step.done ? "rgba(20,184,166,0.12)" : "var(--color-surface)",
+                          }}>
+                          <Clock size={11} style={{ color: step.done ? "#14b8a6" : "var(--color-text-muted)" }} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className={`text-xs font-semibold ${step.done ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"}`}>{step.label}</p>
+                          <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{step.date}</p>
+                          {step.note && <p className="text-[10px] italic text-[var(--color-text-secondary)] mt-0.5">{step.note}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </DashboardCard>
+          </motion.div>
+
+          {/* Escalation Details */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}>
             <DashboardCard className="p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <TrendingUp size={14} style={{ color: "#14b8a6" }} />
@@ -940,27 +1211,11 @@ export default function DistrictComplaintDetailPage() {
             </DashboardCard>
           </motion.div>
 
-          {/* Officer info (mock store only) */}
-          {detail?.officer && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-              <DashboardCard className="p-4 flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <UserCheck size={14} style={{ color: "#14b8a6" }} />
-                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Sub-District Officer</h3>
-                </div>
-                <div className="flex flex-col divide-y divide-[var(--color-border)]">
-                  {[
-                    { label: "Officer",     value: detail.officer.name },
-                    { label: "Assigned",    value: detail.officer.assignedDate },
-                    { label: "Supervisor",  value: detail.officer.supervisor },
-                    { label: "SLA Risk",    value: detail.officer.slaRisk },
-                  ].map((r) => (
-                    <div key={r.label} className="flex items-center justify-between py-1.5 first:pt-0 last:pb-0">
-                      <span className="text-[11px] text-[var(--color-text-muted)]">{r.label}</span>
-                      <span className="text-[11px] font-medium text-[var(--color-text-primary)]">{r.value}</span>
-                    </div>
-                  ))}
-                </div>
+          {/* Case Journey — CMP-* mock IDs */}
+          {isMockId && caseJourneySteps.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}>
+              <DashboardCard className="p-4">
+                <CaseJourneyTimeline steps={caseJourneySteps} title="Case Journey" accentColor="#14b8a6" />
               </DashboardCard>
             </motion.div>
           )}
