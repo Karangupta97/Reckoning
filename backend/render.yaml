@@ -6,7 +6,7 @@ services:
     plan: free                 # change to starter/standard for production
     rootDir: backend           # repo root is the monorepo root (Reckoning/)
 
-    buildCommand: npm ci && npm run build
+    buildCommand: npm run build
     startCommand: npm run start
 
     # Health-check — Render will mark the deploy healthy once this returns 200
