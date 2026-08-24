@@ -1,0 +1,128 @@
+services:
+  - type: web
+    name: reckoning-backend
+    runtime: node
+    region: singapore          # closest to ap-south-1 Supabase/SES region
+    plan: free                 # change to starter/standard for production
+    rootDir: backend           # repo root is the monorepo root (Reckoning/)
+
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+
+    # Health-check — Render will mark the deploy healthy once this returns 200
+    healthCheckPath: /health
+
+    # Node version — mirrors local dev
+    envVars:
+      - key: NODE_VERSION
+        value: "20"            # LTS; pin to avoid surprise major bumps
+
+      # ── Runtime ──────────────────────────────────────────────────────────
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8000"
+
+      # ── Database ─────────────────────────────────────────────────────────
+      - key: DATABASE_URL
+        sync: false            # set in Render dashboard → never committed
+      - key: DIRECT_URL
+        sync: false
+
+      # ── Supabase ─────────────────────────────────────────────────────────
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # ── Email (SES) ───────────────────────────────────────────────────────
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: EMAIL_FROM_NAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+
+      # ── Citizen JWT ───────────────────────────────────────────────────────
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES
+        value: 7d
+
+      # ── Admin JWT ────────────────────────────────────────────────────────
+      - key: ADMIN_JWT_SECRET
+        sync: false
+      - key: ADMIN_JWT_ACCESS_SECRET
+        sync: false
+      - key: ADMIN_JWT_REFRESH_SECRET
+        sync: false
+      - key: ADMIN_JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: ADMIN_JWT_REFRESH_EXPIRES
+        value: 7d
+      - key: ADMIN_FRONTEND_URL
+        sync: false
+      - key: ADMIN_ACTIVATION_BASE_URL
+        sync: false
+
+      # ── Super-admin seed ─────────────────────────────────────────────────
+      - key: SUPER_ADMIN_EMAIL
+        sync: false
+      - key: SUPER_ADMIN_PASSWORD
+        sync: false
+      - key: SUPER_ADMIN_FULL_NAME
+        sync: false
+
+      # ── Timing-attack dummy hash ─────────────────────────────────────────
+      - key: DUMMY_HASH
+        sync: false
+
+      # ── Redis (BullMQ + rate limiting) ───────────────────────────────────
+      - key: REDIS_URL
+        sync: false
+
+      # ── AWS S3 ───────────────────────────────────────────────────────────
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: AWS_S3_BUCKET_NAME
+        sync: false
+      - key: AWS_CDN_BASE_URL
+        sync: false
+
+      # ── Nominatim ────────────────────────────────────────────────────────
+      - key: NOMINATIM_USER_AGENT
+        sync: false
+
+      # ── Reckoning AI ─────────────────────────────────────────────────────
+      - key: RECKONING_API_URL
+        sync: false
+      - key: RECKONING_API_SECRET
+        sync: false
+      - key: RECKONING_TIMEOUT_MS
+        value: "30000"
+      - key: RECKONING_CONFIDENCE_THRESHOLD
+        value: "0.40"
+
+      # ── Demo mode ────────────────────────────────────────────────────────
+      - key: DEMO_MODE_ENABLED
+        value: "false"
